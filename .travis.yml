@@ -7,5 +7,6 @@ go:
 
 install:
   - go get -u github.com/cep21/goverify
+  - go get -d -v -t ./... 
 script:
   - goverify -v
