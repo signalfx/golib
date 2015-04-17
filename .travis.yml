@@ -6,6 +6,6 @@ go:
   - tip
 
 install:
-  - go install github.com/cep21/goverify
+  - go get -u github.com/cep21/goverify
 script:
   - goverify -v
