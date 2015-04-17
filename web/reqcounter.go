@@ -1,4 +1,4 @@
-package reqcounter
+package web
 
 import (
 	"net/http"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/web"
 )
 
 // RequestCounter is a negroni handler that tracks connection stats
@@ -16,8 +15,8 @@ type RequestCounter struct {
 	TotalProcessingTimeNs int64
 }
 
-var _ web.HTTPConstructor = (&RequestCounter{}).Wrap
-var _ web.NextHTTP = (&RequestCounter{}).ServeHTTP
+var _ HTTPConstructor = (&RequestCounter{}).Wrap
+var _ NextHTTP = (&RequestCounter{}).ServeHTTP
 
 // Wrap returns a handler that forwards calls to next and counts the calls forwarded
 func (m *RequestCounter) Wrap(next http.Handler) http.Handler {
