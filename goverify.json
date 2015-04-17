@@ -87,7 +87,7 @@
         "args": ["get", "golang.org/x/tools/cmd/cover"]
       },
       "check": {
-        "args": ["test", "-cover", "-covermode", "atomic", "-race", "-parallel=8", "-timeout", "3s", "-cpu", "4", "./..."]
+        "args": ["test", "-cover", "-covermode", "atomic", "-race", "-parallel=8", "-timeout", "3s", "-cpu", "1,4", "./..."]
       },
       "validate": {
         "type": "cover",
