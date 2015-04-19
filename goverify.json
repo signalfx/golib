@@ -1,98 +1,17 @@
 {
   "checks": [
     {
-      "name": "import fix",
-      "cmd": "goimports",
-      "fix": {
-        "args": ["-w", "-l", "$1"]
-      },
-      "check": {
-        "args": ["-l", "$1"]
-      },
-      "install": {
-        "cmd": "go",
-        "args": ["get", "golang.org/x/tools/cmd/goimports"]
-      },
-      "each": {
-        "cmd": "git",
-        "args": ["ls-files", "--", "*.go"]
-      }
-    },
-    {
-      "name": "fmt fix",
-      "cmd": "gofmt",
-      "fix": {
-        "args": ["-s", "-w", "-l", "$1"]
-      },
-      "check": {
-        "args": ["-s", "-l", "$1"]
-      },
-      "each": {
-        "cmd": "git",
-        "args": ["ls-files", "--", "*.go"]
-      }
-    },
-    {
-      "name": "vet",
-      "cmd": "go",
-      "check": {
-        "args": ["tool", "vet", "$1"]
-      },
-      "gotool": "vet",
-      "install": {
-        "cmd": "go",
-        "args": ["get", "golang.org/x/tools/cmd/vet"]
-      },
-      "each": {
-        "cmd": "git",
-        "args": ["ls-files", "--", "*.go"]
-      }
-    },
-    {
-      "name": "code lint",
-      "cmd": "golint",
-      "check": {
-        "args": ["-min_confidence=.3", "$1"]
-      },
-      "install": {
-        "cmd": "go",
-        "args": ["get", "github.com/golang/lint/golint"]
-      },
-      "each": {
-        "cmd": "git",
-        "args": ["ls-files", "--", "*.go"]
-      }
-    },
-    {
-      "name": "cyclomatic check",
-      "cmd": "gocyclo",
-      "check": {
-        "args": ["-over", "10", "$1"]
-      },
-      "install": {
-        "cmd": "go",
-        "args": ["get", "github.com/fzipp/gocyclo"]
-      },
-      "each": {
-        "cmd": "git",
-        "args": ["ls-files", "--", "*.go"]
-      }
-    },
-    {
-      "name": "code coverage",
-      "cmd": "go",
-      "gotool": "cover",
-      "install": {
-        "cmd": "go",
-        "args": ["get", "golang.org/x/tools/cmd/cover"]
-      },
-      "check": {
-        "args": ["test", "-cover", "-covermode", "atomic", "-race", "-parallel=8", "-timeout", "3s", "-cpu", "1,4", "./..."]
-      },
-      "validate": {
-        "type": "cover",
-        "coverage": 50
-      }
+      "macro": "goimport"
+    }, {
+      "macro": "gofmt"
+    }, {
+      "macro": "vet"
+    }, {
+      "macro": "golint"
+    }, {
+      "macro": "gocyclo"
+    }, {
+      "macro": "go-cover"
     }
   ]
 }
