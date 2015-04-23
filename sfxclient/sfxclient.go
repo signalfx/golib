@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/signalfx/golib/logherd"
 	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/logherd"
 	// TODO: Figure out a way to not have this dependency
 	"github.com/signalfx/metricproxy/dp/dpsink"
 	"github.com/signalfx/metricproxy/protocol/signalfx"

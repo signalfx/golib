@@ -10,9 +10,9 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/nettest"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
-	"github.com/signalfx/golib/nettest"
 	"github.com/stretchr/testify/assert"
 )
 
