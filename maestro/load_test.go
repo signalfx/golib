@@ -1,6 +1,7 @@
 package maestro
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 func TestReadInvalidConfig(t *testing.T) {
 	_, err := (&Loader{}).Load("/doesnotexit.txt")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "python")
+	assert.True(t, strings.Contains(err.Error(), "python") || strings.Contains(err.Error(), "maestro.__main__"))
 }
 
 func TestReadInvalidJson(t *testing.T) {
