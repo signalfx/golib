@@ -44,9 +44,9 @@ func (a *EventCounter) Events(now time.Time, count int64) int64 {
 		if atomic.CompareAndSwapInt64(&a.nsSinceStart, prevNsSinceStart, nsSince) {
 			atomic.StoreInt64(&a.eventsThisPeriod, 0)
 		} // else {
-		  // In this case we've crossed the boundary twice with one event.  We're just guessing that
-		  // it's unlikely the Event() call's nsSinceStart() crossed us into a different region
-		  // }
+		// In this case we've crossed the boundary twice with one event.  We're just guessing that
+		// it's unlikely the Event() call's nsSinceStart() crossed us into a different region
+		// }
 	}
 	return atomic.AddInt64(&a.eventsThisPeriod, count)
 }
