@@ -38,6 +38,9 @@ func (a *EventCounter) Events(now time.Time, count int64) int64 {
 	nsSince := now.Sub(a.startingTime).Nanoseconds()
 	prevNsSinceStart := atomic.LoadInt64(&a.nsSinceStart)
 	if nsSince-prevNsSinceStart > a.eventDuration.Nanoseconds() {
+		// Note: There is an accepted race here when we transition states that could cause us to
+		//       rarely miss an event that crosses the threshold.  This is an accepted aspect of
+		//       having a very fast non threshold event
 		if atomic.CompareAndSwapInt64(&a.nsSinceStart, prevNsSinceStart, nsSince) {
 			atomic.StoreInt64(&a.eventsThisPeriod, 0)
 		}
