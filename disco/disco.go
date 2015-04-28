@@ -371,7 +371,7 @@ func (s *Service) refresh(zkConn ZkConn) error {
 	defer s.watchLock.Unlock()
 	newHash := s.byteHashes()
 	if oldHash != newHash {
-		log.Info("Calling watches")
+		log.Debug("Calling watches")
 		for _, w := range s.watches {
 			w()
 		}

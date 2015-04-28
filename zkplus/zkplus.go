@@ -110,18 +110,17 @@ func (z *ZkPlus) eventLoop() {
 	for {
 		select {
 		case eventToSend = <-whenI(!haveEventToSend && z.connectedChan != nil, z.connectedChan):
-			log.WithField("event", eventToSend).WithField("pre", z.pathPrefix).Info("ZkPlus event")
+			log.WithField("event", eventToSend).WithField("pre", z.pathPrefix).Debug("ZkPlus event")
 			if strings.HasPrefix(eventToSend.Path, z.pathPrefix) {
 				eventToSend.Path = eventToSend.Path[len(z.pathPrefix):]
 				if eventToSend.Path == "" {
 					eventToSend.Path = "/"
 				}
-				log.WithField("event", eventToSend).Info("New event path!")
 			}
 			haveEventToSend = true
 			delayForNewConn = time.Millisecond * 0
 		case whenO(haveEventToSend, z.exposedChan) <- eventToSend:
-			log.Info("Send to exposed chan from zkplus")
+			log.Debug("Send to exposed chan from zkplus")
 			haveEventToSend = false
 		case c := <-whenAsk(z.connectedConn != nil, z.askForConn):
 			c <- z.connectedConn
@@ -176,7 +175,7 @@ func (z *ZkPlus) realPath(path string) string {
 	if finalPath != "/" && finalPath[len(finalPath)-1] == '/' {
 		finalPath = finalPath[0 : len(finalPath)-1]
 	}
-	log.WithField("finalPath", finalPath).Info("Final path!")
+	log.WithField("finalPath", finalPath).Debug("Final path!")
 	return finalPath
 }
 
@@ -189,7 +188,7 @@ func (z *ZkPlus) blockOnConn() zktest.ZkConnSupported {
 
 // Exists returns true if the path exists
 func (z *ZkPlus) Exists(path string) (bool, *zk.Stat, error) {
-	log.WithField("path", path).Info("Exists")
+	log.WithField("path", path).Debug("Exists")
 	return z.blockOnConn().Exists(z.realPath(path))
 }
 
@@ -208,31 +207,31 @@ func (z *ZkPlus) Get(path string) ([]byte, *zk.Stat, error) {
 
 // GetW is like Get, but also sets a watch
 func (z *ZkPlus) GetW(path string) ([]byte, *zk.Stat, <-chan zk.Event, error) {
-	log.WithField("path", path).Info("GetW")
+	log.WithField("path", path).Debug("GetW")
 	return z.blockOnConn().GetW(z.realPath(path))
 }
 
 // Children gets children of a path
 func (z *ZkPlus) Children(path string) ([]string, *zk.Stat, error) {
-	log.WithField("path", z.realPath(path)).Info("ChildrenW")
+	log.WithField("path", z.realPath(path)).Debug("ChildrenW")
 	return z.blockOnConn().Children(z.realPath(path))
 }
 
 // ChildrenW is like children but also sets a watch
 func (z *ZkPlus) ChildrenW(path string) ([]string, *zk.Stat, <-chan zk.Event, error) {
-	log.WithField("path", z.realPath(path)).Info("ChildrenW")
+	log.WithField("path", z.realPath(path)).Debug("ChildrenW")
 	return z.blockOnConn().ChildrenW(z.realPath(path))
 }
 
 // Delete a Zk node
 func (z *ZkPlus) Delete(path string, version int32) error {
-	log.WithField("path", path).Info("Delete")
+	log.WithField("path", path).Debug("Delete")
 	return z.blockOnConn().Delete(z.realPath(path), version)
 }
 
 // Create a Zk node
 func (z *ZkPlus) Create(path string, data []byte, flags int32, acl []zk.ACL) (string, error) {
-	log.WithField("path", path).Info("Create")
+	log.WithField("path", path).Debug("Create")
 	p, err := z.blockOnConn().Create(z.realPath(path), data, flags, acl)
 	if strings.HasPrefix(p, z.pathPrefix) && z.pathPrefix != "" {
 		p = p[len(z.pathPrefix)+1:]
@@ -242,6 +241,6 @@ func (z *ZkPlus) Create(path string, data []byte, flags int32, acl []zk.ACL) (st
 
 // Set the data of a zk node
 func (z *ZkPlus) Set(path string, data []byte, version int32) (*zk.Stat, error) {
-	log.WithField("path", path).Info("Set")
+	log.WithField("path", path).Debug("Set")
 	return z.blockOnConn().Set(z.realPath(path), data, version)
 }
