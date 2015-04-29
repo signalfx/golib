@@ -195,13 +195,13 @@ func (z *ZkPlus) Exists(path string) (bool, *zk.Stat, error) {
 // ExistsW is like Exists but also sets a watch.  Note: We DO NOT change paths on the returned
 // channel nor do we reconnect it.  Use the global channel instead
 func (z *ZkPlus) ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error) {
-	log.WithField("path", path).Info("Exists")
+	log.WithField("path", path).Debug("ExistsW")
 	return z.blockOnConn().ExistsW(z.realPath(path))
 }
 
 // Get the bytes of a zk path
 func (z *ZkPlus) Get(path string) ([]byte, *zk.Stat, error) {
-	log.WithField("path", path).Info("Get")
+	log.WithField("path", path).Debug("Get")
 	return z.blockOnConn().Get(z.realPath(path))
 }
 

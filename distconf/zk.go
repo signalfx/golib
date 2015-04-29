@@ -85,7 +85,7 @@ func (back *zkConfig) Write(key string, value []byte) error {
 }
 
 func (back *zkConfig) Watch(key string, callback backingCallbackFunction) error {
-	log.WithField("key", key).Info("Watch")
+	log.WithField("key", key).Debug("Watch")
 	path := back.configPath(key)
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
