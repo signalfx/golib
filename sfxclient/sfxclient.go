@@ -45,6 +45,10 @@ func New(authToken string) *Reporter {
 // ErrNoauthToken is returned by Report() if no auth token has been set.
 var ErrNoauthToken = errors.New("no auth token")
 
+// DirectCallback is a functional callback that can be passed to DirectDatapointCallback as a way
+// to have the caller calculate and return their own datapoints
+type DirectCallback func(defaultDims map[string]string) []*datapoint.Datapoint
+
 // A Reporter reports metrics to SignalFx
 type Reporter struct {
 	defaultDimensions map[string]string
@@ -55,7 +59,7 @@ type Reporter struct {
 	metrics                  map[*Timeseries]struct{}
 	buckets                  map[*Bucket]struct{}
 	preCallbacks             []func()
-	directDatapointCallbacks []func() []*datapoint.Datapoint
+	directDatapointCallbacks []DirectCallback
 
 	mu sync.Mutex
 }
@@ -158,7 +162,7 @@ func (s *Reporter) PrecollectCallback(f func()) {
 }
 
 // DirectDatapointCallback adds a callback that itself will generate datapoints to report
-func (s *Reporter) DirectDatapointCallback(f func() []*datapoint.Datapoint) {
+func (s *Reporter) DirectDatapointCallback(f DirectCallback) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.directDatapointCallbacks = append(s.directDatapointCallbacks, f)
@@ -184,7 +188,7 @@ func (s *Reporter) collectDatapoints(ctx context.Context) ([]*datapoint.Datapoin
 	}
 	for _, c := range s.directDatapointCallbacks {
 		// Note: Add default dimensions
-		datapoints = append(datapoints, c()...)
+		datapoints = append(datapoints, c(s.defaultDimensions)...)
 	}
 	for b := range s.buckets {
 		datapoints = append(datapoints, b.datapoints(s.defaultDimensions, now)...)

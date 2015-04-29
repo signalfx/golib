@@ -36,7 +36,7 @@ func TestReporter(t *testing.T) {
 	x.PrecollectCallback(func() {
 		cb++
 	})
-	x.DirectDatapointCallback(func() []*datapoint.Datapoint {
+	x.DirectDatapointCallback(func(map[string]string) []*datapoint.Datapoint {
 		cb++
 		return []*datapoint.Datapoint{}
 	})
