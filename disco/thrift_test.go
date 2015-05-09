@@ -17,7 +17,7 @@ import (
 )
 
 func TestThrift(t *testing.T) {
-	l, err := net.Listen("tcp", "0.0.0.0:0")
+	l, err := net.Listen("tcp", "localhost:0")
 	assert.NoError(t, err)
 	defer l.Close()
 	go func() {
@@ -41,7 +41,7 @@ func TestThrift(t *testing.T) {
 		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
 		return zkp, zkp.EventChan(), err
 	})
-	d1, _ := New(zkConnFunc, "0.0.0.0")
+	d1, _ := New(zkConnFunc, "localhost")
 
 	s, err := d1.Services("thriftservice")
 	updated := make(chan struct{}, 5)
@@ -68,7 +68,7 @@ func TestThrift(t *testing.T) {
 	err = trans.Open()
 	assert.Error(t, err)
 
-	fmt.Printf("new\n")
+	log.Infof("ad on %d\n", nettest.TCPPort(l))
 	assert.NoError(t, d1.Advertise("thriftservice", "", nettest.TCPPort(l)))
 	<-updated
 

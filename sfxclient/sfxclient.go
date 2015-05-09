@@ -31,7 +31,7 @@ type ClientSink interface {
 
 // New creates a new SignalFx client
 func New(authToken string) *Reporter {
-	forwarder := signalfx.NewSignalfxJSONForwarer("https://ingest.signalfx.com/v2/datapoint", time.Second*10, authToken, 10, "", "")
+	forwarder := signalfx.NewSignalfxJSONForwarer("https://ingest.signalfx.com/v2/datapoint", time.Second*10, authToken, 10, "", "", "")
 	forwarder.UserAgent(fmt.Sprintf("SignalFxGo/0.2 (gover %s)", runtime.Version()))
 	return &Reporter{
 		defaultDimensions: make(map[string]string),
