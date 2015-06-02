@@ -43,6 +43,7 @@ func TestDistconf(t *testing.T) {
 		readers:        []Reader{memConf},
 	}
 	defer conf.Close()
+
 	iVal := conf.Int("testval", 1)
 	assert.Equal(t, int64(1), iVal.Get())
 	totalWatches := 0
@@ -52,6 +53,15 @@ func TestDistconf(t *testing.T) {
 
 	memConf.Write("testval", []byte("2"))
 	assert.Equal(t, int64(2), iVal.Get())
+
+	fVal := conf.Float("testval_f", 3.14)
+	assert.Equal(t, float64(3.14), fVal.Get())
+	fVal.Watch(FloatWatch(func(float *Float, oldValue float64) {
+		totalWatches++
+	}))
+
+	memConf.Write("testval_f", []byte("4.771"))
+	assert.Equal(t, float64(4.771), fVal.Get())
 
 	sVal := conf.Str("testval_s", "default")
 	assert.Equal(t, "default", sVal.Get())
@@ -65,6 +75,9 @@ func TestDistconf(t *testing.T) {
 	var nilInt *Int
 	assert.Equal(t, nilInt, conf.Int("testval_s", 0))
 
+	var nilFloat *Float
+	assert.Equal(t, nilFloat, conf.Float("testval_s", 0.0))
+
 	var nilStr *Str
 	assert.Equal(t, nilStr, conf.Str("testval", ""))
 
@@ -75,7 +88,10 @@ func TestDistconf(t *testing.T) {
 	memConf.Write("testval", []byte("invalidint"))
 	assert.Equal(t, int64(1), iVal.Get())
 
-	assert.Equal(t, 3, totalWatches)
+	memConf.Write("testval_f", []byte("invalidfloat"))
+	assert.Equal(t, float64(3.14), fVal.Get())
+
+	assert.Equal(t, 5, totalWatches)
 
 	assert.Nil(t, conf.Duration("testval_s", time.Second))
 	memConf.Write("testval_t", []byte("3ms"))
@@ -87,15 +103,15 @@ func TestDistconf(t *testing.T) {
 	}))
 	memConf.Write("testval_t", []byte("10ms"))
 	assert.Equal(t, time.Millisecond*10, timeVal.Get())
-	assert.Equal(t, 4, totalWatches)
+	assert.Equal(t, 6, totalWatches)
 
 	memConf.Write("testval_t", []byte("abcd"))
 	assert.Equal(t, time.Second, timeVal.Get())
-	assert.Equal(t, 5, totalWatches)
+	assert.Equal(t, 7, totalWatches)
 
 	memConf.Write("testval_t", nil)
 	assert.Equal(t, time.Second, timeVal.Get())
-	assert.Equal(t, 5, totalWatches)
+	assert.Equal(t, 7, totalWatches)
 }
 
 func TestDistconfErrorBackings(t *testing.T) {
