@@ -5,6 +5,8 @@ import (
 
 	"time"
 
+	"math"
+
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -39,6 +41,21 @@ func (c *Config) Int(key string, defaultVal int64) *Int {
 		return nil
 	}
 	return &ret.Int
+}
+
+// Float object that can be referenced to get float values from a backing config
+func (c *Config) Float(key string, defaultVal float64) *Float {
+	s := &floatConf{
+		defaultVal: defaultVal,
+	}
+	s.currentVal = math.Float64bits(defaultVal)
+	// Note: in race conditions 's' may not be the thing actually returned
+	ret, okCast := c.register(key, s).(*floatConf)
+	if !okCast {
+		log.WithField("key", key).Error("Registering key with multiple types!  FIX ME!!!!")
+		return nil
+	}
+	return &ret.Float
 }
 
 // Str object that can be referenced to get string values from a backing config
