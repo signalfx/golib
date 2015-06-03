@@ -35,83 +35,142 @@ type allErrorconfigVariable struct {
 func (a *allErrorconfigVariable) Update(newValue []byte) error {
 	return errNope
 }
-
-func TestDistconf(t *testing.T) {
+func makeConf() (ReaderWriter, *Config) {
 	memConf := Mem()
 	conf := &Config{
 		registeredVars: make(map[string]configVariable),
 		readers:        []Reader{memConf},
 	}
+	return memConf, conf
+}
+
+func TestDistconfInt(t *testing.T) {
+	memConf, conf := makeConf()
 	defer conf.Close()
 
-	iVal := conf.Int("testval", 1)
-	assert.Equal(t, int64(1), iVal.Get())
+	// default
+	val := conf.Int("testval", 1)
+	assert.Equal(t, int64(1), val.Get())
 	totalWatches := 0
-	iVal.Watch(IntWatch(func(str *Int, oldValue int64) {
+	val.Watch(IntWatch(func(str *Int, oldValue int64) {
 		totalWatches++
 	}))
 
+	// update valid
 	memConf.Write("testval", []byte("2"))
-	assert.Equal(t, int64(2), iVal.Get())
+	assert.Equal(t, int64(2), val.Get())
 
-	fVal := conf.Float("testval_f", 3.14)
-	assert.Equal(t, float64(3.14), fVal.Get())
-	fVal.Watch(FloatWatch(func(float *Float, oldValue float64) {
-		totalWatches++
-	}))
-
-	memConf.Write("testval_f", []byte("4.771"))
-	assert.Equal(t, float64(4.771), fVal.Get())
-
-	sVal := conf.Str("testval_s", "default")
-	assert.Equal(t, "default", sVal.Get())
-	sVal.Watch(StrWatch(func(str *Str, oldValue string) {
-		totalWatches++
-	}))
-
-	memConf.Write("testval_s", []byte("newval"))
-	assert.Equal(t, "newval", sVal.Get())
-
+	// check already registered
+	conf.Str("testval_other", "moo")
 	var nilInt *Int
-	assert.Equal(t, nilInt, conf.Int("testval_s", 0))
+	assert.Equal(t, nilInt, conf.Int("testval_other", 0))
 
-	var nilFloat *Float
-	assert.Equal(t, nilFloat, conf.Float("testval_s", 0.0))
-
-	var nilStr *Str
-	assert.Equal(t, nilStr, conf.Str("testval", ""))
-
-	assert.NotPanics(t, func() {
-		(&noopCloser{}).Close()
-	})
-
+	// update to invalid
 	memConf.Write("testval", []byte("invalidint"))
-	assert.Equal(t, int64(1), iVal.Get())
+	assert.Equal(t, int64(2), val.Get())
 
-	memConf.Write("testval_f", []byte("invalidfloat"))
-	assert.Equal(t, float64(3.14), fVal.Get())
+	// update to nil
+	memConf.Write("testval", nil)
+	assert.Equal(t, int64(1), val.Get())
 
-	assert.Equal(t, 5, totalWatches)
+	// check callback
+	assert.Equal(t, 2, totalWatches)
+}
 
-	assert.Nil(t, conf.Duration("testval_s", time.Second))
-	memConf.Write("testval_t", []byte("3ms"))
-	timeVal := conf.Duration("testval_t", time.Second)
-	assert.Equal(t, time.Millisecond*3, timeVal.Get())
+func TestDistconfFloat(t *testing.T) {
+	memConf, conf := makeConf()
+	defer conf.Close()
 
-	timeVal.Watch(DurationWatch(func(*Duration, time.Duration) {
+	// default
+	val := conf.Float("testval", 3.14)
+	assert.Equal(t, float64(3.14), val.Get())
+	totalWatches := 0
+	val.Watch(FloatWatch(func(float *Float, oldValue float64) {
 		totalWatches++
 	}))
-	memConf.Write("testval_t", []byte("10ms"))
-	assert.Equal(t, time.Millisecond*10, timeVal.Get())
-	assert.Equal(t, 6, totalWatches)
 
-	memConf.Write("testval_t", []byte("abcd"))
-	assert.Equal(t, time.Second, timeVal.Get())
-	assert.Equal(t, 7, totalWatches)
+	// update to valid
+	memConf.Write("testval", []byte("4.771"))
+	assert.Equal(t, float64(4.771), val.Get())
 
-	memConf.Write("testval_t", nil)
-	assert.Equal(t, time.Second, timeVal.Get())
-	assert.Equal(t, 7, totalWatches)
+	// check already registered
+	conf.Str("testval_other", "moo")
+	var nilFloat *Float
+	assert.Equal(t, nilFloat, conf.Float("testval_other", 0.0))
+
+	// update to invalid
+	memConf.Write("testval", []byte("invalidfloat"))
+	assert.Equal(t, float64(4.771), val.Get())
+
+	// update to nil
+	memConf.Write("testval", nil)
+	assert.Equal(t, float64(3.14), val.Get())
+
+	// check callback
+	assert.Equal(t, 2, totalWatches)
+}
+
+func TestDistconfStr(t *testing.T) {
+	memConf, conf := makeConf()
+	defer conf.Close()
+
+	// default
+	val := conf.Str("testval", "default")
+	assert.Equal(t, "default", val.Get())
+	totalWatches := 0
+	val.Watch(StrWatch(func(str *Str, oldValue string) {
+		totalWatches++
+	}))
+
+	// update to valid
+	memConf.Write("testval", []byte("newval"))
+	assert.Equal(t, "newval", val.Get())
+
+	// check already registered
+	conf.Int("testval_other", 0)
+	var nilStr *Str
+	assert.Equal(t, nilStr, conf.Str("testval_other", ""))
+
+	// update to nil
+	memConf.Write("testval", nil)
+	assert.Equal(t, "default", val.Get())
+
+	// check callback
+	assert.Equal(t, 2, totalWatches)
+
+}
+
+func TestDistconfDuration(t *testing.T) {
+	memConf, conf := makeConf()
+	defer conf.Close()
+
+	//default
+
+	val := conf.Duration("testval", time.Second)
+	assert.Equal(t, time.Second, val.Get())
+	totalWatches := 0
+	val.Watch(DurationWatch(func(*Duration, time.Duration) {
+		totalWatches++
+	}))
+
+	// update valid
+	memConf.Write("testval", []byte("10ms"))
+	assert.Equal(t, time.Millisecond*10, val.Get())
+
+	// check already registered
+	conf.Str("testval_other", "moo")
+	var nilDuration *Duration
+	assert.Equal(t, nilDuration, conf.Duration("testval_other", 0))
+
+	// update to invalid
+	memConf.Write("testval", []byte("abcd"))
+	assert.Equal(t, time.Second, val.Get())
+
+	// update to nil
+	memConf.Write("testval", nil)
+	assert.Equal(t, time.Second, val.Get())
+
+	assert.Equal(t, 2, totalWatches)
 }
 
 func TestDistconfErrorBackings(t *testing.T) {

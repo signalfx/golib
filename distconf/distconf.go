@@ -133,8 +133,7 @@ func (c *Config) refresh(key string, configVar configVariable) bool {
 		if v != nil {
 			e = configVar.Update(v)
 			if e != nil {
-				log.WithField("err", e).Warn("Invalid config bytes")
-				continue
+				log.WithField("err", e).Error("Invalid config bytes for " + key)
 			}
 			return dynamicReadersOnPath
 		}
