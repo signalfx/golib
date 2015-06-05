@@ -34,7 +34,8 @@ func TestLots(t *testing.T) {
 	now := time.Now()
 	a := New(now, time.Minute)
 	wg := sync.WaitGroup{}
-	for i := 0; i < 10000; i++ {
+	loopCount := 1000
+	for i := 0; i < loopCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -46,6 +47,6 @@ func TestLots(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	assert.Equal(t, int64(10000*59), a.Events(now.Add(time.Second*59), 0))
+	assert.Equal(t, int64(loopCount*59), a.Events(now.Add(time.Second*59), 0))
 	assert.Equal(t, int64(1), a.Events(now.Add(time.Second*61), 1))
 }
