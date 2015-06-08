@@ -9,11 +9,11 @@ import (
 )
 
 type SimpleBucket struct {
-	Labels  []byte
+	Labels  string
 	Weights uint32
 }
 
-func (s *SimpleBucket) Label() []byte {
+func (s *SimpleBucket) Label() string {
 	return s.Labels
 }
 
@@ -35,11 +35,11 @@ func randStr(r *rand.Rand) string {
 func TestKetama(t *testing.T) {
 	s := []Bucket{
 		&SimpleBucket{
-			Labels:  []byte("w1"),
+			Labels:  "w1",
 			Weights: 1,
 		},
 		&SimpleBucket{
-			Labels:  []byte("w2"),
+			Labels:  "w2",
 			Weights: 2,
 		},
 	}

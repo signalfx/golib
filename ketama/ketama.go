@@ -21,7 +21,7 @@ import (
 // Bucket is a source we hash into.  The Label() is used as the hash key and Weight represents
 // how much we weight this bucket against others
 type Bucket interface {
-	Label() []byte
+	Label() string
 	Weight() uint32
 }
 
