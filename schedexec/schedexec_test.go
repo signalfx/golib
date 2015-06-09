@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"runtime"
 	"sync/atomic"
 
 	"github.com/signalfx/golib/timekeeper/timekeepertest"
@@ -42,34 +41,26 @@ func TestScheduleExecutorTick(t *testing.T) {
 	se := NewScheduledExecutor(time.Second)
 	stubTime := timekeepertest.NewStubClock(time.Now())
 	se.TimeKeeper = stubTime
-	runChan := make(chan struct{})
-	f := func() error {
-		defer func() { runChan <- struct{}{} }()
-		return scheduled.runOneIteration()
-	}
 
 	doneChan := make(chan struct{})
+	msgChan := make(chan time.Duration)
 	var err error
 	go func() {
-		err = se.Start(f)
+		err = se.StartWithMsgChan(scheduled.runOneIteration, msgChan)
 		close(doneChan)
 	}()
 
-	for atomic.LoadUint32(&se.startedCount) == 0 {
-		runtime.Gosched()
-	}
-	stubTime.Incr(time.Second)
-	<-runChan
+	duration := <-msgChan
+	assert.Equal(t, duration, time.Second)
+	stubTime.Incr(duration)
+	duration = <-msgChan
 
 	assert.Equal(t, int32(1), atomic.LoadInt32(&scheduled.calledIteratorCount))
 
 	scheduled.runOneIterationError = errors.New("MOO")
-	for atomic.LoadUint32(&se.runCount) == 0 {
-		runtime.Gosched()
-	}
-	stubTime.Incr(time.Second)
+	assert.Equal(t, duration, time.Second)
+	stubTime.Incr(duration)
 
-	<-runChan
 	<-doneChan
 	assert.Equal(t, scheduled.runOneIterationError, err)
 
@@ -80,34 +71,29 @@ func TestScheduleExecutorUpdateScheduleRate(t *testing.T) {
 	se := NewScheduledExecutor(time.Second)
 	stubTime := timekeepertest.NewStubClock(time.Now())
 	se.TimeKeeper = stubTime
-	runChan := make(chan struct{})
-	f := func() error {
-		defer func() { runChan <- struct{}{} }()
-		return scheduled.runOneIteration()
-	}
 
 	doneChan := make(chan struct{})
+	msgChan := make(chan time.Duration)
 	var err error
 	go func() {
-		err = se.Start(f)
+		err = se.StartWithMsgChan(scheduled.runOneIteration, msgChan)
 		close(doneChan)
 	}()
 
-	for atomic.LoadUint32(&se.startedCount) == 0 {
-		runtime.Gosched()
-	}
+	duration := <-msgChan
+	assert.Equal(t, duration, time.Second)
 	// make sure we only update the scheduled rate after the initial timer was created
 	se.SetScheduleRate(2 * time.Second)
 
-	stubTime.Incr(time.Second)
-	<-runChan
+	stubTime.Incr(duration)
+	duration = <-msgChan
 	assert.Equal(t, int32(1), atomic.LoadInt32(&scheduled.calledIteratorCount))
 
-	for atomic.LoadUint32(&se.runCount) == 0 {
-		runtime.Gosched()
-	}
-	stubTime.Incr(2 * time.Second)
-	<-runChan
+	assert.Equal(t, duration, 2*time.Second)
+
+	stubTime.Incr(duration)
+
+	duration = <-msgChan
 	assert.Equal(t, int32(2), atomic.LoadInt32(&scheduled.calledIteratorCount))
 
 	se.Close()
