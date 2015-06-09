@@ -15,8 +15,6 @@ type ScheduledExecutor struct {
 	TimeKeeper   timekeeper.TimeKeeper
 	closeChan    chan struct{}
 	wg           sync.WaitGroup
-	startedCount uint32
-	runCount     uint32
 }
 
 //NewScheduledExecutor returns a new ScheduledExecutor that will file
@@ -33,10 +31,22 @@ func (se *ScheduledExecutor) SetScheduleRate(scheduleRate time.Duration) {
 	atomic.StoreInt64(&se.scheduleRate, int64(scheduleRate))
 }
 
-// Start the Scheduled
+// Start starts the execution of a func on the schedule of the ScheduledExecutor. This method blocks until
+// the ScheduledExecutor's Close method is called or iterationFunc returns an error
 func (se *ScheduledExecutor) Start(iterationFunc func() error) error {
-	timer := se.TimeKeeper.NewTimer(time.Duration(atomic.LoadInt64(&se.scheduleRate)))
-	atomic.AddUint32(&se.startedCount, 1)
+	return se.StartWithMsgChan(iterationFunc, nil)
+}
+
+// StartWithMsgChan starts the execution of a func on the schedule of the ScheduledExecutor. This method blocks until
+// the ScheduledExecutor's Close method is called or iterationFunc returns an error. msgChan receives the duration of
+// how long the ScheduledExecutor will sleep before the start of every iteration.
+func (se *ScheduledExecutor) StartWithMsgChan(iterationFunc func() error, msgChan chan time.Duration) error {
+	sleepDuration := time.Duration(atomic.LoadInt64(&se.scheduleRate))
+	timer := se.TimeKeeper.NewTimer(sleepDuration)
+	if msgChan != nil {
+		msgChan <- sleepDuration
+	}
+
 	se.wg.Add(1)
 	defer se.wg.Done()
 	for {
@@ -45,8 +55,11 @@ func (se *ScheduledExecutor) Start(iterationFunc func() error) error {
 			if err := iterationFunc(); err != nil {
 				return err
 			}
-			timer = se.TimeKeeper.NewTimer(time.Duration(atomic.LoadInt64(&se.scheduleRate)))
-			atomic.AddUint32(&se.runCount, 1)
+			sleepDuration = time.Duration(atomic.LoadInt64(&se.scheduleRate))
+			timer = se.TimeKeeper.NewTimer(sleepDuration)
+			if msgChan != nil {
+				msgChan <- sleepDuration
+			}
 		case <-se.closeChan:
 			timer.Stop()
 			return nil
