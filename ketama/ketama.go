@@ -32,7 +32,8 @@ type continuumPoint struct {
 
 // Continuum stores the ketama hashring and allows users to hash bytes into the ring
 type Continuum struct {
-	ring points
+	ring    points
+	buckets []Bucket
 }
 
 type points []continuumPoint
@@ -46,6 +47,11 @@ func New(buckets []Bucket) *Continuum {
 	var ret Continuum
 	ret.Reset(buckets)
 	return &ret
+}
+
+// Buckets returns the buckets last set in the continuum
+func (c *Continuum) Buckets() []Bucket {
+	return c.buckets
 }
 
 // Reset the Continuum to use the given buckets in the hashring
@@ -88,6 +94,7 @@ func (c *Continuum) Reset(buckets []Bucket) {
 	sort.Sort(ring)
 
 	c.ring = ring
+	c.buckets = buckets
 }
 
 // Hash an array of bytes into a location in the ring

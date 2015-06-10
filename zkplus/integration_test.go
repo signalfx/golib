@@ -36,6 +36,8 @@ func onDemandCloseDialer(network, address string, timeout time.Duration) (net.Co
 	return n, nil
 }
 
+var _ zk.Dialer = onDemandCloseDialer
+
 func randomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -71,6 +73,6 @@ func TestZkPlusIT(t *testing.T) {
 	fmt.Printf("Closed\n")
 	b, _, err = zkPlusChild.Get("/" + randomString)
 	fmt.Printf("Closing size=%d\n", len(conns))
-	assert.NoError(t, err)
-	assert.Equal(t, "hello", string(b))
+	assert.Error(t, err)
+	assert.Equal(t, "", string(b))
 }

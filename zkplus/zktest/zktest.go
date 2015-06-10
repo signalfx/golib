@@ -180,6 +180,16 @@ func (z *MemoryZkServer) Connect() (*ZkConn, <-chan zk.Event, error) {
 	z.childrenConnectionsLock.Lock()
 	defer z.childrenConnectionsLock.Unlock()
 	z.childrenConnections[r] = struct{}{}
+	r.events <- zk.Event{
+		Type:   zk.EventSession,
+		State:  zk.StateConnecting,
+		Server: "localhost",
+	}
+	r.events <- zk.Event{
+		Type:   zk.EventSession,
+		State:  zk.StateHasSession,
+		Server: "localhost",
+	}
 	return r, r.events, nil
 }
 
@@ -206,10 +216,12 @@ func (z *ZkConn) offerEvent(e zk.Event) {
 	w, exists := z.pathWatch[e.Path]
 	logrus.WithField("e", e).WithField("exists", exists).Info("Event on path")
 	if exists {
+		logrus.WithField("e", e).WithField("exists", exists).Info("Firing event!")
 		delete(z.pathWatch, e.Path)
 		go func() {
 			select {
 			case w <- e:
+				logrus.WithField("e", e).WithField("exists", exists).Info("event sent!")
 			case <-time.After(z.chanTimeout):
 			}
 			close(w)
@@ -218,6 +230,7 @@ func (z *ZkConn) offerEvent(e zk.Event) {
 		go func() {
 			select {
 			case z.events <- e:
+				logrus.WithField("e", e).WithField("exists", exists).Info("event sent!")
 			case <-time.After(z.chanTimeout):
 			}
 		}()

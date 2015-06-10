@@ -9,7 +9,11 @@ import (
 
 	"fmt"
 
+	"sync/atomic"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/nettest"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,27 +31,77 @@ func init() {
 }
 
 func TestZkConfIT(t *testing.T) {
-	zkPlusBuilder := zkplus.NewBuilder().DialZkConnector([]string{zkTestHost}, time.Second*30, nil).AppendPathPrefix(zkTestPrefix).AppendPathPrefix("config")
+	doTestWithDisconnects(t, false)
+}
 
-	fmt.Printf("Zk()\n")
+func TestZkConfWithKillIT(t *testing.T) {
+	doTestWithDisconnects(t, true)
+}
+
+var runIndex = int32(0)
+
+func stateMonitor(t *testing.T, zkPlusBuilder *zkplus.Builder, toToChange string, changeValues <-chan []byte) {
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkPlusBuilder.BuildDirect()
 	}))
 	assert.NoError(t, err)
 	defer z.Close()
-	fmt.Printf("z.Write\n")
-	assert.NoError(t, z.Write("TestZkConf", nil))
-	config := FromLoaders([]BackingLoader{BackingLoaderFunc(func() (Reader, error) {
-		return z, nil
-	})})
-	fmt.Printf("config.Str\n")
-	s := config.Str("TestZkConf", "__DEFAULT__")
-	assert.Equal(t, "__DEFAULT__", s.Get())
+	defer z.Write(toToChange, nil)
+	assert.NoError(t, z.Write(toToChange, nil))
+	for newValue := range changeValues {
+		assert.NoError(t, z.Write(toToChange, newValue))
+		log.Info("Write finished")
+	}
+}
 
-	fmt.Printf("z.Write\n")
-	err = z.Write("TestZkConf", []byte("Hello world6"))
-	fmt.Printf("Adding done\n")
-	assert.NoError(t, err)
-	time.Sleep(time.Second)
-	assert.Equal(t, "Hello world6", s.Get())
+func doTestWithDisconnects(t *testing.T, triggerConnKill bool) {
+	const defaultTestValue = "__DEFAULT__"
+	testZkConfVar := "TestZkConf" + fmt.Sprintf("%d", atomic.AddInt32(&runIndex, 1))
+
+	var dialer nettest.TrackingDialer
+	defer dialer.Close()
+	zkPlusBuilder := zkplus.NewBuilder().DialZkConnector([]string{zkTestHost}, time.Second*30, dialer.DialTimeout).AppendPathPrefix(zkTestPrefix).AppendPathPrefix("config")
+	changeValues := make(chan []byte)
+	defer close(changeValues)
+	go stateMonitor(t, zkPlusBuilder, testZkConfVar, changeValues)
+
+	changeValues <- nil
+	config := FromLoaders([]BackingLoader{BackingLoaderFunc(func() (Reader, error) {
+		return Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			return zkPlusBuilder.BuildDirect()
+		}))
+	})})
+	s := config.Str(testZkConfVar, defaultTestValue)
+	assert.Equal(t, defaultTestValue, s.Get())
+	gotValue := make(chan string, 10)
+
+	expectedOldValue := defaultTestValue
+	expectedNewValue := ""
+	s.Watch(func(str *Str, oldValue string) {
+		log.Infof("Watch triggered in code %s vs %s", oldValue, str.Get())
+		assert.Equal(t, expectedOldValue, oldValue)
+		assert.Equal(t, expectedNewValue, s.Get())
+		gotValue <- str.Get()
+	})
+
+	updateValues := func(shouldKill bool, newValue string) {
+		expectedNewValue = newValue
+		if triggerConnKill && shouldKill {
+			assert.NoError(t, dialer.Close())
+		}
+
+		log.Infof("Sending a value to write %s", newValue)
+		changeValues <- []byte(newValue)
+		log.Info("Waiting for response from watch")
+		assert.Equal(t, newValue, <-gotValue)
+		assert.Equal(t, newValue, s.Get())
+	}
+
+	updateValues(true, "v1")
+
+	expectedOldValue = "v1"
+	updateValues(true, "v2")
+
+	expectedOldValue = "v2"
+	updateValues(false, "v3")
 }

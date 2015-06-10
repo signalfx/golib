@@ -26,18 +26,23 @@ func TestZkConf(t *testing.T) {
 
 	assert.NoError(t, z.Write("TestZkConf", nil))
 
-	signalChan := make(chan struct{}, 4)
+	signalChan := make(chan string, 4)
+	log.Info("Setting watches")
 	z.(Dynamic).Watch("TestZkConf", backingCallbackFunction(func(S string) {
+		log.Info("Watch fired!")
 		assert.Equal(t, "TestZkConf", S)
-		signalChan <- struct{}{}
+		signalChan <- S
 	}))
 
 	// The write should work and I should get a single signal on the chan
 	log.Info("Doing write 1")
 	assert.NoError(t, z.Write("TestZkConf", []byte("newval")))
+	log.Info("Write done")
 	b, err = z.Get("TestZkConf")
+	log.Info("Get done")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("newval"), b)
+	log.Info("Blocking for values")
 	<-signalChan
 
 	// Should send another signal
@@ -71,6 +76,29 @@ func TestCloseNormal(t *testing.T) {
 
 	// Should not deadlock
 	<-z.(*zkConfig).shouldQuit
+}
+
+func TestErrorReregister(t *testing.T) {
+	zkServer := zktest.New()
+	zkServer.ChanTimeout = time.Millisecond
+
+	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		return zkServer.Connect()
+	}))
+	assert.NoError(t, err)
+	defer z.Close()
+	z.(Dynamic).Watch("hello", func(string) {
+
+	})
+	zkServer.ForcedErrorCheck(func(s string) error {
+		return errors.New("nope")
+	})
+	z.(*zkConfig).refreshRetryDelay = time.Millisecond
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		zkServer.ForcedErrorCheck(nil)
+	}()
+	z.(*zkConfig).refreshWatches()
 }
 
 func TestCloseQuitChan(t *testing.T) {

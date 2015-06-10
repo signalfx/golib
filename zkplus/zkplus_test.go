@@ -156,12 +156,19 @@ func create(t *testing.T, zkp *ZkPlus) {
 	assert.NoError(t, err)
 	assert.Equal(t, "testWatches", s)
 
-	select {
-	case ev := <-ch:
-		assert.Equal(t, "/testWatches", ev.Path)
-	case <-time.After(time.Second * 2):
-		t.Error("Time out waiting for event")
-		return
+outer:
+	for {
+		select {
+		case ev := <-ch:
+			if ev.State != zk.StateConnected {
+				continue
+			}
+			assert.Equal(t, "/testWatches", ev.Path)
+			break outer
+		case <-time.After(time.Second * 2):
+			t.Error("Time out waiting for event")
+			return
+		}
 	}
 
 	select {

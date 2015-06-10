@@ -33,7 +33,7 @@ func (s *strConf) Update(newValue []byte) error {
 	} else {
 		s.currentVal.Store(newValueStr)
 	}
-	if oldValue != newValueStr {
+	if oldValue != s.Get() {
 		for _, w := range s.watches {
 			w(&s.Str, oldValue)
 		}

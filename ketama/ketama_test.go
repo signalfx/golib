@@ -44,10 +44,11 @@ func TestKetama(t *testing.T) {
 		},
 	}
 	c := New(s)
+	assert.Equal(t, 2, len(c.Buckets()))
 	r := rand.New(rand.NewSource(0))
 	i0 := 0
 	i1 := 0
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 10000; i++ {
 		str := randStr(r)
 		buck := c.Hash([]byte(str))
 		if buck == s[0] {

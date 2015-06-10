@@ -1,10 +1,11 @@
 package distconf
 
 import (
-	"errors"
 	"fmt"
 
 	"sync"
+
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
@@ -14,6 +15,7 @@ import (
 type ZkConn interface {
 	Exists(path string) (bool, *zk.Stat, error)
 	Get(path string) ([]byte, *zk.Stat, error)
+	GetW(path string) ([]byte, *zk.Stat, <-chan zk.Event, error)
 	Create(path string, data []byte, flags int32, acl []zk.ACL) (string, error)
 	Set(path string, data []byte, version int32) (*zk.Stat, error)
 	ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error)
@@ -41,8 +43,9 @@ type zkConfig struct {
 	shouldQuit chan struct{}
 	servers    []string
 
-	callbackLock sync.Mutex
-	callbacks    map[string][]backingCallbackFunction
+	callbackLock      sync.Mutex
+	callbacks         map[string][]backingCallbackFunction
+	refreshRetryDelay time.Duration
 }
 
 func (back *zkConfig) configPath(key string) string {
@@ -51,7 +54,8 @@ func (back *zkConfig) configPath(key string) string {
 
 // Get returns the config value from zookeeper
 func (back *zkConfig) Get(key string) ([]byte, error) {
-	bytes, _, err := back.conn.Get(back.configPath(key))
+	pathToFetch := back.configPath(key)
+	bytes, _, _, err := back.conn.GetW(pathToFetch)
 	if err != nil {
 		if err == zk.ErrNoNode {
 			return nil, nil
@@ -104,8 +108,17 @@ func (back *zkConfig) Close() {
 	back.conn.Close()
 }
 
-var errInvalidPathPrefix = errors.New("invalid prefix path: Must being with /")
-var errInvalidPathSuffix = errors.New("invalid prefix path: Must not end with /")
+func (back *zkConfig) logInfoState(e zk.Event) bool {
+	if e.State == zk.StateDisconnected {
+		log.WithField("event", e).Info("Disconnected from zookeeper.  Will attempt to remake connection.")
+		return true
+	}
+	if e.State == zk.StateConnecting {
+		log.WithField("event", e).Info("Server is now attempting to reconnect.")
+		return true
+	}
+	return false
+}
 
 func (back *zkConfig) drainEventChan() {
 	defer log.Info("Quitting ZK distconf event loop")
@@ -114,9 +127,14 @@ func (back *zkConfig) drainEventChan() {
 		select {
 		case e := <-back.eventChan:
 			log.WithField("event", e).Info("Event seen")
-			if e.State == zk.StateDisconnected {
-				log.WithField("event", e).Info("Disconnected from zookeeper.  Unable to read more updates.")
-				return
+			back.logInfoState(e)
+			if e.State == zk.StateHasSession {
+				log.WithField("event", e).Info("Server now has a session.")
+				back.refreshWatches()
+				continue
+			}
+			if e.Path == "" {
+				continue
 			}
 			if len(e.Path) > 0 && e.Path[0] == '/' {
 				e.Path = e.Path[1:]
@@ -140,8 +158,26 @@ func (back *zkConfig) drainEventChan() {
 	}
 }
 
+func (back *zkConfig) refreshWatches() {
+	back.callbackLock.Lock()
+	defer back.callbackLock.Unlock()
+	for path, callbacks := range back.callbacks {
+		for _, c := range callbacks {
+			c(path)
+		}
+		for {
+			err := back.reregisterWatch(path)
+			if err == nil {
+				break
+			}
+			log.Warnf("Error reregistering watch: %s  Will sleep and try again", err)
+			time.Sleep(back.refreshRetryDelay)
+		}
+	}
+}
+
 func (back *zkConfig) reregisterWatch(path string) error {
-	// Reregister watch
+	log.Infof("Reregistering watch for %s", path)
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
 		log.WithField("err", err).Info("Unable to reregister watch")
@@ -153,8 +189,9 @@ func (back *zkConfig) reregisterWatch(path string) error {
 // Zk creates a zookeeper readable backing
 func Zk(zkConnector ZkConnector) (ReaderWriter, error) {
 	ret := &zkConfig{
-		shouldQuit: make(chan struct{}),
-		callbacks:  make(map[string][]backingCallbackFunction),
+		shouldQuit:        make(chan struct{}),
+		callbacks:         make(map[string][]backingCallbackFunction),
+		refreshRetryDelay: time.Millisecond * 500,
 	}
 	var err error
 	ret.conn, ret.eventChan, err = zkConnector.Connect()
