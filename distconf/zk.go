@@ -176,6 +176,12 @@ func (back *zkConfig) refreshWatches() {
 	}
 }
 
+func (back *zkConfig) setRefreshDelay(refreshDelay time.Duration) {
+	back.callbackLock.Lock()
+	defer back.callbackLock.Unlock()
+	back.refreshRetryDelay = refreshDelay
+}
+
 func (back *zkConfig) reregisterWatch(path string) error {
 	log.Infof("Reregistering watch for %s", path)
 	_, _, _, err := back.conn.ExistsW(path)

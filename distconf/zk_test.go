@@ -93,7 +93,7 @@ func TestErrorReregister(t *testing.T) {
 	zkServer.ForcedErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})
-	z.(*zkConfig).refreshRetryDelay = time.Millisecond
+	z.(*zkConfig).setRefreshDelay(time.Millisecond)
 	go func() {
 		time.Sleep(time.Millisecond * 10)
 		zkServer.ForcedErrorCheck(nil)
