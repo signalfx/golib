@@ -75,6 +75,7 @@ type ZkConn interface {
 	Create(path string, data []byte, flags int32, acl []zk.ACL) (string, error)
 	ChildrenW(path string) ([]string, *zk.Stat, <-chan zk.Event, error)
 	ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error)
+	Delete(path string, version int32) error
 	Close()
 }
 
@@ -99,7 +100,7 @@ type Disco struct {
 	eventChan            <-chan zk.Event
 	GUIDbytes            [16]byte
 	publishAddress       string
-	myAdvertisedServices map[string]struct{}
+	myAdvertisedServices map[string]ServiceInstance
 	shouldQuit           chan struct{}
 	eventLoopDone        chan struct{}
 
@@ -133,8 +134,9 @@ func NewRandSource(zkConnCreator ZkConnCreator, publishAddress string, r io.Read
 
 	d := &Disco{
 		zkConnCreator:        zkConnCreator,
-		myAdvertisedServices: make(map[string]struct{}),
+		myAdvertisedServices: make(map[string]ServiceInstance),
 		GUIDbytes:            GUID,
+		jsonMarshal:          json.Marshal,
 		publishAddress:       publishAddress,
 		shouldQuit:           make(chan struct{}),
 		eventLoopDone:        make(chan struct{}),
@@ -154,9 +156,7 @@ func isServiceModificationEvent(eventType zk.EventType) bool {
 }
 
 func (d *Disco) eventLoop() {
-	defer func() {
-		close(d.eventLoopDone)
-	}()
+	defer close(d.eventLoopDone)
 	for {
 		select {
 		case <-d.shouldQuit:
@@ -171,8 +171,24 @@ func (d *Disco) eventLoop() {
 
 var errServiceDoesNotExist = errors.New("could not find service to refresh")
 
-func (d *Disco) processZkEvent(e *zk.Event) {
+func (d *Disco) logInfoState(e *zk.Event) bool {
+	if e.State == zk.StateDisconnected {
+		log.WithField("event", e).Info("Disconnected from zookeeper.  Will attempt to remake connection.")
+		return true
+	}
+	if e.State == zk.StateConnecting {
+		log.WithField("event", e).Info("Server is now attempting to reconnect.")
+		return true
+	}
+	return false
+}
+
+func (d *Disco) processZkEvent(e *zk.Event) error {
 	log.WithField("event", e).Info("Disco event seen")
+	d.logInfoState(e)
+	if e.State == zk.StateHasSession {
+		return d.refreshAll()
+	}
 	serviceName := ""
 	if isServiceModificationEvent(e.Type) {
 		// serviceName is in () /(___)/___
@@ -198,12 +214,14 @@ func (d *Disco) processZkEvent(e *zk.Event) {
 			log.WithField("event", e).WithField("parent", serviceName).WithField("err", err).Warn("Unable to find parent")
 		} else {
 			log.WithField("service", service).Info("refreshing")
-			service.refresh(d.zkConn)
+			return service.refresh(d.zkConn)
 		}
 	}
+	return nil
 }
 
 // Close any open disco connections making this disco unreliable for future updates
+// TODO(jack): Close should also delete advertised services
 func (d *Disco) Close() {
 	close(d.shouldQuit)
 	<-d.eventLoopDone
@@ -233,36 +251,84 @@ func (d *Disco) myServiceData(serviceName string, payload interface{}, port uint
 	}
 }
 
-// Advertise yourself as hosting a service
-func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) error {
-	log.WithField("name", serviceName).Info("Advertising myself on a service")
-	service := d.myServiceData(serviceName, payload, port)
-	jsonMarshal := json.Marshal
-	if d.jsonMarshal != nil {
-		jsonMarshal = d.jsonMarshal
+func (d *Disco) refreshAll() error {
+	log.Info("Refreshing all zk services")
+	d.watchedMutex.Lock()
+	defer d.watchedMutex.Unlock()
+	for serviceName, serviceInstance := range d.myAdvertisedServices {
+		log.Infof("Refresh for service %s", serviceName)
+		d.advertiseInZK(false, serviceName, serviceInstance)
 	}
-	bytes, err := jsonMarshal(service)
+	for _, service := range d.watchedServices {
+		service.refresh(d.zkConn)
+	}
+	return nil
+}
+
+func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceData ServiceInstance) error {
+	// Need to create service root node
+	_, err := d.zkConn.Create(fmt.Sprintf("/%s", serviceName), []byte{}, 0, zk.WorldACL(zk.PermAll))
+	if err != nil && err != zk.ErrNodeExists {
+		return err
+	}
+	servicePath := d.servicePath(serviceName)
+	exists, stat, _, err := d.zkConn.ExistsW(servicePath)
 	if err != nil {
 		return err
 	}
-	d.myAdvertisedServices[serviceName] = struct{}{}
-	_, err = d.zkConn.Create(d.servicePath(serviceName), bytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
-	if err == zk.ErrNoNode {
-		// Need to create service root node
-		_, err = d.zkConn.Create(fmt.Sprintf("/%s", serviceName), []byte{}, 0, zk.WorldACL(zk.PermAll))
-		if err != nil {
+	if !deleteIfExists && exists {
+		log.Infof("Service already exists.  Will not delete it")
+		return nil
+	}
+	if exists {
+		log.Infof("Clearing out old service path %s", servicePath)
+		// clear out the old version
+		if err = d.zkConn.Delete(servicePath, stat.Version); err != nil {
 			return err
 		}
-		// Retry create now that we have parent node
-		_, err = d.zkConn.Create(d.servicePath(serviceName), bytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
 	}
 
-	d.manualEvents <- zk.Event{
-		Type: zk.EventNodeChildrenChanged,
-		Path: serviceName,
+	instanceBytes, err := d.jsonMarshal(instanceData)
+	if err != nil {
+		return err
 	}
 
+	_, err = d.zkConn.Create(servicePath, instanceBytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
 	return err
+}
+
+// ErrDuplicateAdvertise is returned by Advertise if users try to Advertise the same service name
+// twice
+var ErrDuplicateAdvertise = errors.New("service name already advertised")
+
+// Advertise yourself as hosting a service
+func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) (err error) {
+	// Note: Important to defer after we release the mutex since the chan send could be a blocking
+	//       operation
+	defer func() {
+		log.Infof("Advertise result is %+v", err)
+		if err == nil {
+			d.manualEvents <- zk.Event{
+				Type:  zk.EventNodeChildrenChanged,
+				State: zk.StateConnected,
+				Path:  serviceName,
+			}
+		}
+	}()
+	d.watchedMutex.Lock()
+	defer d.watchedMutex.Unlock()
+	log.WithField("name", serviceName).Info("Advertising myself on a service")
+	_, exists := d.myAdvertisedServices[serviceName]
+	if exists {
+		return ErrDuplicateAdvertise
+	}
+	service := d.myServiceData(serviceName, payload, port)
+	d.myAdvertisedServices[serviceName] = service
+	if err := d.advertiseInZK(true, serviceName, service); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Services advertising for serviceName

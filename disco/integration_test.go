@@ -9,6 +9,7 @@ import (
 
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/distconf"
+	"github.com/signalfx/golib/nettest"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,6 +26,30 @@ func init() {
 	if zkTestHost == "" || zkTestPrefix == "" || zkTestService == "" {
 		panic("Please set zk.test_host|zk.testprefix|zk.test_service in env or .integration_test_config.ini")
 	}
+}
+
+func TestDupAdvertiseIT(t *testing.T) {
+	z, ch, err := zk.Connect([]string{zkTestHost}, time.Second)
+	assert.NoError(t, err)
+	testDupAdvertise(t, z, ch)
+}
+
+func TestTestAdvertiseIT(t *testing.T) {
+	z, ch, err := zk.Connect([]string{zkTestHost}, time.Second)
+	assert.NoError(t, err)
+
+	z2, ch2, err := zk.Connect([]string{zkTestHost}, time.Second)
+
+	zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+		return zkp, zkp.EventChan(), err
+	})
+
+	zkConnFunc2 := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z2, Ch: ch2}).Build()
+		return zkp, zkp.EventChan(), err
+	})
+	testAdvertise(t, zkConnFunc, zkConnFunc2)
 }
 
 func TestDiscoConfIT(t *testing.T) {
@@ -77,4 +102,37 @@ func TestServicesIT(t *testing.T) {
 	assert.NoError(t, err)
 	zkPlusRoot2, err := zkplus.NewBuilder().PathPrefix("/test/TestServicesIT").DialZkConnector([]string{zkTestHost}, time.Second*30, nil).Build()
 	testServices(t, zkPlusRoot, zkPlusRoot.EventChan(), zkPlusRoot2)
+}
+
+func TestZkDisconnectIT(t *testing.T) {
+	log.Info("TestZkDisconnect")
+	defer log.Info("Done for TestZkDisconnect")
+	serviceName := "TestZkDisconnect"
+	var dialer nettest.TrackingDialer
+	defer dialer.Close()
+	zkPlusBuilder := BuilderConnector(zkplus.NewBuilder().DialZkConnector([]string{zkTestHost}, time.Second*30, dialer.DialTimeout).AppendPathPrefix(zkTestPrefix))
+	disco1, err := New(zkPlusBuilder, "addr1")
+	assert.NoError(t, err)
+
+	disco2, err := New(zkPlusBuilder, "addr2")
+	assert.NoError(t, err)
+
+	service, err := disco2.Services(serviceName)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(service.ServiceInstances()))
+	foundOneInstance := make(chan struct{}, 1024)
+	service.Watch(func() {
+		instances := service.ServiceInstances()
+		log.Infof("Found %d instances", len(instances))
+		if len(instances) == 1 {
+			foundOneInstance <- struct{}{}
+		}
+	})
+
+	assert.NoError(t, disco1.Advertise(serviceName, struct{}{}, 1234))
+	<-foundOneInstance
+
+	assert.NoError(t, dialer.Close())
+	time.Sleep(time.Second * 2)
+	assert.Equal(t, 1, len(service.ServiceInstances()))
 }

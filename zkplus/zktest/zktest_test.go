@@ -83,6 +83,9 @@ func TestForcedErrorCheck(t *testing.T) {
 
 		_, _, err = z.Exists("/bob")
 		assert.Error(t, err)
+
+		_, _, _, err = z.ExistsW("/bob")
+		assert.Error(t, err)
 	}
 
 	f(z1)

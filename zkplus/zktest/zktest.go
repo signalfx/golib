@@ -348,6 +348,9 @@ func fixPath(path string) string {
 func (z *ZkConn) ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error) {
 	z.methodCallLock.Lock()
 	defer z.methodCallLock.Unlock()
+	if err := z.check("exists"); err != nil {
+		return false, nil, nil, err
+	}
 	e, s, err := z.connectedTo.exists(path)
 	return e, s, z.patchWatch(path), err
 }
