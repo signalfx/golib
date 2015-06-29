@@ -1,4 +1,5 @@
 {
+  "ignoreDir": ["calc_test.go"],
   "checks": [
     {
       "macro": "goimport"
@@ -15,4 +16,3 @@
     }
   ]
 }
-
