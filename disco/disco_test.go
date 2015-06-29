@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing/iotest"
 
+	"bytes"
+
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
@@ -26,6 +28,52 @@ func TestBadRandomSource(t *testing.T) {
 	r.Read([]byte{})
 	_, err := NewRandSource(nil, "", r)
 	require.Error(t, err)
+}
+
+func TestAdvertiseInZKErrs(t *testing.T) {
+	s := zktest.New()
+	z, ch, _ := s.Connect()
+	b := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch})
+	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	d1, _ := New(BuilderConnector(b), "TestDupAdvertise")
+	require.Nil(t, d1.Advertise("service1", "", uint16(1234)))
+	e1 := errors.New("nope")
+
+	z.ForcedErrorCheck(func(s string) error {
+		if s == "delete" {
+			return e1
+		}
+		return nil
+	})
+	require.Equal(t, e1, d1.advertiseInZK(true, "service1", ServiceInstance{}))
+
+	z.ForcedErrorCheck(func(s string) error {
+		if s == "exists" {
+			return e1
+		}
+		return nil
+	})
+	require.Equal(t, e1, d1.advertiseInZK(false, "", ServiceInstance{}))
+}
+
+func TestDupAdvertise(t *testing.T) {
+	s := zktest.New()
+	z, ch, _ := s.Connect()
+	b := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch})
+	myID := "AAAAAAAAAAAAAAAA"
+	guidStr := "41414141414141414141414141414141"
+	d1, _ := NewRandSource(BuilderConnector(b), "TestDupAdvertise", bytes.NewBufferString(myID))
+	defer d1.Close()
+	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	z.Create("/test/t1", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	_, err := z.Create(fmt.Sprintf("/test/t1/%s", guidStr), []byte("nope"), 0, zk.WorldACL(zk.PermAll))
+	require.Nil(t, err)
+	require.Nil(t, d1.Advertise("t1", "", uint16(1234)))
+	data, _, err := z.Get(fmt.Sprintf("/test/t1/%s", guidStr))
+	require.Nil(t, err)
+	require.NotEqual(t, string(data), "nope")
+	close(d1.manualEvents)
+	require.Equal(t, ErrDuplicateAdvertise, d1.Advertise("t1", "", uint16(1234)))
 }
 
 func TestJsonMarshalBadAdvertise(t *testing.T) {
@@ -71,8 +119,10 @@ func TestBadRefresh(t *testing.T) {
 	badForce := errors.New("nope")
 	c := 0
 	z.ForcedErrorCheck(func(s string) error {
-		c++
-		if c > 5 && s == "childrenw" {
+		if s == "childrenw" {
+			c++
+		}
+		if c > 2 && s == "childrenw" {
 			return badForce
 		}
 		return nil
@@ -188,7 +238,10 @@ func TestAdvertise(t *testing.T) {
 		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z2, Ch: ch2}).Build()
 		return zkp, zkp.EventChan(), err
 	})
+	testAdvertise(t, zkConnFunc, zkConnFunc2)
+}
 
+func testAdvertise(t *testing.T, zkConnFunc ZkConnCreatorFunc, zkConnFunc2 ZkConnCreatorFunc) {
 	d1, err := New(zkConnFunc, "TestAdvertise1")
 
 	require.NoError(t, err)
