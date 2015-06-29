@@ -43,22 +43,19 @@ func TestZkConf(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("newval"), b)
 	log.Info("Blocking for values")
-	<-signalChan
+	res := <-signalChan
+	assert.Equal(t, "TestZkConf", res)
 
 	// Should send another signal
 	log.Info("Doing write 2")
 	assert.NoError(t, z.Write("TestZkConf", []byte("newval_v2")))
-	//	b, err = z.Get("TestZkConf")
-	//	assert.NoError(t, err)
-	//	assert.Equal(t, []byte("newval_v2"), b)
-	<-signalChan
+	res = <-signalChan
+	assert.Equal(t, "TestZkConf", res)
 
 	log.Info("Doing write 3")
 	assert.NoError(t, z.Write("TestZkConf", nil))
-	//	b, err = z.Get("TestZkConf")
-	//	assert.NoError(t, err)
-	//	assert.Nil(t, b)
-	<-signalChan
+	res = <-signalChan
+	assert.Equal(t, "TestZkConf", res)
 }
 
 func TestCloseNormal(t *testing.T) {
