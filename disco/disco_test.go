@@ -14,6 +14,7 @@ import (
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/require"
+	"time"
 )
 
 func TestUnableToConn(t *testing.T) {
@@ -147,6 +148,7 @@ func TestBadRefresh(t *testing.T) {
 	d1.manualEvents <- zk.Event{
 		Path: "/TestAdvertiseService",
 	}
+	time.Sleep(time.Millisecond)
 	require.Equal(t, badForce, s.refresh(z))
 
 	z.ForcedErrorCheck(nil)
