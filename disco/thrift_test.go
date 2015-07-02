@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"sync/atomic"
+
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/nettest"
@@ -147,4 +149,127 @@ func TestNoGoodInstances(t *testing.T) {
 	trans.service.services.Store(instances)
 
 	assert.Equal(t, ErrNoInstanceOpen, trans.NextConnection())
+}
+
+type calcHandler struct {
+	forcedSleep int64
+	server      *thrift.TSimpleServer
+	transport   *thrift.TServerSocket
+}
+
+var _ Calculator = &calcHandler{}
+
+func (c *calcHandler) Start(listenPort uint16, timeout time.Duration) {
+	processorFactory := thrift.NewTProcessorFactory(NewCalculatorProcessor(c))
+	var err error
+	c.transport, err = thrift.NewTServerSocketTimeout(fmt.Sprintf("localhost:%d", listenPort), timeout)
+	if err != nil {
+		panic("failure")
+	}
+	framedFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
+	binaryFactory := thrift.NewTBinaryProtocolFactoryDefault()
+	c.server = thrift.NewTSimpleServerFactory4(processorFactory, c.transport, framedFactory, binaryFactory)
+	err = c.server.Listen()
+	if err != nil {
+		panic("Unable to listen")
+	}
+	go c.server.AcceptLoop()
+}
+
+func (c *calcHandler) Add(num1 int32, num2 int32) (r int32, err error) {
+	sleepAmnt := atomic.LoadInt64(&c.forcedSleep)
+	if sleepAmnt > 0 {
+		time.Sleep(time.Millisecond * time.Duration(sleepAmnt))
+	}
+	return num1 + num2, nil
+}
+
+func TestThriftConnect(t *testing.T) {
+	h1 := calcHandler{}
+	h2 := calcHandler{}
+	port1 := nettest.FreeTCPPort()
+	h1.Start(port1, time.Second)
+
+	port2 := nettest.FreeTCPPort()
+	h2.Start(port2, time.Second)
+
+	s2 := zktest.New()
+	z, ch, _ := s2.Connect()
+	z2, ch2, _ := s2.Connect()
+	zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+		return zkp, zkp.EventChan(), err
+	})
+	zkConnFunc2 := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z2, Ch: ch2}).Build()
+		return zkp, zkp.EventChan(), err
+	})
+
+	d1, err := New(zkConnFunc, "localhost")
+	assert.NoError(t, err)
+
+	d2, err := New(zkConnFunc2, "localhost")
+	assert.NoError(t, err)
+
+	assert.NoError(t, d1.Advertise("testing", struct{}{}, port1))
+	assert.NoError(t, d2.Advertise("testing", struct{}{}, port2))
+
+	service, err := d1.Services("testing")
+	assert.NoError(t, err)
+
+	transport := NewThriftTransport(service, time.Millisecond*250)
+	transport.Open()
+
+	time.Sleep(time.Millisecond * 10)
+
+	thriftClient := NewCalculatorClientFactory(transport, thrift.NewTBinaryProtocolFactoryDefault())
+	num, err := thriftClient.Add(1, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, int32(3), num)
+
+	atomic.StoreInt64(&h1.forcedSleep, int64(time.Second))
+	atomic.StoreInt64(&h2.forcedSleep, int64(time.Second))
+
+	num, err = thriftClient.Add(3, 2)
+	assert.Error(t, err)
+
+	atomic.StoreInt64(&h1.forcedSleep, int64(0))
+	atomic.StoreInt64(&h2.forcedSleep, int64(0))
+
+	for i := 0; i < 2; i++ {
+		assert.NoError(t, transport.NextConnection())
+
+		num, err = thriftClient.Add(3, 2)
+		assert.NoError(t, err)
+		assert.Equal(t, int32(5), num)
+	}
+
+	assert.NoError(t, h1.server.Stop())
+	assert.NoError(t, h1.transport.Close())
+
+	for i := 0; i < 3; i++ {
+		assert.NoError(t, transport.NextConnection())
+
+		num, err = thriftClient.Add(3, 2)
+		assert.NoError(t, err)
+		assert.Equal(t, int32(5), num)
+	}
+
+	listenSocket, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port1))
+	assert.NoError(t, err)
+	defer listenSocket.Close()
+
+	found := false
+	for j := 0; j < 32; j++ {
+		assert.NoError(t, transport.NextConnection())
+		num, err = thriftClient.Add(3, 2)
+		if err != nil {
+			log.Infof("%s", err)
+			continue
+		}
+		found = true
+		assert.Equal(t, int32(5), num)
+		break
+	}
+	assert.True(t, found)
 }
