@@ -10,11 +10,12 @@ import (
 
 	"bytes"
 
+	"time"
+
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/require"
-	"time"
 )
 
 func TestUnableToConn(t *testing.T) {
