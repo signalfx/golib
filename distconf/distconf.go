@@ -32,8 +32,10 @@ func (n *noopCloser) Close() {
 func (c *Config) Int(key string, defaultVal int64) *Int {
 	s := &intConf{
 		defaultVal: defaultVal,
+		Int: Int{
+			currentVal: defaultVal,
+		},
 	}
-	s.currentVal = defaultVal
 	// Note: in race conditions 's' may not be the thing actually returned
 	ret, okCast := c.register(key, s).(*intConf)
 	if !okCast {
@@ -47,8 +49,10 @@ func (c *Config) Int(key string, defaultVal int64) *Int {
 func (c *Config) Float(key string, defaultVal float64) *Float {
 	s := &floatConf{
 		defaultVal: defaultVal,
+		Float: Float{
+			currentVal: math.Float64bits(defaultVal),
+		},
 	}
-	s.currentVal = math.Float64bits(defaultVal)
 	// Note: in race conditions 's' may not be the thing actually returned
 	ret, okCast := c.register(key, s).(*floatConf)
 	if !okCast {
@@ -73,12 +77,38 @@ func (c *Config) Str(key string, defaultVal string) *Str {
 	return &ret.Str
 }
 
+// Bool object that can be referenced to get boolean values from a backing config
+func (c *Config) Bool(key string, defaultVal bool) *Bool {
+	var defautlAsInt int32
+	if defaultVal {
+		defautlAsInt = 1
+	} else {
+		defautlAsInt = 0
+	}
+
+	s := &boolConf{
+		defaultVal: defautlAsInt,
+		Bool: Bool{
+			currentVal: defautlAsInt,
+		},
+	}
+	// Note: in race conditions 's' may not be the thing actually returned
+	ret, okCast := c.register(key, s).(*boolConf)
+	if !okCast {
+		log.WithField("key", key).Error("Registering key with multiple types!  FIX ME!!!!")
+		return nil
+	}
+	return &ret.Bool
+}
+
 // Duration returns a duration object that calls ParseDuration() on the given key
 func (c *Config) Duration(key string, defaultVal time.Duration) *Duration {
 	s := &durationConf{
 		defaultVal: defaultVal,
+		Duration: Duration{
+			currentVal: defaultVal.Nanoseconds(),
+		},
 	}
-	s.currentVal = defaultVal.Nanoseconds()
 	// Note: in race conditions 's' may not be the thing actually returned
 	ret, okCast := c.register(key, s).(*durationConf)
 	if !okCast {
