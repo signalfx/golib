@@ -173,6 +173,43 @@ func TestDistconfDuration(t *testing.T) {
 	assert.Equal(t, 2, totalWatches)
 }
 
+func TestDistconfBool(t *testing.T) {
+	memConf, conf := makeConf()
+	defer conf.Close()
+
+	//default
+
+	val := conf.Bool("testval", false)
+	assert.False(t, val.Get())
+	totalWatches := 0
+	val.Watch(BoolWatch(func(*Bool, bool) {
+		totalWatches++
+	}))
+
+	// update valid
+	memConf.Write("testval", []byte("true"))
+	assert.True(t, val.Get())
+
+	// update valid
+	memConf.Write("testval", []byte("FALSE"))
+	assert.False(t, val.Get())
+
+	// check already registered
+	conf.Str("testval_other", "moo")
+	var nilBool *Bool
+	assert.Equal(t, nilBool, conf.Bool("testval_other", true))
+
+	// update to invalid
+	memConf.Write("testval", []byte("__"))
+	assert.False(t, val.Get())
+
+	// update to nil
+	memConf.Write("testval", nil)
+	assert.False(t, val.Get())
+
+	assert.Equal(t, 2, totalWatches)
+}
+
 func TestDistconfErrorBackings(t *testing.T) {
 	conf := &Config{
 		registeredVars: make(map[string]configVariable),

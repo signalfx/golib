@@ -27,11 +27,10 @@ func (s *strConf) Update(newValue []byte) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	oldValue := s.currentVal.Load().(string)
-	newValueStr := string(newValue)
 	if newValue == nil {
 		s.currentVal.Store(s.defaultVal)
 	} else {
-		s.currentVal.Store(newValueStr)
+		s.currentVal.Store(string(newValue))
 	}
 	if oldValue != s.Get() {
 		for _, w := range s.watches {
