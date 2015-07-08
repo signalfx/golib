@@ -8,6 +8,8 @@ import (
 )
 
 func TestEvent(t *testing.T) {
-	dp := New("collectd", "eventType", map[string]string{}, time.Now())
+	dp := New("collectd", "eventType", "category", map[string]string{}, time.Now())
 	assert.Contains(t, dp.String(), "eventType")
+	assert.Contains(t, dp.String(), "category")
+	assert.Contains(t, dp.String(), "collectd")
 }
