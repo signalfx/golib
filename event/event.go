@@ -7,8 +7,6 @@ import (
 
 // An Event is a noteworthy occurrence of something
 type Event struct {
-	// Source of the event
-	Source string
 	// EventType encodes where the event came from and some of the meaning
 	EventType string
 	// Category of the event created
@@ -24,18 +22,17 @@ type Event struct {
 }
 
 func (e *Event) String() string {
-	return fmt.Sprintf("E[%s\t%s\t%s\t%s\t%s\t%s]", e.Source, e.EventType, e.Category, e.Dimensions, e.Meta, e.Timestamp.String())
+	return fmt.Sprintf("E[%s\t%s\t%s\t%s\t%s]", e.EventType, e.Category, e.Dimensions, e.Meta, e.Timestamp.String())
 }
 
 // New creates a new event with empty meta data
-func New(source string, eventType string, category string, dimensions map[string]string, timestamp time.Time) *Event {
-	return NewWithMeta(source, eventType, category, dimensions, map[string]interface{}{}, timestamp)
+func New(eventType string, category string, dimensions map[string]string, timestamp time.Time) *Event {
+	return NewWithMeta(eventType, category, dimensions, map[string]interface{}{}, timestamp)
 }
 
 // NewWithMeta creates a new event with passed metadata
-func NewWithMeta(source string, eventType string, category string, dimensions map[string]string, meta map[string]interface{}, timestamp time.Time) *Event {
+func NewWithMeta(eventType string, category string, dimensions map[string]string, meta map[string]interface{}, timestamp time.Time) *Event {
 	return &Event{
-		Source:     source,
 		EventType:  eventType,
 		Category:   category,
 		Dimensions: dimensions,
