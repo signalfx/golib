@@ -92,7 +92,8 @@ func TestThrift(t *testing.T) {
 
 var errNope = errors.New("nope")
 
-type errorTransport struct{}
+type errorTransport struct {
+}
 
 func (d *errorTransport) Flush() (err error) {
 	return errNope
@@ -114,9 +115,15 @@ func (d *errorTransport) Write(b []byte) (n int, err error) {
 	return 0, errNope
 }
 
+func (d *errorTransport) RemainingBytes() uint64 {
+	return 1234
+}
+
 func (d *errorTransport) Open() error {
 	return errNope
 }
+
+var _ thrift.TTransport = &errorTransport{}
 
 func TestCurrentTransportErrors(t *testing.T) {
 	trans := &ThriftTransport{
@@ -133,6 +140,13 @@ func TestCurrentTransportErrors(t *testing.T) {
 	trans.currentTransport = &errorTransport{}
 	_, err = trans.Write([]byte{})
 	assert.Error(t, err)
+
+	trans.currentTransport = &errorTransport{}
+	assert.Equal(t, uint64(1234), trans.RemainingBytes())
+
+	trans.currentTransport = nil
+	remaining := trans.RemainingBytes()
+	assert.True(t, remaining > 0)
 }
 
 func TestNoGoodInstances(t *testing.T) {
