@@ -128,3 +128,14 @@ func (d *ThriftTransport) Open() error {
 	}
 	return nil
 }
+
+// RemainingBytes of underline transport, or maxSize if not set
+func (d *ThriftTransport) RemainingBytes() uint64 {
+	if d.currentTransport == nil {
+		// Looking at the thrift code, I think this is the right thing to do.  This public interface
+		// and function is not documented by thrift.
+		const maxSize = ^uint64(0)
+		return maxSize // the thruth is, we just don't know unless framed is used
+	}
+	return d.currentTransport.RemainingBytes()
+}
