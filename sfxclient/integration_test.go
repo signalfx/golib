@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/signalfx/golib/distconf"
-	"github.com/signalfx/metricproxy/Godeps/_workspace/src/golang.org/x/net/context"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 )
 
 var testEndpoint string
