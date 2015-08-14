@@ -9,16 +9,20 @@ import (
 	"testing"
 	"time"
 
+	"bytes"
+
 	"github.com/boltdb/bolt"
 	"github.com/stretchr/testify/require"
 )
 
 type testSetup struct {
-	filename string
-	cdb      *CycleDB
-	cycleLen int
-	t        *testing.T
-	readOnly bool
+	filename    string
+	cdb         *CycleDB
+	cycleLen    int
+	log         bytes.Buffer
+	t           *testing.T
+	asyncErrors chan error
+	readOnly    bool
 }
 
 func (t *testSetup) Errorf(format string, args ...interface{}) {
@@ -33,6 +37,8 @@ func (t *testSetup) FailNow() {
 }
 
 func (t *testSetup) Close() error {
+	require.NoError(t, t.cdb.Close())
+	require.NoError(t, t.cdb.db.Close())
 	require.NoError(t, os.Remove(t.filename))
 	return nil
 }
@@ -43,9 +49,10 @@ func setupCdb(t *testing.T, cycleLen int) testSetup {
 	require.NoError(t, f.Close())
 	require.NoError(t, os.Remove(f.Name()))
 	ret := testSetup{
-		filename: f.Name(),
-		cycleLen: cycleLen,
-		t:        t,
+		filename:    f.Name(),
+		cycleLen:    cycleLen,
+		t:           t,
+		asyncErrors: make(chan error),
 	}
 	ret.canOpen()
 	return ret
@@ -58,7 +65,7 @@ func (t *testSetup) canOpen() {
 	})
 	require.NoError(t, err)
 
-	t.cdb, err = Init(db, t.cycleLen)
+	t.cdb, err = New(db, CycleLen(t.cycleLen), ReadMovementBacklog(10), AsyncErrors(t.asyncErrors))
 	require.NoError(t, err)
 	require.NoError(t, t.cdb.VerifyCompressed())
 }
@@ -161,14 +168,14 @@ func TestErrNoLastBucket(t *testing.T) {
 		b.Put([]byte("hello"), []byte("invalid_setup"))
 		return err
 	}))
-	require.Equal(t, errNoLastBucket, testRun.cdb.moveRecentReads(nil, nil))
+	require.Equal(t, errNoLastBucket, testRun.cdb.moveRecentReads(nil))
 	require.Equal(t, errNoLastBucket, testRun.cdb.Write([]KvPair{}))
 
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(testRun.cdb.bucketTimesIn)
 		return b.Delete([]byte("hello"))
 	}))
-	require.Equal(t, errNoLastBucket, testRun.cdb.moveRecentReads(nil, nil))
+	require.Equal(t, errNoLastBucket, testRun.cdb.moveRecentReads(nil))
 	require.Equal(t, errNoLastBucket, testRun.cdb.Write([]KvPair{}))
 }
 
@@ -189,20 +196,23 @@ func TestBadCleanup(t *testing.T) {
 	testRun.canWrite("hello", "world")
 	testRun.canCycle()
 	e1 := errors.New("nope")
-	cleanupBuckets = func(oldBucketCursor *bolt.Cursor, lastBucket *bolt.Bucket, readLoc readToLocation) error {
-		return e1
+	cleanupBuckets = func(oldBucketCursor *bolt.Cursor, lastBucket *bolt.Bucket, readLoc readToLocation) (bool, error) {
+		return false, e1
 	}
 	defer func() {
 		cleanupBuckets = cleanupBucketsFunc
 	}()
 	_, err := testRun.cdb.Read([][]byte{[]byte("hello")})
-	require.Equal(t, e1, err)
+	require.Nil(t, err)
+	require.Equal(t, e1, <-testRun.asyncErrors)
+	require.Equal(t, testRun.cdb.Stats().TotalErrorsDuringRecopy, int64(1))
 
 	err = testRun.cdb.db.View(func(tx *bolt.Tx) error {
 		var bucketName [8]byte
 		binary.BigEndian.PutUint64(bucketName[:], 0)
 		cur := tx.Bucket(testRun.cdb.bucketTimesIn).Bucket(bucketName[:]).Cursor()
-		return cleanupBucketsFunc(cur, nil, readToLocation{key: []byte("hello")})
+		_, e := cleanupBucketsFunc(cur, nil, readToLocation{key: []byte("hello")})
+		return e
 	})
 	require.Equal(t, bolt.ErrTxNotWritable, err)
 }
@@ -235,7 +245,7 @@ func TestErrUnableToFindRootBucket(t *testing.T) {
 	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.VerifyBuckets())
 	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.VerifyCompressed())
 	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.CycleNodes())
-	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.moveRecentReads(nil, nil))
+	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.moveRecentReads(nil))
 
 	_, err := testRun.cdb.Read([][]byte{[]byte("hello")})
 	require.Equal(t, errUnableToFindRootBucket, err)
@@ -252,14 +262,14 @@ func TestDatabaseInit(t *testing.T) {
 	defer testRun.Close()
 	testRun.canClose()
 	testRun.canOpen()
-	testRun.cdb.bucketTimesIn = []byte{}
-	require.Error(t, testRun.cdb.init())
+	_, err := New(testRun.cdb.db, BucketTimesIn([]byte{}))
+	require.Error(t, err)
 }
 
 func TestCycleNodes(t *testing.T) {
 	testRun := setupCdb(t, 5)
 	defer testRun.Close()
-	testRun.cdb.minNumBuckets = 0
+	testRun.cdb.minNumOldBuckets = 0
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(testRun.cdb.bucketTimesIn).Put([]byte("hi"), []byte("world"))
 	}))
@@ -277,8 +287,13 @@ func TestDatabaseCycle(t *testing.T) {
 	testRun.isCompressed()
 	testRun.equals("hello", "world")
 
+	startingMoveCount := testRun.cdb.Stats().TotalItemsRecopied
 	testRun.canCycle()
 	testRun.equals("hello", "world")
+	// Give "hello" time to copy to the last bucket
+	for startingMoveCount == testRun.cdb.Stats().TotalItemsRecopied {
+		runtime.Gosched()
+	}
 
 	for i := 0; i < testRun.cycleLen; i++ {
 		testRun.canCycle()
@@ -315,4 +330,37 @@ func TestReadDelete(t *testing.T) {
 	testRun.canCycle()
 	testRun.canDelete("hello", true)
 	testRun.isEmpty("hello")
+}
+
+func TestBadInit(t *testing.T) {
+	expected := errors.New("nope")
+	_, err := New(nil, func(*CycleDB) error { return expected })
+	require.Equal(t, expected, err)
+}
+
+func TestDrainAllMovements(t *testing.T) {
+	{
+		readMovements := make(chan readToLocation)
+		maxBatchSize := 10
+		close(readMovements)
+		n := drainAllMovements(readMovements, maxBatchSize)
+		require.Nil(t, n)
+	}
+	{
+		readMovements := make(chan readToLocation, 3)
+		maxBatchSize := 10
+		readMovements <- readToLocation{bucket: 101}
+		close(readMovements)
+		n := drainAllMovements(readMovements, maxBatchSize)
+		require.Equal(t, []readToLocation{{bucket: 101}}, n)
+	}
+	{
+		readMovements := make(chan readToLocation, 3)
+		maxBatchSize := 2
+		readMovements <- readToLocation{bucket: 101}
+		readMovements <- readToLocation{bucket: 102}
+		close(readMovements)
+		n := drainAllMovements(readMovements, maxBatchSize)
+		require.Equal(t, []readToLocation{{bucket: 101}, {bucket: 102}}, n)
+	}
 }
