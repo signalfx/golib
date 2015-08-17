@@ -36,11 +36,15 @@ type CycleDB struct {
 	wg sync.WaitGroup
 	// stats records useful operation information for reporting back out by the user
 	stats Stats
+
+	// Stub functions used for testing
+	cursorDelete func(*bolt.Cursor) error
 }
 
 // Stats are exported by CycleDB to let users inspect its behavior over time
 type Stats struct {
 	TotalItemsRecopied            int64
+	TotalItemsAsyncPut            int64
 	RecopyTransactionCount        int64
 	TotalItemsDeletedDuringRecopy int64
 	TotalReadCount                int64
@@ -54,6 +58,7 @@ type Stats struct {
 func (s *Stats) atomicClone() Stats {
 	return Stats{
 		TotalItemsRecopied:            atomic.LoadInt64(&s.TotalItemsRecopied),
+		TotalItemsAsyncPut:            atomic.LoadInt64(&s.TotalItemsAsyncPut),
 		RecopyTransactionCount:        atomic.LoadInt64(&s.RecopyTransactionCount),
 		TotalItemsDeletedDuringRecopy: atomic.LoadInt64(&s.TotalItemsDeletedDuringRecopy),
 		TotalReadCount:                atomic.LoadInt64(&s.TotalReadCount),
@@ -123,6 +128,9 @@ func New(db *bolt.DB, optionalParameters ...DBConfiguration) (*CycleDB, error) {
 		minNumOldBuckets:    2,
 		maxBatchSize:        1000,
 		readMovementBacklog: 10000,
+		cursorDelete: func(c *bolt.Cursor) error {
+			return c.Delete()
+		},
 	}
 	for _, config := range optionalParameters {
 		if err := config(ret); err != nil {
@@ -199,10 +207,12 @@ func (c *CycleDB) init() error {
 		if err != nil {
 			return err
 		}
-		// If there is no bucket at all, make a first bucket at key=[0,0,0,0, 0,0,0,0]
+		// If there is no bucket at all, make a first bucket at key=[0,0,0,0, 0,0,0,1]
+		// Because we special case bucket zero, start at 1 not zero.
 		if k, _ := bucket.Cursor().First(); k == nil {
 			var b [8]byte
-			_, err := bucket.CreateBucket(b[:])
+
+			_, err := bucket.CreateBucket(nextKey(b[:]))
 			return err
 		}
 		return nil
@@ -450,43 +460,46 @@ func (c *CycleDB) moveRecentReads(readLocations []readToLocation) error {
 
 		recopyCount := int64(0)
 		deletedCount := int64(0)
+		asyncPutCount := int64(0)
+
 		for bucketID, readLocs := range bucketIDToReadLocations {
-			var bucketName [8]byte
-			binary.BigEndian.PutUint64(bucketName[:], bucketID)
-			oldBucket := bucket.Bucket(bucketName[:])
-			if oldBucket != nil {
-				oldBucketCursor := oldBucket.Cursor()
-				for _, rs := range readLocs {
-					recopyCount++
-					var wasDeleted bool
-					var err error
-					if wasDeleted, err = cleanupBuckets(oldBucketCursor, lastBucket, rs); err != nil {
-						return err
-					}
-					if wasDeleted {
-						deletedCount++
-					}
+			if bucketID != 0 {
+				if err := deleteFromOldBucket(bucketID, readLocs, bucket, c.cursorDelete, &recopyCount, &deletedCount); err != nil {
+					return err
+				}
+			}
+			for _, rs := range readLocs {
+				asyncPutCount++
+				if err := lastBucket.Put(rs.key, rs.value); err != nil {
+					return err
 				}
 			}
 		}
 		atomic.AddInt64(&c.stats.TotalItemsRecopied, recopyCount)
+		atomic.AddInt64(&c.stats.TotalItemsAsyncPut, asyncPutCount)
 		atomic.AddInt64(&c.stats.TotalItemsDeletedDuringRecopy, deletedCount)
 		return nil
 	})
 }
 
-var cleanupBuckets = cleanupBucketsFunc
-
-func cleanupBucketsFunc(oldBucketCursor *bolt.Cursor, lastBucket *bolt.Bucket, readLoc readToLocation) (bool, error) {
-	k, _ := oldBucketCursor.Seek(readLoc.key)
-	wasDeleted := false
-	if bytes.Equal(k, readLoc.key) {
-		if err := oldBucketCursor.Delete(); err != nil {
-			return false, err
+func deleteFromOldBucket(bucketID uint64, readLocs []readToLocation, bucket *bolt.Bucket, cursorDelete func(*bolt.Cursor) error, recopyCount *int64, deletedCount *int64) error {
+	var bucketName [8]byte
+	binary.BigEndian.PutUint64(bucketName[:], bucketID)
+	oldBucket := bucket.Bucket(bucketName[:])
+	if oldBucket != nil {
+		oldBucketCursor := oldBucket.Cursor()
+		for _, rs := range readLocs {
+			k, _ := oldBucketCursor.Seek(rs.key)
+			*recopyCount++
+			if k != nil && bytes.Equal(k, rs.key) {
+				if err := cursorDelete(oldBucketCursor); err != nil {
+					return err
+				}
+				*deletedCount++
+			}
 		}
-		wasDeleted = true
 	}
-	return wasDeleted, lastBucket.Put(readLoc.key, readLoc.value)
+	return nil
 }
 
 // Read bytes from the first available bucket
@@ -512,6 +525,20 @@ func (c *CycleDB) Read(toread [][]byte) ([][]byte, error) {
 	return res, nil
 }
 
+// AsyncWrite will enqueue a write into the same chan that moves reads to the last bucket.  You
+// must not *ever* change the []byte given to towrite since you can't know when that []byte is
+// finished being used.  Note that if the readMovements queue is backed up this operation will block
+// until it has room.
+func (c *CycleDB) AsyncWrite(towrite []KvPair) {
+	for _, w := range towrite {
+		c.readMovements <- readToLocation{
+			key:   w.Key,
+			value: w.Value,
+		}
+	}
+}
+
+// Write a pair of key/value items into the cycle disk
 func (c *CycleDB) Write(towrite []KvPair) error {
 	atomic.AddInt64(&c.stats.TotalWriteCount, int64(len(towrite)))
 	return c.db.Update(func(tx *bolt.Tx) error {

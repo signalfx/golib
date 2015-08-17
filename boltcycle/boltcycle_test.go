@@ -16,13 +16,14 @@ import (
 )
 
 type testSetup struct {
-	filename    string
-	cdb         *CycleDB
-	cycleLen    int
-	log         bytes.Buffer
-	t           *testing.T
-	asyncErrors chan error
-	readOnly    bool
+	filename     string
+	cdb          *CycleDB
+	cycleLen     int
+	log          bytes.Buffer
+	t            *testing.T
+	failedDelete bool
+	asyncErrors  chan error
+	readOnly     bool
 }
 
 func (t *testSetup) Errorf(format string, args ...interface{}) {
@@ -65,7 +66,17 @@ func (t *testSetup) canOpen() {
 	})
 	require.NoError(t, err)
 
-	t.cdb, err = New(db, CycleLen(t.cycleLen), ReadMovementBacklog(10), AsyncErrors(t.asyncErrors))
+	args := []DBConfiguration{CycleLen(t.cycleLen), ReadMovementBacklog(10), AsyncErrors(t.asyncErrors)}
+	if t.failedDelete {
+		args = append(args, func(c *CycleDB) error {
+			c.cursorDelete = func(*bolt.Cursor) error {
+				return errors.New("nope")
+			}
+			return nil
+		})
+	}
+
+	t.cdb, err = New(db, args...)
 	require.NoError(t, err)
 	require.NoError(t, t.cdb.VerifyCompressed())
 }
@@ -190,31 +201,34 @@ func TestMoveRecentReads(t *testing.T) {
 	testRun.equals("hello", "world")
 }
 
-func TestBadCleanup(t *testing.T) {
+func TestAsyncWriteEventuallyHappens(t *testing.T) {
 	testRun := setupCdb(t, 5)
 	defer testRun.Close()
+	testRun.cdb.AsyncWrite([]KvPair{{Key: []byte("hello"), Value: []byte("world")}})
+	for testRun.cdb.Stats().TotalItemsAsyncPut == 0 {
+		runtime.Gosched()
+	}
+	// No assert needed.  Testing that write eventually happens
+}
+
+func TestAsyncWriteBadDelete(t *testing.T) {
+	testRun := setupCdb(t, 5)
+	defer testRun.Close()
+	testRun.canClose()
+	testRun.failedDelete = true
+	testRun.canOpen()
 	testRun.canWrite("hello", "world")
 	testRun.canCycle()
-	e1 := errors.New("nope")
-	cleanupBuckets = func(oldBucketCursor *bolt.Cursor, lastBucket *bolt.Bucket, readLoc readToLocation) (bool, error) {
-		return false, e1
-	}
-	defer func() {
-		cleanupBuckets = cleanupBucketsFunc
-	}()
-	_, err := testRun.cdb.Read([][]byte{[]byte("hello")})
-	require.Nil(t, err)
-	require.Equal(t, e1, <-testRun.asyncErrors)
-	require.Equal(t, testRun.cdb.Stats().TotalErrorsDuringRecopy, int64(1))
+	testRun.equals("hello", "world")
+	e := <-testRun.asyncErrors
+	require.Equal(t, "nope", e.Error())
+}
 
-	err = testRun.cdb.db.View(func(tx *bolt.Tx) error {
-		var bucketName [8]byte
-		binary.BigEndian.PutUint64(bucketName[:], 0)
-		cur := tx.Bucket(testRun.cdb.bucketTimesIn).Bucket(bucketName[:]).Cursor()
-		_, e := cleanupBucketsFunc(cur, nil, readToLocation{key: []byte("hello")})
-		return e
-	})
-	require.Equal(t, bolt.ErrTxNotWritable, err)
+func TestAsyncWriteBadValue(t *testing.T) {
+	testRun := setupCdb(t, 5)
+	defer testRun.Close()
+	testRun.cdb.AsyncWrite([]KvPair{{Key: []byte(""), Value: []byte("world")}})
+	require.Equal(t, bolt.ErrKeyRequired, <-testRun.asyncErrors)
 }
 
 func TestErrOnWrite(t *testing.T) {
@@ -231,7 +245,7 @@ func TestErrOnDelete(t *testing.T) {
 
 	err := testRun.cdb.db.View(func(tx *bolt.Tx) error {
 		var bucketName [8]byte
-		binary.BigEndian.PutUint64(bucketName[:], 0)
+		binary.BigEndian.PutUint64(bucketName[:], 1)
 		cur := tx.Bucket(testRun.cdb.bucketTimesIn).Bucket(bucketName[:]).Cursor()
 		return deleteKeys([][]byte{[]byte("hello")}, cur, []bool{false})
 	})
@@ -300,7 +314,15 @@ func TestDatabaseCycle(t *testing.T) {
 		testRun.isCompressed()
 	}
 
+	begin := testRun.cdb.Stats().TotalItemsRecopied
 	testRun.equals("hello", "world")
+	for testRun.cdb.Stats().TotalItemsRecopied == begin {
+		runtime.Gosched()
+	}
+
+	for testRun.cdb.Stats().SizeOfBacklogToCopy > 0 {
+		runtime.Gosched()
+	}
 
 	for i := 0; i < testRun.cycleLen+1; i++ {
 		testRun.canCycle()
