@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/boltdb/bolt"
+	"golang.org/x/net/context"
 )
 
 // CycleDB allows you to use a bolt.DB as a pseudo-LRU using a cycle of buckets
@@ -529,11 +530,15 @@ func (c *CycleDB) Read(toread [][]byte) ([][]byte, error) {
 // must not *ever* change the []byte given to towrite since you can't know when that []byte is
 // finished being used.  Note that if the readMovements queue is backed up this operation will block
 // until it has room.
-func (c *CycleDB) AsyncWrite(towrite []KvPair) {
+func (c *CycleDB) AsyncWrite(ctx context.Context, towrite []KvPair) {
 	for _, w := range towrite {
-		c.readMovements <- readToLocation{
+		select {
+		case <-ctx.Done():
+			return
+		case c.readMovements <- readToLocation{
 			key:   w.Key,
 			value: w.Value,
+		}:
 		}
 	}
 }

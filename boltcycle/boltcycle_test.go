@@ -12,7 +12,9 @@ import (
 	"bytes"
 
 	"github.com/boltdb/bolt"
+	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 )
 
 type testSetup struct {
@@ -204,7 +206,7 @@ func TestMoveRecentReads(t *testing.T) {
 func TestAsyncWriteEventuallyHappens(t *testing.T) {
 	testRun := setupCdb(t, 5)
 	defer testRun.Close()
-	testRun.cdb.AsyncWrite([]KvPair{{Key: []byte("hello"), Value: []byte("world")}})
+	testRun.cdb.AsyncWrite(context.Background(), []KvPair{{Key: []byte("hello"), Value: []byte("world")}})
 	for testRun.cdb.Stats().TotalItemsAsyncPut == 0 {
 		runtime.Gosched()
 	}
@@ -224,10 +226,23 @@ func TestAsyncWriteBadDelete(t *testing.T) {
 	require.Equal(t, "nope", e.Error())
 }
 
+func TestAsyncWrite(t *testing.T) {
+	Convey("when setup", t, func() {
+		c := CycleDB{}
+		Convey("and channel is full", func() {
+			c.readMovements = make(chan readToLocation)
+			Convey("Async write should timeout", func() {
+				ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+				c.AsyncWrite(ctx, []KvPair{{}})
+			})
+		})
+	})
+}
+
 func TestAsyncWriteBadValue(t *testing.T) {
 	testRun := setupCdb(t, 5)
 	defer testRun.Close()
-	testRun.cdb.AsyncWrite([]KvPair{{Key: []byte(""), Value: []byte("world")}})
+	testRun.cdb.AsyncWrite(context.Background(), []KvPair{{Key: []byte(""), Value: []byte("world")}})
 	require.Equal(t, bolt.ErrKeyRequired, <-testRun.asyncErrors)
 }
 
