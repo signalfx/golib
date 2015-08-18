@@ -1,16 +1,13 @@
 package disco
 
 import (
-	"errors"
-	"testing"
-
-	"fmt"
-	"strings"
-	"testing/iotest"
-
 	"bytes"
-
-	"time"
+	"errors"
+	"fmt"
+	"runtime"
+	"strings"
+	"testing"
+	"testing/iotest"
 
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/zkplus"
@@ -149,8 +146,13 @@ func TestBadRefresh(t *testing.T) {
 	d1.manualEvents <- zk.Event{
 		Path: "/TestAdvertiseService",
 	}
-	time.Sleep(time.Millisecond)
-	require.Equal(t, badForce, s.refresh(z))
+	for {
+		runtime.Gosched()
+		err := s.refresh(z)
+		if err == badForce {
+			break
+		}
+	}
 
 	z.ForcedErrorCheck(nil)
 	s2.ForcedErrorCheck(func(s string) error {
