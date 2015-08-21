@@ -191,7 +191,9 @@ func (c *Config) watch(key string, configVar configVariable) {
 }
 
 func (c *Config) onBackingChange(key string) {
+	c.varsMutex.Lock()
 	m, exists := c.registeredVars[key]
+	c.varsMutex.Unlock()
 	if !exists {
 		log.WithField("key", key).Warn("Backing callback on variable that doesn't exist")
 		return
