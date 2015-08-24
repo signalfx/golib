@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/zkplus/zktest"
+	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,6 +74,19 @@ func TestCloseNormal(t *testing.T) {
 
 	// Should not deadlock
 	<-z.(*zkConfig).shouldQuit
+}
+
+func TestCallbackMap(t *testing.T) {
+	Convey("when callback map is made", t, func() {
+		m := callbackMap{
+			callbacks: map[string][]backingCallbackFunction{},
+		}
+		Convey("Unknown key gets should return empty list", func() {
+			l := m.get("unknown")
+			So(l, ShouldNotBeNil)
+			So(len(l), ShouldEqual, 0)
+		})
+	})
 }
 
 func TestErrorReregister(t *testing.T) {

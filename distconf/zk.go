@@ -37,15 +37,71 @@ func (z ZkConnectorFunc) Connect() (ZkConn, <-chan zk.Event, error) {
 	return z()
 }
 
+type callbackMap struct {
+	mu        sync.Mutex
+	callbacks map[string][]backingCallbackFunction
+}
+
+func (c *callbackMap) add(key string, val backingCallbackFunction) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.callbacks[key] = append(c.callbacks[key], val)
+}
+
+func (c *callbackMap) len() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.callbacks)
+}
+
+func (c *callbackMap) get(key string) []backingCallbackFunction {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	r, exists := c.callbacks[key]
+	if exists {
+		return r
+	}
+	return []backingCallbackFunction{}
+}
+
+func (c *callbackMap) copy() map[string][]backingCallbackFunction {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	ret := make(map[string][]backingCallbackFunction, len(c.callbacks))
+	for k, v := range c.callbacks {
+		ret[k] = []backingCallbackFunction{}
+		for _, c := range v {
+			ret[k] = append(ret[k], c)
+		}
+	}
+	return ret
+}
+
+type atomicDuration struct {
+	mu                sync.Mutex
+	refreshRetryDelay time.Duration
+}
+
+func (a *atomicDuration) set(t time.Duration) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.refreshRetryDelay = t
+}
+
+func (a *atomicDuration) get() time.Duration {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.refreshRetryDelay
+}
+
 type zkConfig struct {
 	conn       ZkConn
 	eventChan  <-chan zk.Event
 	shouldQuit chan struct{}
 	servers    []string
 
-	callbackLock      sync.Mutex
-	callbacks         map[string][]backingCallbackFunction
-	refreshRetryDelay time.Duration
+	callbacks    callbackMap
+	refreshDelay atomicDuration
 }
 
 func (back *zkConfig) configPath(key string) string {
@@ -95,10 +151,7 @@ func (back *zkConfig) Watch(key string, callback backingCallbackFunction) error 
 	if err != nil {
 		return err
 	}
-	// use the connection's global event chan for callbacks
-	back.callbackLock.Lock()
-	defer back.callbackLock.Unlock()
-	back.callbacks[path] = append(back.callbacks[path], callback)
+	back.callbacks.add(path, callback)
 
 	return nil
 }
@@ -140,12 +193,10 @@ func (back *zkConfig) drainEventChan() {
 				e.Path = e.Path[1:]
 			}
 			{
-				back.callbackLock.Lock()
-				log.WithField("event", e).WithField("len()", len(back.callbacks)).Info("Change state")
-				for _, c := range back.callbacks[e.Path] {
+				log.WithField("event", e).WithField("len()", back.callbacks.len()).Info("Change state")
+				for _, c := range back.callbacks.get(e.Path) {
 					c(e.Path)
 				}
-				back.callbackLock.Unlock()
 			}
 			log.WithField("path", e.Path).Info("reregistering watch")
 
@@ -159,9 +210,7 @@ func (back *zkConfig) drainEventChan() {
 }
 
 func (back *zkConfig) refreshWatches() {
-	back.callbackLock.Lock()
-	defer back.callbackLock.Unlock()
-	for path, callbacks := range back.callbacks {
+	for path, callbacks := range back.callbacks.copy() {
 		for _, c := range callbacks {
 			c(path)
 		}
@@ -171,15 +220,13 @@ func (back *zkConfig) refreshWatches() {
 				break
 			}
 			log.Warnf("Error reregistering watch: %s  Will sleep and try again", err)
-			time.Sleep(back.refreshRetryDelay)
+			time.Sleep(back.refreshDelay.get())
 		}
 	}
 }
 
 func (back *zkConfig) setRefreshDelay(refreshDelay time.Duration) {
-	back.callbackLock.Lock()
-	defer back.callbackLock.Unlock()
-	back.refreshRetryDelay = refreshDelay
+	back.refreshDelay.set(refreshDelay)
 }
 
 func (back *zkConfig) reregisterWatch(path string) error {
@@ -195,9 +242,13 @@ func (back *zkConfig) reregisterWatch(path string) error {
 // Zk creates a zookeeper readable backing
 func Zk(zkConnector ZkConnector) (ReaderWriter, error) {
 	ret := &zkConfig{
-		shouldQuit:        make(chan struct{}),
-		callbacks:         make(map[string][]backingCallbackFunction),
-		refreshRetryDelay: time.Millisecond * 500,
+		shouldQuit: make(chan struct{}),
+		callbacks: callbackMap{
+			callbacks: make(map[string][]backingCallbackFunction),
+		},
+		refreshDelay: atomicDuration{
+			refreshRetryDelay: time.Millisecond * 500,
+		},
 	}
 	var err error
 	ret.conn, ret.eventChan, err = zkConnector.Connect()
