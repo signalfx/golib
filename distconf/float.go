@@ -52,6 +52,10 @@ func (c *floatConf) Update(newValue []byte) error {
 	return nil
 }
 
+func (c *floatConf) GenericGet() interface{} {
+	return c.Get()
+}
+
 // Watch for changes to this variable.
 func (c *Float) Watch(watch FloatWatch) {
 	c.mutex.Lock()

@@ -50,6 +50,10 @@ func (c *intConf) Update(newValue []byte) error {
 	return nil
 }
 
+func (c *intConf) GenericGet() interface{} {
+	return c.Get()
+}
+
 // Watch for changes to this variable.
 func (c *Int) Watch(watch IntWatch) {
 	c.mutex.Lock()

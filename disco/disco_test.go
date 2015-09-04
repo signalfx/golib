@@ -12,6 +12,7 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -293,6 +294,8 @@ func testAdvertise(t *testing.T, zkConnFunc ZkConnCreatorFunc, zkConnFunc2 ZkCon
 	<-seen
 
 	require.Equal(t, 2, len(service.ServiceInstances()))
+
+	assert.Contains(t, d1.Var().String(), "TestAdvertiseService")
 }
 
 func TestServices(t *testing.T) {

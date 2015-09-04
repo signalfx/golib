@@ -45,6 +45,10 @@ func (s *Str) Get() string {
 	return s.currentVal.Load().(string)
 }
 
+func (s *strConf) GenericGet() interface{} {
+	return s.Get()
+}
+
 // Watch adds a watch for changes to this structure
 func (s *Str) Watch(watch StrWatch) {
 	s.mutex.Lock()

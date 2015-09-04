@@ -11,6 +11,8 @@ import (
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/logherd"
 	// TODO: Figure out a way to not have this dependency
+	"expvar"
+
 	"github.com/signalfx/metricproxy/dp/dpsink"
 	"github.com/signalfx/metricproxy/protocol/signalfx"
 	"golang.org/x/net/context"
@@ -31,14 +33,15 @@ type ClientSink interface {
 
 // New creates a new SignalFx client
 func New(authToken string) *Reporter {
-	forwarder := signalfx.NewSignalfxJSONForwarer("https://ingest.signalfx.com/v2/datapoint", time.Second*10, authToken, 10, "", "", "")
+	forwarder := signalfx.NewSignalfxJSONForwarder("https://ingest.signalfx.com/v2/datapoint", time.Second*10, authToken, 10, "", "", "")
 	forwarder.UserAgent(fmt.Sprintf("SignalFxGo/0.2 (gover %s)", runtime.Version()))
 	return &Reporter{
-		defaultDimensions: make(map[string]string),
-		metrics:           make(map[*Timeseries]struct{}),
-		preCallbacks:      []func(){},
-		buckets:           make(map[*Bucket]struct{}),
-		forwarder:         forwarder,
+		defaultDimensions:  make(map[string]string),
+		previousDatapoints: []*datapoint.Datapoint{},
+		metrics:            make(map[*Timeseries]struct{}),
+		preCallbacks:       []func(){},
+		buckets:            make(map[*Bucket]struct{}),
+		forwarder:          forwarder,
 	}
 }
 
@@ -61,7 +64,8 @@ type Reporter struct {
 	preCallbacks             []func()
 	directDatapointCallbacks []DirectCallback
 
-	mu sync.Mutex
+	previousDatapoints []*datapoint.Datapoint
+	mu                 sync.Mutex
 }
 
 // Endpoint controls which URL metrics are reported to
@@ -196,6 +200,15 @@ func (s *Reporter) collectDatapoints(ctx context.Context) ([]*datapoint.Datapoin
 	return datapoints, nil
 }
 
+// Var returns an expvar variable that prints the values of the previously reported datapoints
+func (s *Reporter) Var() expvar.Var {
+	return expvar.Func(func() interface{} {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		return s.previousDatapoints
+	})
+}
+
 // Report any metrics saved in this reporter to SignalFx
 func (s *Reporter) Report(ctx context.Context) error {
 	datapoints, err := s.collectDatapoints(ctx)
@@ -207,5 +220,8 @@ func (s *Reporter) Report(ctx context.Context) error {
 	}
 	s.forwarderLock.Lock()
 	defer s.forwarderLock.Unlock()
+	s.mu.Lock()
+	s.previousDatapoints = datapoints
+	s.mu.Unlock()
 	return s.forwarder.AddDatapoints(ctx, datapoints)
 }
