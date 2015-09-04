@@ -31,7 +31,7 @@ func TestReporter(t *testing.T) {
 	x.AuthToken("abcdefg")
 
 	v := int64(0)
-	met := x.Cumulative("", &IntAddr{&v})
+	met := x.Cumulative("a_metric_name", &IntAddr{&v})
 	cb := 0
 	x.PrecollectCallback(func() {
 		cb++
@@ -45,6 +45,8 @@ func TestReporter(t *testing.T) {
 	assert.NotNil(t, met)
 	assert.Equal(t, 2, cb)
 	x.Forwarder(nil)
+	s := x.Var().String()
+	assert.Contains(t, s, "a_metric_name")
 }
 
 func TestBadContext(t *testing.T) {

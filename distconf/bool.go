@@ -54,6 +54,10 @@ func (s *Bool) Get() bool {
 	return atomic.LoadInt32(&s.currentVal) != 0
 }
 
+func (s *boolConf) GenericGet() interface{} {
+	return s.Get()
+}
+
 // Watch adds a watch for changes to this structure
 func (s *Bool) Watch(watch BoolWatch) {
 	s.mutex.Lock()

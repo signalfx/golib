@@ -35,6 +35,10 @@ type allErrorconfigVariable struct {
 func (a *allErrorconfigVariable) Update(newValue []byte) error {
 	return errNope
 }
+func (a *allErrorconfigVariable) GenericGet() interface{} {
+	return errNope
+}
+
 func makeConf() (ReaderWriter, *Config) {
 	memConf := Mem()
 	conf := &Config{
@@ -75,6 +79,8 @@ func TestDistconfInt(t *testing.T) {
 
 	// check callback
 	assert.Equal(t, 2, totalWatches)
+
+	assert.Contains(t, conf.Var().String(), "testval")
 }
 
 func TestDistconfFloat(t *testing.T) {
@@ -108,6 +114,7 @@ func TestDistconfFloat(t *testing.T) {
 
 	// check callback
 	assert.Equal(t, 2, totalWatches)
+	assert.Contains(t, conf.Var().String(), "testval")
 }
 
 func TestDistconfStr(t *testing.T) {
@@ -137,6 +144,7 @@ func TestDistconfStr(t *testing.T) {
 
 	// check callback
 	assert.Equal(t, 2, totalWatches)
+	assert.Contains(t, conf.Var().String(), "testval_other")
 
 }
 
@@ -171,6 +179,7 @@ func TestDistconfDuration(t *testing.T) {
 	assert.Equal(t, time.Second, val.Get())
 
 	assert.Equal(t, 2, totalWatches)
+	assert.Contains(t, conf.Var().String(), "testval")
 }
 
 func TestDistconfBool(t *testing.T) {
@@ -208,6 +217,7 @@ func TestDistconfBool(t *testing.T) {
 	assert.False(t, val.Get())
 
 	assert.Equal(t, 2, totalWatches)
+	assert.Contains(t, conf.Var().String(), "testval")
 }
 
 func TestDistconfErrorBackings(t *testing.T) {

@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"expvar"
+
 	"strings"
 	"sync"
 
@@ -329,6 +331,20 @@ func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) 
 	}
 
 	return nil
+}
+
+// Var returns an expvar variable that shows all the current disco services and the current
+// list of endpoints seen for each service
+func (d *Disco) Var() expvar.Var {
+	return expvar.Func(func() interface{} {
+		d.watchedMutex.Lock()
+		defer d.watchedMutex.Unlock()
+		ret := make(map[string][]ServiceInstance)
+		for serviceName, service := range d.watchedServices {
+			ret[serviceName] = service.ServiceInstances()
+		}
+		return ret
+	})
 }
 
 // Services advertising for serviceName

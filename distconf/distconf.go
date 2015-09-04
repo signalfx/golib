@@ -7,6 +7,8 @@ import (
 
 	"math"
 
+	"expvar"
+
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -20,12 +22,29 @@ type Config struct {
 
 type configVariable interface {
 	Update(newValue []byte) error
+	// Get but on an interface return.  Oh how I miss you templates.
+	GenericGet() interface{}
 }
 
 type noopCloser struct {
 }
 
 func (n *noopCloser) Close() {
+}
+
+// Var returns an expvar variable that shows all the current configuration variables and their
+// current value
+func (c *Config) Var() expvar.Var {
+	return expvar.Func(func() interface{} {
+		c.varsMutex.Lock()
+		defer c.varsMutex.Unlock()
+
+		m := make(map[string]interface{})
+		for name, v := range c.registeredVars {
+			m[name] = v.GenericGet()
+		}
+		return m
+	})
 }
 
 // Int object that can be referenced to get integer values from a backing config

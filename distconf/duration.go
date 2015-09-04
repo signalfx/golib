@@ -61,3 +61,7 @@ func (s *Duration) Watch(watch DurationWatch) {
 	defer s.mutex.Unlock()
 	s.watches = append(s.watches, watch)
 }
+
+func (s *durationConf) GenericGet() interface{} {
+	return s.Get()
+}

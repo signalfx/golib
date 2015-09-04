@@ -32,20 +32,20 @@ const (
 type Datapoint struct {
 	// What is being measured.  We think metric, rather than "unit" of metrics20, should be the
 	// required identity of a datapoint and the "unit" should be a property of the Value itself
-	Metric string
+	Metric string `json:"metric"`
 	// Dimensions of what is being measured.  They are intrinsic.  Contributes to the identity of
 	// the metric. If this changes, we get a new metric identifier
-	Dimensions map[string]string
+	Dimensions map[string]string `json:"dimensions"`
 	// Meta is information that's not particularly important to the datapoint, but may be important
 	// to the pipeline that uses the datapoint.  They are extrinsic.  It provides additional
 	// information about the metric. changes in this set doesn't change the metric identity
-	Meta map[interface{}]interface{}
+	Meta map[interface{}]interface{} `json:"-"`
 	// Value of the datapoint
-	Value Value
+	Value Value `json:"value"`
 	// The type of the datapoint series
-	MetricType MetricType
+	MetricType MetricType `json:"metric_type"`
 	// The unix time of the datapoint
-	Timestamp time.Time
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func (dp *Datapoint) String() string {
