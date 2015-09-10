@@ -1,6 +1,8 @@
 package datapoint
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -46,6 +48,40 @@ type Datapoint struct {
 	MetricType MetricType `json:"metric_type"`
 	// The unix time of the datapoint
 	Timestamp time.Time `json:"timestamp"`
+}
+
+type jsonDatapoint struct {
+	Metric     string            `json:"metric"`
+	Dimensions map[string]string `json:"dimensions"`
+	Value      interface{}       `json:"value"`
+	MetricType MetricType        `json:"metric_type"`
+	Timestamp  time.Time         `json:"timestamp"`
+}
+
+// UnmarshalJSON decodes JSON into a datapoint, creating the correct Value interface types for the
+// type of JSON value that was encoded
+func (dp *Datapoint) UnmarshalJSON(b []byte) error {
+	var m jsonDatapoint
+	dec := json.NewDecoder(bytes.NewBuffer(b))
+	dec.UseNumber()
+	if err := dec.Decode(&m); err != nil {
+		return err
+	}
+	switch t := m.Value.(type) {
+	case string:
+		dp.Value = NewStringValue(t)
+	case json.Number:
+		if num, e := t.Int64(); e == nil {
+			dp.Value = NewIntValue(num)
+		} else if num, e := t.Float64(); e == nil {
+			dp.Value = NewFloatValue(num)
+		}
+	}
+	dp.Metric = m.Metric
+	dp.Dimensions = m.Dimensions
+	dp.MetricType = m.MetricType
+	dp.Timestamp = m.Timestamp
+	return nil
 }
 
 func (dp *Datapoint) String() string {
