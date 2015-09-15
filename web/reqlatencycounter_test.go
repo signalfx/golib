@@ -33,6 +33,14 @@ func TestReqLatencyCounter(t *testing.T) {
 			So(stats, ShouldNotBeNil)
 			So(len(stats), ShouldEqual, 2)
 		})
+		Convey("having extra dimensions adds dimensions to metrics", func() {
+			stats := counter.Stats(map[string]string{"testDim": "testVal"})
+			So(stats, ShouldNotBeNil)
+			for _, stat := range stats {
+				So(stat.Dimensions, ShouldContainKey, "testDim")
+				So(stat.Dimensions["testDim"], ShouldEqual, "testVal")
+			}
+		})
 		Convey("slow increment the slow request count.", func() {
 			ctx = AddTime(ctx, starttime)
 			timeStub.Incr(fastRequestLimit + 1)
