@@ -38,7 +38,7 @@ func TestTestAdvertiseIT(t *testing.T) {
 	z, ch, err := zk.Connect([]string{zkTestHost}, time.Second)
 	assert.NoError(t, err)
 
-	z2, ch2, err := zk.Connect([]string{zkTestHost}, time.Second)
+	z2, ch2, _ := zk.Connect([]string{zkTestHost}, time.Second)
 
 	zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
@@ -100,7 +100,7 @@ func TestDiscoConfIT(t *testing.T) {
 func TestServicesIT(t *testing.T) {
 	zkPlusRoot, err := zkplus.NewBuilder().PathPrefix("/test/TestServicesIT").DialZkConnector([]string{zkTestHost}, time.Second*30, nil).Build()
 	assert.NoError(t, err)
-	zkPlusRoot2, err := zkplus.NewBuilder().PathPrefix("/test/TestServicesIT").DialZkConnector([]string{zkTestHost}, time.Second*30, nil).Build()
+	zkPlusRoot2, _ := zkplus.NewBuilder().PathPrefix("/test/TestServicesIT").DialZkConnector([]string{zkTestHost}, time.Second*30, nil).Build()
 	testServices(t, zkPlusRoot, zkPlusRoot.EventChan(), zkPlusRoot2)
 }
 

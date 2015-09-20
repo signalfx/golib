@@ -98,7 +98,6 @@ type zkConfig struct {
 	conn       ZkConn
 	eventChan  <-chan zk.Event
 	shouldQuit chan struct{}
-	servers    []string
 
 	callbacks    callbackMap
 	refreshDelay atomicDuration

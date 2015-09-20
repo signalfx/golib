@@ -12,6 +12,14 @@
     }, {
       "macro": "gocyclo"
     }, {
+      "macro": "varcheck"
+    }, {
+      "macro": "aligncheck"
+    }, {
+      "macro": "structcheck"
+    }, {
+      "macro": "ineffassign"
+    }, {
       "macro": "gocoverdir"
     }
   ]

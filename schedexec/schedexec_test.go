@@ -93,7 +93,7 @@ func TestScheduleExecutorUpdateScheduleRate(t *testing.T) {
 
 	stubTime.Incr(duration)
 
-	duration = <-msgChan
+	<-msgChan
 	assert.Equal(t, int32(2), atomic.LoadInt32(&scheduled.calledIteratorCount))
 
 	se.Close()
