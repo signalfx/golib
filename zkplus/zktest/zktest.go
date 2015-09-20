@@ -13,8 +13,6 @@ import (
 )
 
 type event struct {
-	path  string
-	event zk.Event
 }
 
 // ErrDeleteOnRoot is returned when EnsureDelete is called with a root path
