@@ -23,6 +23,14 @@ type ReqLatencyCounter struct {
 	timeKeeper               timekeeper.TimeKeeper
 }
 
+// NewReqLatencyCounter creates a new ReqLatencyCounter
+func NewReqLatencyCounter(fastRequestDurationLimit FastRequestLimitDuration) ReqLatencyCounter {
+	return ReqLatencyCounter{
+		fastRequestLimitDuration: fastRequestDurationLimit,
+		timeKeeper:               timekeeper.RealTime{},
+	}
+}
+
 // ModStats modifies the metric values for the ReqLatencyCounter.
 func (a *ReqLatencyCounter) ModStats(ctx context.Context) {
 	a.ModStatsTime(RequestTime(ctx))

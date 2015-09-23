@@ -10,23 +10,21 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type limitStub time.Duration
+type limitStubThing time.Duration
 
-func (l limitStub) Get() time.Duration {
-	return time.Duration(l)
+func (l *limitStubThing) Get() time.Duration {
+	return time.Duration(*l)
 }
 
 func TestReqLatencyCounter(t *testing.T) {
 	starttime := time.Date(1981, time.March, 19, 6, 0, 0, 0, time.UTC)
 	fastRequestLimit := 100 * time.Millisecond
-	limitStub := limitStub(fastRequestLimit)
+	limitStub := limitStubThing(fastRequestLimit)
 
 	Convey("When setup,", t, func() {
 		timeStub := timekeepertest.NewStubClock(starttime)
-		counter := ReqLatencyCounter{
-			fastRequestLimitDuration: limitStub,
-			timeKeeper:               timeStub,
-		}
+		counter := NewReqLatencyCounter(&limitStub)
+		counter.timeKeeper = timeStub
 		ctx := context.Background()
 		Convey("having no requests results in 2 stat metrics.", func() {
 			stats := counter.Stats(map[string]string{})
