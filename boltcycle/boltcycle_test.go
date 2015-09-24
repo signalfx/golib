@@ -18,14 +18,15 @@ import (
 )
 
 type testSetup struct {
-	filename     string
-	cdb          *CycleDB
-	cycleLen     int
-	log          bytes.Buffer
-	t            *testing.T
-	failedDelete bool
-	asyncErrors  chan error
-	readOnly     bool
+	filename             string
+	cdb                  *CycleDB
+	cycleLen             int
+	readMovementsBacklog int
+	log                  bytes.Buffer
+	t                    *testing.T
+	failedDelete         bool
+	asyncErrors          chan error
+	readOnly             bool
 }
 
 func (t *testSetup) Errorf(format string, args ...interface{}) {
@@ -52,10 +53,11 @@ func setupCdb(t *testing.T, cycleLen int) testSetup {
 	require.NoError(t, f.Close())
 	require.NoError(t, os.Remove(f.Name()))
 	ret := testSetup{
-		filename:    f.Name(),
-		cycleLen:    cycleLen,
-		t:           t,
-		asyncErrors: make(chan error),
+		filename:             f.Name(),
+		cycleLen:             cycleLen,
+		t:                    t,
+		readMovementsBacklog: 10,
+		asyncErrors:          make(chan error),
 	}
 	ret.canOpen()
 	return ret
@@ -68,7 +70,7 @@ func (t *testSetup) canOpen() {
 	})
 	require.NoError(t, err)
 
-	args := []DBConfiguration{CycleLen(t.cycleLen), ReadMovementBacklog(10), AsyncErrors(t.asyncErrors)}
+	args := []DBConfiguration{CycleLen(t.cycleLen), ReadMovementBacklog(t.readMovementsBacklog), AsyncErrors(t.asyncErrors)}
 	if t.failedDelete {
 		args = append(args, func(c *CycleDB) error {
 			c.cursorDelete = func(*bolt.Cursor) error {
@@ -224,6 +226,35 @@ func TestAsyncWriteBadDelete(t *testing.T) {
 	testRun.equals("hello", "world")
 	e := <-testRun.asyncErrors
 	require.Equal(t, "nope", e.Error())
+}
+
+func TestBoltCycleRead(t *testing.T) {
+	Convey("when setup to fail", t, func() {
+		testRun := setupCdb(t, 5)
+		testRun.Close()
+		testRun.readMovementsBacklog = 0
+		testRun.failedDelete = true
+		testRun.canOpen()
+		testRun.canWrite("hello", "world")
+		So(testRun.cdb.stats.TotalReadMovementsSkipped, ShouldEqual, 0)
+		testRun.canCycle()
+		Convey("and channel is full because error is blocking", func() {
+			testRun.equals("hello", "world")
+			Convey("future reads should not block", func() {
+				// This should not block
+				testRun.equals("hello", "world")
+				So(testRun.cdb.stats.TotalReadMovementsSkipped, ShouldBeGreaterThan, 0)
+			})
+		})
+		Reset(func() {
+			go func() {
+				<-testRun.asyncErrors
+			}()
+
+			testRun.Close()
+			close(testRun.asyncErrors)
+		})
+	})
 }
 
 func TestAsyncWrite(t *testing.T) {
