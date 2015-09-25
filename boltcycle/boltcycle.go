@@ -53,6 +53,8 @@ type Stats struct {
 	TotalDeleteCount              int64
 	TotalCycleCount               int64
 	TotalErrorsDuringRecopy       int64
+	TotalReadMovementsSkipped     int64
+	TotalReadMovementsAdded       int64
 	SizeOfBacklogToCopy           int
 }
 
@@ -67,6 +69,8 @@ func (s *Stats) atomicClone() Stats {
 		TotalDeleteCount:              atomic.LoadInt64(&s.TotalDeleteCount),
 		TotalCycleCount:               atomic.LoadInt64(&s.TotalCycleCount),
 		TotalErrorsDuringRecopy:       atomic.LoadInt64(&s.TotalErrorsDuringRecopy),
+		TotalReadMovementsSkipped:     atomic.LoadInt64(&s.TotalReadMovementsSkipped),
+		TotalReadMovementsAdded:       atomic.LoadInt64(&s.TotalReadMovementsAdded),
 	}
 }
 
@@ -503,7 +507,8 @@ func deleteFromOldBucket(bucketID uint64, readLocs []readToLocation, bucket *bol
 	return nil
 }
 
-// Read bytes from the first available bucket
+// Read bytes from the first available bucket.  Do not modify the returned bytes because
+// they are recopied to later cycle databases if needed.
 func (c *CycleDB) Read(toread [][]byte) ([][]byte, error) {
 	atomic.AddInt64(&c.stats.TotalReadCount, int64(len(toread)))
 	readLocations, err := c.indexToLocation(toread)
@@ -512,10 +517,23 @@ func (c *CycleDB) Read(toread [][]byte) ([][]byte, error) {
 	}
 
 	if !c.db.IsReadOnly() {
+		skips := int64(0)
+		adds := int64(0)
 		for _, readLocation := range readLocations {
 			if readLocation.needsCopy {
-				c.readMovements <- readLocation
+				select {
+				case c.readMovements <- readLocation:
+					adds++
+				default:
+					skips++
+				}
 			}
+		}
+		if skips != 0 {
+			atomic.AddInt64(&c.stats.TotalReadMovementsSkipped, skips)
+		}
+		if adds != 0 {
+			atomic.AddInt64(&c.stats.TotalReadMovementsAdded, adds)
 		}
 	}
 
