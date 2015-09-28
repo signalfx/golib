@@ -55,3 +55,32 @@ func TestDatapointInvalidJSONDecode(t *testing.T) {
 		So((&dpOut).UnmarshalJSON([]byte("INVALID_JSON")), ShouldNotBeNil)
 	})
 }
+
+func TestDatapointProperties(t *testing.T) {
+	Convey("Given a datapoint", t, func() {
+		dp := New("datapoint", map[string]string{}, NewIntValue(10), Gauge, time.Now())
+		Convey("GetProperties should return nil", func() {
+			So(dp.GetProperties(), ShouldBeNil)
+		})
+
+		Convey("When you add a key value", func() {
+			dp.SetProperty("foo", "bar")
+			Convey("GetProperties should return map with key value", func() {
+				So(dp.GetProperties(), ShouldResemble, map[string]string{"foo": "bar"})
+			})
+			Convey("and then remove it", func() {
+				dp.RemoveProperty("foo")
+				Convey("GetProperties should return nil", func() {
+					So(dp.GetProperties(), ShouldBeNil)
+				})
+			})
+		})
+
+		Convey("When You remove a missing key", func() {
+			dp.RemoveProperty("foo1")
+			Convey("GetProperties should return nil", func() {
+				So(dp.GetProperties(), ShouldBeNil)
+			})
+		})
+	})
+}
