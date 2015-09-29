@@ -88,6 +88,39 @@ func (dp *Datapoint) String() string {
 	return fmt.Sprintf("DP[%s\t%s\t%s\t%d\t%s]", dp.Metric, dp.Dimensions, dp.Value, dp.MetricType, dp.Timestamp.String())
 }
 
+type metadata int
+
+const (
+	stringProperties metadata = iota
+)
+
+//SetProperty sets a property to be used when the time series associated with the datapoint is created
+func (dp *Datapoint) SetProperty(key string, value string) {
+	if dp.Meta[stringProperties] == nil {
+		dp.Meta[stringProperties] = make(map[string]string, 1)
+	}
+	dp.GetProperties()[key] = value
+}
+
+//RemoveProperty removes a property from the map of properties to be used when the time series associated with the datapoint is created
+func (dp *Datapoint) RemoveProperty(key string) {
+	if dp.Meta[stringProperties] != nil {
+		delete(dp.GetProperties(), key)
+		if len(dp.GetProperties()) == 0 {
+			delete(dp.Meta, stringProperties)
+		}
+	}
+}
+
+//GetProperties gets the map of properties to set when creating the time series associated with the datapoint. nil if no properties are set.
+func (dp *Datapoint) GetProperties() map[string]string {
+	m, ok := dp.Meta[stringProperties].(map[string]string)
+	if !ok {
+		return nil
+	}
+	return m
+}
+
 // New creates a new datapoint with empty meta data
 func New(metric string, dimensions map[string]string, value Value, metricType MetricType, timestamp time.Time) *Datapoint {
 	return NewWithMeta(metric, dimensions, map[interface{}]interface{}{}, value, metricType, timestamp)
