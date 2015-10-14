@@ -3,7 +3,8 @@ language: go
 sudo: false
 
 go:
-  - 1.4
+# 1.4 isn't working b/c of the travis pull
+#  - 1.4
   - 1.5
   - tip
 
