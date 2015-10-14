@@ -81,6 +81,21 @@ func testDupAdvertise(t *testing.T, z zktest.ZkConnSupported, ch <-chan zk.Event
 	require.Equal(t, ErrDuplicateAdvertise, d1.Advertise("t1", "", uint16(1234)))
 }
 
+func TestNinjaMode(t *testing.T) {
+	s := zktest.New()
+	z, ch, _ := s.Connect()
+	b := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch})
+	d1, err := NewRandSource(BuilderConnector(b), "TestDupAdvertise", bytes.NewBufferString("AAAAAAAAAAAAAAAA"))
+	require.NoError(t, err)
+	d1.NinjaMode(true)
+	require.Nil(t, d1.Advertise("test", nil, uint16(1234)))
+
+	d2, _ := NewRandSource(BuilderConnector(b), "TestDupAdvertise2", bytes.NewBufferString("AAAAAAAAAAAAAAAA"))
+	serv, err := d2.Services("test")
+	require.NoError(t, err)
+	require.Equal(t, 0, len(serv.ServiceInstances()))
+}
+
 func TestJsonMarshalBadAdvertise(t *testing.T) {
 	s := zktest.New()
 	z, ch, _ := s.Connect()
