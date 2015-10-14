@@ -22,3 +22,13 @@ script:
 
 after_script:
   - cat coverage.out
+
+# http://stackoverflow.com/questions/16638573/auto-authorize-ssh-auth-requests-on-travis-ci
+# *  The authenticity of host 'git.apache.org (54.84.58.65)' can't be established.
+# *  ECDSA key fingerprint is 8c:59:e8:18:9b:7a:bb:99:f3:5b:1c:ca:d4:3f:12:d8.
+# *  Are you sure you want to continue connecting (yes/no)? 
+#
+before_script:
+  - echo -e "Host heroku.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+  - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+  - echo -e "Host git.apache.org\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
