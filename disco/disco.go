@@ -105,6 +105,7 @@ type Disco struct {
 	myAdvertisedServices map[string]ServiceInstance
 	shouldQuit           chan struct{}
 	eventLoopDone        chan struct{}
+	ninjaMode            bool
 
 	watchedMutex    sync.Mutex
 	watchedServices map[string]*Service
@@ -151,6 +152,13 @@ func NewRandSource(zkConnCreator ZkConnCreator, publishAddress string, r io.Read
 	}
 	go d.eventLoop()
 	return d, nil
+}
+
+// NinjaMode will have future Advertise() calls no-op.  This is useful when
+// connecting an application to a production or testing tier and not wanting to advertise yourself
+// for incomming connections,
+func (d *Disco) NinjaMode(ninjaMode bool) {
+	d.ninjaMode = ninjaMode
 }
 
 func isServiceModificationEvent(eventType zk.EventType) bool {
@@ -305,6 +313,10 @@ var ErrDuplicateAdvertise = errors.New("service name already advertised")
 
 // Advertise yourself as hosting a service
 func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) (err error) {
+	if d.ninjaMode {
+		log.Infof("Not advertising %s because disco is in ninja mode", serviceName)
+		return nil
+	}
 	// Note: Important to defer after we release the mutex since the chan send could be a blocking
 	//       operation
 	defer func() {
