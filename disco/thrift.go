@@ -26,8 +26,14 @@ var _ thrift.TTransport = &ThriftTransport{}
 
 // NewThriftTransport creates a new ThriftTransport.  The default transport factory is TFramed
 func NewThriftTransport(service *Service, timeout time.Duration) *ThriftTransport {
+	return NewThriftTransportWithMaxBufferSize(service, timeout, thrift.DEFAULT_MAX_LENGTH)
+}
+
+// NewThriftTransportWithMaxBufferSize creates a new ThriftTransport for TFramedTransport but sets
+// the maximum size for request frames.
+func NewThriftTransportWithMaxBufferSize(service *Service, timeout time.Duration, maxLength uint32) *ThriftTransport {
 	return &ThriftTransport{
-		WrappedFactory: thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory()),
+		WrappedFactory: thrift.NewTFramedTransportFactoryMaxLength(thrift.NewTTransportFactory(), maxLength),
 		service:        service,
 		randSource:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		Dialer: net.Dialer{
