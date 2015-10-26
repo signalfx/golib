@@ -77,10 +77,6 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	rw.Write([]byte(s))
 }
 
-func getObj(obj interface{}) *Result {
-	return ExploreObject(reflect.ValueOf(obj), []string{})
-}
-
 func checkConsts(t reflect.Value) *Result {
 	ret := &Result{}
 	if !t.IsValid() {

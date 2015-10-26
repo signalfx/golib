@@ -12,6 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func getObj(obj interface{}) *Result {
+	return ExploreObject(reflect.ValueOf(obj), []string{})
+}
+
 type Nameable interface {
 	Name() string
 }
