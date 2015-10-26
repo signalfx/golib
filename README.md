@@ -1,3 +1,3 @@
-# golib [![Build Status](https://travis-ci.org/signalfx/golib.svg?branch=master)](https://travis-ci.org/signalfx/golib)
+# golib [![Circle CI](https://circleci.com/gh/signalfx/golib.svg?style=svg)](https://circleci.com/gh/signalfx/golib)
 
 Various golang libraries we've found useful.
