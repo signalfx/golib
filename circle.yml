@@ -6,7 +6,7 @@ machine:
     GOPATH: "$HOME/.go"
     CACHED_LINT_TOOLS_DIR: "$HOME/lints"
     PATH: "$GOROOT/bin:$GOPATH/bin:$HOME/circleutil/scripts:$CACHED_LINT_TOOLS_DIR:$PATH"
-    IMPORT_PATH: "github.com/cep21/gobuild"
+    IMPORT_PATH: "github.com/signalfx/golib"
     SRC_PATH: "$GOPATH/src/$IMPORT_PATH"
 
 checkout:
