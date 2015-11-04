@@ -2,8 +2,6 @@
   "ignoreDir": ["calc_test.go"],
   "checks": [
     {
-      "macro": "goimport"
-    }, {
       "macro": "gofmt"
     }, {
       "macro": "vet"
