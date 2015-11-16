@@ -25,7 +25,10 @@ func NewBuilder() *Builder {
 // DialZkConnector sets how zk network connections are created
 func (b *Builder) DialZkConnector(servers []string, sessionTimeout time.Duration, dialer zk.Dialer) *Builder {
 	b.zkConnector = ZkConnectorFunc(func() (zktest.ZkConnSupported, <-chan zk.Event, error) {
-		return zk.ConnectWithDialer(servers, sessionTimeout, dialer)
+		if dialer != nil {
+			return zk.ConnectWithDialer(servers, sessionTimeout, dialer)
+		}
+		return zk.Connect(servers, sessionTimeout)
 	})
 	return b
 }

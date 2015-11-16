@@ -6,6 +6,7 @@ import (
 
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
+	"net"
 )
 
 func TestInnerBuilder(t *testing.T) {
@@ -45,10 +46,20 @@ func TestBuildBadPath(t *testing.T) {
 	assert.Equal(t, "", zkp.pathPrefix)
 }
 
-func TestDialZkConnector(t *testing.T) {
-	builder := NewBuilder().DialZkConnector([]string{"BADHOST.example.com"}, time.Second, nil)
+func TestDialZkConnectorNotNil(t *testing.T) {
+	builder := NewBuilder().DialZkConnector([]string{}, time.Second, func(network, address string, timeout time.Duration) (net.Conn, error) {
+		panic("Unreachable")
+	})
 	zkp, err := builder.Build()
 	assert.NoError(t, err)
 	_, _, err = zkp.zkConnector.Conn()
+	assert.Equal(t, "zk: server list must not be empty", err.Error())
+}
+
+func TestDialZkConnectorNil(t *testing.T) {
+	builder := NewBuilder().DialZkConnector([]string{}, time.Second, nil)
+	zkp, err := builder.Build()
 	assert.NoError(t, err)
+	_, _, err = zkp.zkConnector.Conn()
+	assert.Equal(t, "zk: server list must not be empty", err.Error())
 }
