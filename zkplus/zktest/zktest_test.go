@@ -27,7 +27,7 @@ func TestEnsureDelete(t *testing.T) {
 	z.Create("/bob", []byte(""), 0, nil)
 	z.Create("/bob/bob2", []byte(""), 0, nil)
 	i := 0
-	z.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(func(s string) error {
 		if s == "delete" {
 			return errors.New("delete fails")
 		}
@@ -38,7 +38,7 @@ func TestEnsureDelete(t *testing.T) {
 		return nil
 	})
 	assert.Error(t, EnsureDelete(z, "/bob"))
-	s.ForcedErrorCheck(func(s string) error {
+	s.SetErrorCheck(func(s string) error {
 		if s == "delete" {
 			return errors.New("delete fails")
 		}
@@ -54,7 +54,7 @@ func TestFixPath(t *testing.T) {
 func TestForcedErrorCheck(t *testing.T) {
 	s := New()
 	s.ChanTimeout = time.Millisecond * 250
-	s.ForcedErrorCheck(func(s string) error {
+	s.SetErrorCheck(func(s string) error {
 		if s == "delete" {
 			return errors.New("delete fails")
 		}
@@ -63,8 +63,8 @@ func TestForcedErrorCheck(t *testing.T) {
 	z1, _, _ := s.Connect()
 	err := z1.Delete("/", 0)
 	assert.Error(t, err)
-	s.ForcedErrorCheck(nil)
-	z1.ForcedErrorCheck(func(s string) error {
+	s.SetErrorCheck(nil)
+	z1.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})
 
@@ -90,12 +90,12 @@ func TestForcedErrorCheck(t *testing.T) {
 
 	f(z1)
 	z2, _, _ := s.Connect()
-	s.ForcedErrorCheck(func(s string) error {
+	s.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})
 	f(z2)
 
-	s.ForcedErrorCheck(nil)
+	s.SetErrorCheck(nil)
 	_, _, ch, err := z2.ChildrenW("/")
 	assert.NoError(t, err)
 	b := make(chan struct{})

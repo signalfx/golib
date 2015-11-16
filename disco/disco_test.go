@@ -39,7 +39,7 @@ func TestAdvertiseInZKErrs(t *testing.T) {
 	require.Nil(t, d1.Advertise("service1", "", uint16(1234)))
 	e1 := errors.New("nope")
 
-	z.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(func(s string) error {
 		if s == "delete" {
 			return e1
 		}
@@ -47,7 +47,7 @@ func TestAdvertiseInZKErrs(t *testing.T) {
 	})
 	require.Equal(t, e1, d1.advertiseInZK(true, "service1", ServiceInstance{}))
 
-	z.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(func(s string) error {
 		if s == "exists" {
 			return e1
 		}
@@ -119,7 +119,7 @@ func TestErrorNoRootCreate(t *testing.T) {
 	})
 
 	c := 0
-	z.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(func(s string) error {
 		c++
 		if c < 2 {
 			return nil
@@ -138,7 +138,7 @@ func TestBadRefresh(t *testing.T) {
 
 	badForce := errors.New("nope")
 	c := 0
-	z.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(func(s string) error {
 		if s == "childrenw" {
 			c++
 		}
@@ -170,8 +170,8 @@ func TestBadRefresh(t *testing.T) {
 		}
 	}
 
-	z.ForcedErrorCheck(nil)
-	s2.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(nil)
+	s2.SetErrorCheck(func(s string) error {
 		return zk.ErrNoNode
 	})
 	d1.manualEvents <- zk.Event{
@@ -180,8 +180,8 @@ func TestBadRefresh(t *testing.T) {
 	require.NoError(t, s.refresh(z))
 	require.Equal(t, 0, len(s.ServiceInstances()))
 
-	z.ForcedErrorCheck(nil)
-	s2.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(nil)
+	s2.SetErrorCheck(func(s string) error {
 		return badForce
 	})
 
@@ -198,7 +198,7 @@ func TestBadRefresh2(t *testing.T) {
 	z, ch, _ := s2.Connect()
 	badForce := errors.New("nope")
 	c := 0
-	z.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(func(s string) error {
 		if s == "getw" {
 			c++
 			if c > 1 {

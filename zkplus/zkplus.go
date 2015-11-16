@@ -53,7 +53,7 @@ type ZkPlus struct {
 var errInvalidPathPrefix = errors.New("invalid prefix path: Must being with /")
 var errInvalidPathSuffix = errors.New("invalid prefix path: Must not end with /")
 
-// EventChan that will see zookeeper events whos path is changed to this zk connection's
+// EventChan that will see zookeeper events whose path is changed to this zk connection's
 // namespace
 func (z *ZkPlus) EventChan() <-chan zk.Event {
 	return z.exposedChan
