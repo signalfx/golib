@@ -62,7 +62,7 @@ func TestErrorEnsureRoot(t *testing.T) {
 	}
 	z, ch, _ := zktest.New().Connect()
 	createError := make(chan struct{}, 3)
-	z.ForcedErrorCheck(func(s string) error {
+	z.SetErrorCheck(func(s string) error {
 		if s == "create" {
 			createError <- struct{}{}
 			return errors.New("i don't allow create")

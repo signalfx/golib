@@ -61,7 +61,7 @@ func TestZkConf(t *testing.T) {
 
 func TestCloseNormal(t *testing.T) {
 	zkServer := zktest.New()
-	zkServer.ForcedErrorCheck(func(s string) error {
+	zkServer.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})
 
@@ -101,20 +101,20 @@ func TestErrorReregister(t *testing.T) {
 	z.(Dynamic).Watch("hello", func(string) {
 
 	})
-	zkServer.ForcedErrorCheck(func(s string) error {
+	zkServer.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})
 	z.(*zkConfig).setRefreshDelay(time.Millisecond)
 	go func() {
 		time.Sleep(time.Millisecond * 10)
-		zkServer.ForcedErrorCheck(nil)
+		zkServer.SetErrorCheck(nil)
 	}()
 	z.(*zkConfig).refreshWatches()
 }
 
 func TestCloseQuitChan(t *testing.T) {
 	zkServer := zktest.New()
-	zkServer.ForcedErrorCheck(func(s string) error {
+	zkServer.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})
 
@@ -132,7 +132,7 @@ func TestCloseQuitChan(t *testing.T) {
 
 func TestZkConfErrors(t *testing.T) {
 	zkServer := zktest.New()
-	zkServer.ForcedErrorCheck(func(s string) error {
+	zkServer.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})
 	zkServer.ChanTimeout = time.Millisecond * 10

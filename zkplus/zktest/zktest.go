@@ -10,6 +10,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/sfxtest"
 )
 
 type event struct {
@@ -57,14 +58,12 @@ func EnsureDelete(z ZkConnSupported, path string) error {
 
 // MemoryZkServer can be used in the place of a zk.Conn() to unit test zk connections
 type MemoryZkServer struct {
+	sfxtest.ErrChecker
 	root       *zkNode
 	rootLock   sync.Mutex
 	GlobalChan chan zk.Event
 
 	events chan event
-
-	forcedErrorCheck ErrorCheckFunction
-	errCheckMutex    sync.Mutex
 
 	childrenConnectionsLock sync.Mutex
 	childrenConnections     map[*ZkConn]struct{}
@@ -81,48 +80,12 @@ type ZkConn struct {
 	chanTimeout    time.Duration
 	methodCallLock sync.Mutex
 
-	forcedErrorCheck ErrorCheckFunction
-	errCheckMutex    sync.Mutex
+	sfxtest.ErrChecker
 }
 
 // Pretty returns a pretty print of the zk structure
 func (z *MemoryZkServer) Pretty() string {
 	return z.root.pretty(0)
-}
-
-// ErrorCheckFunction is a way to simulate zk errors for a call name
-type ErrorCheckFunction func(methodName string) error
-
-// ForcedErrorCheck sets the function used to simulate errors
-func (z *MemoryZkServer) ForcedErrorCheck(f ErrorCheckFunction) {
-	z.errCheckMutex.Lock()
-	defer z.errCheckMutex.Unlock()
-	z.forcedErrorCheck = f
-}
-
-func (z *MemoryZkServer) check(s string) error {
-	z.errCheckMutex.Lock()
-	defer z.errCheckMutex.Unlock()
-	if z.forcedErrorCheck == nil {
-		return nil
-	}
-	return z.forcedErrorCheck(s)
-}
-
-// ForcedErrorCheck sets the function used to simulate errors
-func (z *ZkConn) ForcedErrorCheck(f ErrorCheckFunction) {
-	z.errCheckMutex.Lock()
-	defer z.errCheckMutex.Unlock()
-	z.forcedErrorCheck = f
-}
-
-func (z *ZkConn) check(s string) error {
-	z.errCheckMutex.Lock()
-	defer z.errCheckMutex.Unlock()
-	if z.forcedErrorCheck == nil {
-		return nil
-	}
-	return z.forcedErrorCheck(s)
 }
 
 func (z *zkNode) pretty(tabsize int) string {
@@ -315,7 +278,7 @@ func (z *MemoryZkServer) exists(path string) (bool, *zk.Stat, error) {
 	path = fixPath(path)
 	z.rootLock.Lock()
 	defer z.rootLock.Unlock()
-	if err := z.check("exists"); err != nil {
+	if err := z.CheckForError("exists"); err != nil {
 		return false, nil, err
 	}
 	at, _ := z.node(path)
@@ -329,7 +292,7 @@ func (z *MemoryZkServer) exists(path string) (bool, *zk.Stat, error) {
 func (z *ZkConn) Exists(path string) (bool, *zk.Stat, error) {
 	z.methodCallLock.Lock()
 	defer z.methodCallLock.Unlock()
-	if err := z.check("exists"); err != nil {
+	if err := z.CheckForError("exists"); err != nil {
 		return false, nil, err
 	}
 	return z.connectedTo.exists(path)
@@ -346,7 +309,7 @@ func fixPath(path string) string {
 func (z *ZkConn) ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error) {
 	z.methodCallLock.Lock()
 	defer z.methodCallLock.Unlock()
-	if err := z.check("exists"); err != nil {
+	if err := z.CheckForError("exists"); err != nil {
 		return false, nil, nil, err
 	}
 	e, s, err := z.connectedTo.exists(path)
@@ -356,7 +319,7 @@ func (z *ZkConn) ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error) {
 func (z *MemoryZkServer) get(path string) ([]byte, *zk.Stat, error) {
 	z.rootLock.Lock()
 	defer z.rootLock.Unlock()
-	if err := z.check("get"); err != nil {
+	if err := z.CheckForError("get"); err != nil {
 		return nil, nil, err
 	}
 	at, _ := z.node(path)
@@ -368,7 +331,7 @@ func (z *MemoryZkServer) get(path string) ([]byte, *zk.Stat, error) {
 
 // Get the bytes of a zk path
 func (z *ZkConn) Get(path string) ([]byte, *zk.Stat, error) {
-	if err := z.check("get"); err != nil {
+	if err := z.CheckForError("get"); err != nil {
 		return nil, nil, err
 	}
 	return z.connectedTo.get(path)
@@ -378,7 +341,7 @@ func (z *ZkConn) Get(path string) ([]byte, *zk.Stat, error) {
 func (z *ZkConn) GetW(path string) ([]byte, *zk.Stat, <-chan zk.Event, error) {
 	z.methodCallLock.Lock()
 	defer z.methodCallLock.Unlock()
-	if err := z.check("getw"); err != nil {
+	if err := z.CheckForError("getw"); err != nil {
 		return nil, nil, nil, err
 	}
 	e, s, err := z.Get(path)
@@ -406,7 +369,7 @@ func (z *ZkConn) patchWatch(path string) chan zk.Event {
 }
 
 func (z *MemoryZkServer) children(path string) ([]string, *zk.Stat, error) {
-	if err := z.check("children"); err != nil {
+	if err := z.CheckForError("children"); err != nil {
 		return nil, nil, err
 	}
 	z.rootLock.Lock()
@@ -425,7 +388,7 @@ func (z *MemoryZkServer) children(path string) ([]string, *zk.Stat, error) {
 
 // Children gets children of a path
 func (z *ZkConn) Children(path string) ([]string, *zk.Stat, error) {
-	if err := z.check("children"); err != nil {
+	if err := z.CheckForError("children"); err != nil {
 		return nil, nil, err
 	}
 	return z.connectedTo.children(path)
@@ -435,7 +398,7 @@ func (z *ZkConn) Children(path string) ([]string, *zk.Stat, error) {
 func (z *ZkConn) ChildrenW(path string) ([]string, *zk.Stat, <-chan zk.Event, error) {
 	z.methodCallLock.Lock()
 	defer z.methodCallLock.Unlock()
-	if err := z.check("childrenw"); err != nil {
+	if err := z.CheckForError("childrenw"); err != nil {
 		return nil, nil, nil, err
 	}
 	e, s, err := z.Children(path)
@@ -448,7 +411,7 @@ func (z *ZkConn) ChildrenW(path string) ([]string, *zk.Stat, <-chan zk.Event, er
 func (z *MemoryZkServer) delete(path string, version int32) error {
 	z.rootLock.Lock()
 	defer z.rootLock.Unlock()
-	if err := z.check("delete"); err != nil {
+	if err := z.CheckForError("delete"); err != nil {
 		return err
 	}
 	path = fixPath(path)
@@ -485,7 +448,7 @@ func (z *MemoryZkServer) delete(path string, version int32) error {
 func (z *ZkConn) Delete(path string, version int32) error {
 	z.methodCallLock.Lock()
 	defer z.methodCallLock.Unlock()
-	if err := z.check("delete"); err != nil {
+	if err := z.CheckForError("delete"); err != nil {
 		return err
 	}
 	return z.connectedTo.delete(path, version)
@@ -495,7 +458,7 @@ func (z *MemoryZkServer) create(path string, data []byte, flags int32, acl []zk.
 	z.rootLock.Lock()
 	defer z.rootLock.Unlock()
 	path = fixPath(path)
-	if err := z.check("create"); err != nil {
+	if err := z.CheckForError("create"); err != nil {
 		return "", err
 	}
 	at, parent := z.node(path)
@@ -534,7 +497,7 @@ func (z *MemoryZkServer) create(path string, data []byte, flags int32, acl []zk.
 func (z *ZkConn) Create(path string, data []byte, flags int32, acl []zk.ACL) (string, error) {
 	z.methodCallLock.Lock()
 	defer z.methodCallLock.Unlock()
-	if err := z.check("create"); err != nil {
+	if err := z.CheckForError("create"); err != nil {
 		return "", err
 	}
 	return z.connectedTo.create(path, data, flags, acl)
