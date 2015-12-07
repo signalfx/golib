@@ -78,7 +78,7 @@ func (d *ThriftTransport) Read(b []byte) (n int, err error) {
 	var e1 error
 	var e2 error
 	n, e1 = d.currentTransport.Read(b)
-	if err != nil {
+	if e1 != nil {
 		e2 = d.Close()
 	}
 	err = errors.NewMultiErr([]error{e1, e2})
@@ -93,7 +93,7 @@ func (d *ThriftTransport) Write(b []byte) (n int, err error) {
 	var e1 error
 	var e2 error
 	n, e1 = d.currentTransport.Write(b)
-	if err != nil {
+	if e1 != nil {
 		e2 = d.Close()
 	}
 	err = errors.NewMultiErr([]error{e1, e2})
