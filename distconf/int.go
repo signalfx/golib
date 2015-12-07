@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+
+	"github.com/signalfx/golib/errors"
 )
 
 // IntWatch is called on any changes to a register integer config variable
@@ -37,7 +39,7 @@ func (c *intConf) Update(newValue []byte) error {
 	} else {
 		newValueInt, err := strconv.ParseInt(string(newValue), 10, 64)
 		if err != nil {
-			return err
+			return errors.Annotatef(err, "Unparsable float %s", string(newValue))
 		}
 		atomic.StoreInt64(&c.currentVal, newValueInt)
 	}

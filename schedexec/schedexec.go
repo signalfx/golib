@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/timekeeper"
 )
 
@@ -53,7 +54,7 @@ func (se *ScheduledExecutor) StartWithMsgChan(iterationFunc func() error, msgCha
 		select {
 		case <-timer.Chan():
 			if err := iterationFunc(); err != nil {
-				return err
+				return errors.Annotate(err, "iteration function failure")
 			}
 			sleepDuration = time.Duration(atomic.LoadInt64(&se.scheduleRate))
 			timer = se.TimeKeeper.NewTimer(sleepDuration)

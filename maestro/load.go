@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/safeexec"
 )
 
@@ -92,7 +93,7 @@ func (l *Loader) Load(filename string) (*Config, error) {
 	var conf Config
 
 	if err = json.Unmarshal([]byte(stdout), &conf); err != nil {
-		return nil, err
+		return nil, errors.Annotate(err, "cannot unmarshal to stdout")
 	}
 	return &conf, nil
 }

@@ -2,8 +2,9 @@ package sfxtest
 
 import (
 	"errors"
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestForcedErr(t *testing.T) {

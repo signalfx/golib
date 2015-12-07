@@ -1,5 +1,6 @@
 [vars]
   duplLimit = "300"
+  testCoverage = 1
 
 [metalinter]
   [metalinter.enabled]

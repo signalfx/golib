@@ -2,12 +2,13 @@ package disco
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 	"testing"
 	"testing/iotest"
+
+	"github.com/signalfx/golib/errors"
 
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/zkplus"
@@ -37,7 +38,7 @@ func TestAdvertiseInZKErrs(t *testing.T) {
 	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
 	d1, _ := New(BuilderConnector(b), "TestDupAdvertise")
 	require.Nil(t, d1.Advertise("service1", "", uint16(1234)))
-	e1 := errors.New("nope")
+	e1 := errors.New("Set error check during delete")
 
 	z.SetErrorCheck(func(s string) error {
 		if s == "delete" {
@@ -45,7 +46,7 @@ func TestAdvertiseInZKErrs(t *testing.T) {
 		}
 		return nil
 	})
-	require.Equal(t, e1, d1.advertiseInZK(true, "service1", ServiceInstance{}))
+	require.Contains(t, errors.Details(d1.advertiseInZK(true, "service1", ServiceInstance{})), e1.Error())
 
 	z.SetErrorCheck(func(s string) error {
 		if s == "exists" {
@@ -53,7 +54,7 @@ func TestAdvertiseInZKErrs(t *testing.T) {
 		}
 		return nil
 	})
-	require.Equal(t, e1, d1.advertiseInZK(false, "", ServiceInstance{}))
+	require.Equal(t, e1, errors.Tail(d1.advertiseInZK(false, "", ServiceInstance{})))
 }
 
 func TestDupAdvertise(t *testing.T) {
@@ -107,7 +108,7 @@ func TestJsonMarshalBadAdvertise(t *testing.T) {
 		return nil, e
 	}
 
-	require.Equal(t, e, d1.Advertise("TestAdvertiseService", "", (uint16)(1234)))
+	require.Equal(t, e, errors.Tail(d1.Advertise("TestAdvertiseService", "", (uint16)(1234))))
 }
 
 func TestErrorNoRootCreate(t *testing.T) {
@@ -129,7 +130,7 @@ func TestErrorNoRootCreate(t *testing.T) {
 
 	d1, _ := New(zkConnFunc, "TestAdvertise1")
 
-	require.Equal(t, zk.ErrNoNode, d1.Advertise("TestAdvertiseService", "", (uint16)(1234)))
+	require.Equal(t, zk.ErrNoNode, errors.Tail(d1.Advertise("TestAdvertiseService", "", (uint16)(1234))))
 }
 
 func TestBadRefresh(t *testing.T) {
@@ -164,7 +165,7 @@ func TestBadRefresh(t *testing.T) {
 	}
 	for {
 		runtime.Gosched()
-		err := s.refresh(z)
+		err := errors.Tail(s.refresh(z))
 		if err == badForce {
 			break
 		}
@@ -223,7 +224,7 @@ func TestBadRefresh2(t *testing.T) {
 	d1.manualEvents <- zk.Event{
 		Path: "/TestAdvertiseService",
 	}
-	require.Equal(t, badForce, s.refresh(zkp))
+	require.Equal(t, badForce, errors.Tail(s.refresh(zkp)))
 }
 
 func TestInvalidServiceJson(t *testing.T) {

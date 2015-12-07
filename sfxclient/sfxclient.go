@@ -1,7 +1,7 @@
 package sfxclient
 
 import (
-	"errors"
+	"expvar"
 	"fmt"
 	"runtime"
 	"sync"
@@ -10,9 +10,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/logherd"
-	// TODO: Figure out a way to not have this dependency
-	"expvar"
 
+	// TODO: Figure out a way to not have this dependency
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/metricproxy/dp/dpsink"
 	"github.com/signalfx/metricproxy/protocol/signalfx"
 	"golang.org/x/net/context"
@@ -176,7 +176,7 @@ func (s *Reporter) collectDatapoints(ctx context.Context) ([]*datapoint.Datapoin
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		return nil, errors.Annotate(ctx.Err(), "context closed")
 	}
 
 	now := time.Now()

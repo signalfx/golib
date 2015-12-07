@@ -6,6 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/zkplus/zktest"
 )
 
@@ -62,7 +63,7 @@ func (b *Builder) AppendPathPrefix(childPath string) *Builder {
 func (b *Builder) BuildDirect() (*ZkPlus, <-chan zk.Event, error) {
 	z, err := b.Build()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Annotate(err, "cannot build zk connection")
 	}
 	return z, z.EventChan(), nil
 }

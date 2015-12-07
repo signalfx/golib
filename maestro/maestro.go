@@ -1,11 +1,12 @@
 package maestro
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/signalfx/golib/errors"
 )
 
 // Maestro is the golang client for https://github.com/signalfuse/maestro-ng
@@ -93,11 +94,11 @@ func (m *Maestro) GetSpecificHost(service string, container string) (string, err
 func (m *Maestro) GetPort(name string) (uint16, error) {
 	sname, err := m.GetServiceName()
 	if err != nil {
-		return 0, err
+		return 0, errors.Annotate(err, "cannot load service for port")
 	}
 	cname, err := m.GetContainerName()
 	if err != nil {
-		return 0, err
+		return 0, errors.Annotate(err, "cannot load container name for port")
 	}
 	return m.GetSpecificExposedPort(sname, cname, name)
 }

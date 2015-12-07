@@ -1,12 +1,12 @@
 package schedexec
 
 import (
-	"errors"
 	"testing"
 	"time"
 
 	"sync/atomic"
 
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/timekeeper/timekeepertest"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,7 +62,7 @@ func TestScheduleExecutorTick(t *testing.T) {
 	stubTime.Incr(duration)
 
 	<-doneChan
-	assert.Equal(t, scheduled.runOneIterationError, err)
+	assert.Equal(t, scheduled.runOneIterationError, errors.Tail(err))
 
 }
 

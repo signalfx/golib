@@ -4,9 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"net"
+
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
-	"net"
 )
 
 func TestInnerBuilder(t *testing.T) {
@@ -39,7 +41,7 @@ func TestBuildBadPath(t *testing.T) {
 	assert.Equal(t, errInvalidPathSuffix, err)
 
 	_, _, err = builder.BuildDirect()
-	assert.Equal(t, errInvalidPathSuffix, err)
+	assert.Equal(t, errInvalidPathSuffix, errors.Tail(err))
 
 	zkp, err := builder.PathPrefix("").Build()
 	assert.NoError(t, err)

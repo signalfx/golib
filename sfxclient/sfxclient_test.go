@@ -1,12 +1,12 @@
 package sfxclient
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/metricproxy/protocol/signalfx"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
@@ -59,7 +59,7 @@ func TestBadContext(t *testing.T) {
 	x.Endpoint(testSrvr.URL)
 	cancelFunc()
 	<-ctx.Done()
-	assert.Equal(t, context.Canceled, x.Report(ctx))
+	assert.Equal(t, context.Canceled, errors.Tail(x.Report(ctx)))
 }
 
 func TestNoMetrics(t *testing.T) {
