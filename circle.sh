@@ -27,7 +27,7 @@ function do_cache() {
   mkdir -p "$GO_COMPILER_PATH"
   install_all_go_versions "$GO_COMPILER_PATH"
   install_go_version "$GO_COMPILER_PATH" "$GOLANG_VERSION"
-  versioned_goget "github.com/cep21/gobuild:v1.1"
+  versioned_goget "github.com/cep21/gobuild:v1.2"
   mkdir -p "$GOPATH_INTO"
   copy_local_to_path "$SRC_PATH"
 }
