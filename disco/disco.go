@@ -18,7 +18,7 @@ import (
 	"encoding/binary"
 	"sort"
 
-	"errors"
+	"github.com/signalfx/golib/errors"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
@@ -132,7 +132,7 @@ func NewRandSource(zkConnCreator ZkConnCreator, publishAddress string, r io.Read
 	var GUID [16]byte
 	_, err := io.ReadFull(r, GUID[:16])
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotate(err, "cannot create random GUID")
 	}
 
 	d := &Disco{
@@ -148,7 +148,7 @@ func NewRandSource(zkConnCreator ZkConnCreator, publishAddress string, r io.Read
 	}
 	d.zkConn, d.eventChan, err = zkConnCreator.Connect()
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotate(err, "cannot create first zk connection")
 	}
 	go d.eventLoop()
 	return d, nil
@@ -278,13 +278,13 @@ func (d *Disco) refreshAll() error {
 func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceData ServiceInstance) error {
 	// Need to create service root node
 	_, err := d.zkConn.Create(fmt.Sprintf("/%s", serviceName), []byte{}, 0, zk.WorldACL(zk.PermAll))
-	if err != nil && err != zk.ErrNodeExists {
-		return err
+	if err != nil && errors.Tail(err) != zk.ErrNodeExists {
+		return errors.Annotatef(err, "unhandled ZK error on Create of %s", serviceName)
 	}
 	servicePath := d.servicePath(serviceName)
 	exists, stat, _, err := d.zkConn.ExistsW(servicePath)
 	if err != nil {
-		return err
+		return errors.Annotatef(err, "cannot ExistsW %s", servicePath)
 	}
 	if !deleteIfExists && exists {
 		log.Infof("Service already exists.  Will not delete it")
@@ -294,17 +294,17 @@ func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceD
 		log.Infof("Clearing out old service path %s", servicePath)
 		// clear out the old version
 		if err = d.zkConn.Delete(servicePath, stat.Version); err != nil {
-			return err
+			return errors.Annotatef(err, "unhandled ZK Delete of %s", servicePath)
 		}
 	}
 
 	instanceBytes, err := d.jsonMarshal(instanceData)
 	if err != nil {
-		return err
+		return errors.Annotatef(err, "cannot JSON unmarshal data %v", instanceData)
 	}
 
 	_, err = d.zkConn.Create(servicePath, instanceBytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
-	return err
+	return errors.Annotatef(err, "cannot create node to advertise myself in disco")
 }
 
 // ErrDuplicateAdvertise is returned by Advertise if users try to Advertise the same service name
@@ -339,7 +339,7 @@ func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) 
 	service := d.myServiceData(serviceName, payload, port)
 	d.myAdvertisedServices[serviceName] = service
 	if err := d.advertiseInZK(true, serviceName, service); err != nil {
-		return err
+		return errors.Annotatef(err, "cannot advertise %s in disco", serviceName)
 	}
 
 	return nil
@@ -376,7 +376,7 @@ func (d *Disco) Services(serviceName string) (*Service, error) {
 		d.watchedServices[serviceName] = ret
 		return ret, nil
 	}
-	return nil, refreshRes
+	return nil, errors.Annotatef(refreshRes, "cannot refresh service %s", serviceName)
 }
 
 // ServiceInstances that represent instances of this service in your system
@@ -415,7 +415,7 @@ func childrenServices(serviceName string, children []string, zkConn ZkConn) ([]S
 	log.WithField("serviceName", serviceName).Info("Getting services")
 	ret := make([]ServiceInstance, len(children))
 
-	var err error
+	allErrors := make([]error, 0, len(children))
 	var wg sync.WaitGroup
 	for index, child := range children {
 		wg.Add(1)
@@ -425,30 +425,30 @@ func childrenServices(serviceName string, children []string, zkConn ZkConn) ([]S
 			var err2 error
 			bytes, _, _, err2 = zkConn.GetW(fmt.Sprintf("/%s/%s", serviceName, child))
 			if err2 != nil {
-				err = err2
+				allErrors = append(allErrors, errors.Annotatef(err2, "fail to GetW %s/%s", serviceName, child))
 				return
 			}
 			err2 = json.Unmarshal(bytes, instanceAddr)
 			if err2 != nil {
-				err = err2
+				allErrors = append(allErrors, errors.Annotatef(err2, "cannot unmarshal %s from %v", child, bytes))
 				return
 			}
 		}(child, &ret[index]) // <--- Important b/c inside range
 	}
 	wg.Wait()
-	return ret, err
+	return ret, errors.NewMultiErr(allErrors)
 }
 
 func (s *Service) refresh(zkConn ZkConn) error {
 	log.WithField("service", s.name).Info("refresh called")
 	oldHash := s.byteHashes()
 	children, _, _, err := zkConn.ChildrenW(fmt.Sprintf("/%s", s.name))
-	if err != nil && err != zk.ErrNoNode {
+	if err != nil && errors.Tail(err) != zk.ErrNoNode {
 		log.Warn("Error?")
-		return err
+		return errors.Annotatef(err, "unexpected zk error on childrenw")
 	}
 
-	if err == zk.ErrNoNode {
+	if errors.Tail(err) == zk.ErrNoNode {
 		exists, _, _, err := zkConn.ExistsW(fmt.Sprintf("/%s", s.name))
 		if exists || err != nil {
 			log.WithField("err", err).Warn("Unable to register exists watch!")

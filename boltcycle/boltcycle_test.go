@@ -2,12 +2,13 @@ package boltcycle
 
 import (
 	"encoding/binary"
-	"errors"
 	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/signalfx/golib/errors"
 
 	"bytes"
 
@@ -136,12 +137,12 @@ func TestErrUnexpectedNonBucket(t *testing.T) {
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(testRun.cdb.bucketTimesIn).Put([]byte("hi"), []byte("world"))
 	}))
-	require.Equal(t, errUnexpectedNonBucket, testRun.cdb.VerifyBuckets())
+	require.Equal(t, errUnexpectedNonBucket, errors.Tail(testRun.cdb.VerifyBuckets()))
 	_, err := testRun.cdb.Delete([][]byte{[]byte("hello")})
 	require.Equal(t, errUnexpectedNonBucket, err)
 
 	_, err = testRun.cdb.Read([][]byte{[]byte("hello")})
-	require.Equal(t, errUnexpectedNonBucket, err)
+	require.Equal(t, errUnexpectedNonBucket, errors.Tail(err))
 }
 
 func TestErrUnexpectedBucketBytes(t *testing.T) {
@@ -169,7 +170,7 @@ func TestVerifyCompressed(t *testing.T) {
 		return nil, e1
 	}
 
-	require.Equal(t, e1, testRun.cdb.VerifyCompressed())
+	require.Equal(t, e1, errors.Tail(testRun.cdb.VerifyCompressed()))
 
 	createHeapFunc = createHeap
 }
@@ -274,7 +275,7 @@ func TestAsyncWriteBadValue(t *testing.T) {
 	testRun := setupCdb(t, 5)
 	defer testRun.Close()
 	testRun.cdb.AsyncWrite(context.Background(), []KvPair{{Key: []byte(""), Value: []byte("world")}})
-	require.Equal(t, bolt.ErrKeyRequired, <-testRun.asyncErrors)
+	require.Equal(t, bolt.ErrKeyRequired, errors.Tail(<-testRun.asyncErrors))
 }
 
 func TestErrOnWrite(t *testing.T) {
@@ -295,7 +296,7 @@ func TestErrOnDelete(t *testing.T) {
 		cur := tx.Bucket(testRun.cdb.bucketTimesIn).Bucket(bucketName[:]).Cursor()
 		return deleteKeys([][]byte{[]byte("hello")}, cur, []bool{false})
 	})
-	require.Equal(t, bolt.ErrTxNotWritable, err)
+	require.Equal(t, bolt.ErrTxNotWritable, errors.Tail(err))
 }
 
 func TestErrUnableToFindRootBucket(t *testing.T) {
@@ -308,13 +309,13 @@ func TestErrUnableToFindRootBucket(t *testing.T) {
 	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.moveRecentReads(nil))
 
 	_, err := testRun.cdb.Read([][]byte{[]byte("hello")})
-	require.Equal(t, errUnableToFindRootBucket, err)
+	require.Equal(t, errUnableToFindRootBucket, errors.Tail(err))
 
 	err = testRun.cdb.Write([]KvPair{{[]byte("hello"), []byte("world")}})
-	require.Equal(t, errUnableToFindRootBucket, err)
+	require.Equal(t, errUnableToFindRootBucket, errors.Tail(err))
 
 	_, err = testRun.cdb.Delete([][]byte{[]byte("hello")})
-	require.Equal(t, errUnableToFindRootBucket, err)
+	require.Equal(t, errUnableToFindRootBucket, errors.Tail(err))
 }
 
 func TestDatabaseInit(t *testing.T) {
@@ -333,7 +334,7 @@ func TestCycleNodes(t *testing.T) {
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(testRun.cdb.bucketTimesIn).Put([]byte("hi"), []byte("world"))
 	}))
-	require.Equal(t, bolt.ErrIncompatibleValue, testRun.cdb.CycleNodes())
+	require.Equal(t, bolt.ErrIncompatibleValue, errors.Tail(testRun.cdb.CycleNodes()))
 }
 
 func TestDatabaseCycle(t *testing.T) {
@@ -403,7 +404,7 @@ func TestReadDelete(t *testing.T) {
 func TestBadInit(t *testing.T) {
 	expected := errors.New("nope")
 	_, err := New(nil, func(*CycleDB) error { return expected })
-	require.Equal(t, expected, err)
+	require.Equal(t, expected, errors.Tail(err))
 }
 
 func TestDrainAllMovements(t *testing.T) {

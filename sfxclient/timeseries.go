@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/errors"
 )
 
 // A Timeseries is an object that holds some value over time, reportable to signalfx
@@ -61,7 +62,7 @@ func (s *Timeseries) convertToDatapoint(extraDimensions map[string]string, curTi
 	defer s.mu.Unlock()
 	val, err := s.value.GetValue()
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotate(err, "cannot fetch value")
 	}
 	dims := make(map[string]string, len(extraDimensions)+len(s.dimensions))
 	for k, v := range extraDimensions {

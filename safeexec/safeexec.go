@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/logherd"
 )
 
@@ -27,5 +28,5 @@ func Execute(name string, stdin string, args ...string) (string, string, error) 
 	cmd.Stderr = stderr
 
 	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
+	return stdout.String(), stderr.String(), errors.Annotatef(err, "cannot run command %s", name)
 }

@@ -6,7 +6,7 @@ import (
 
 	"time"
 
-	"errors"
+	"github.com/signalfx/golib/errors"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/signalfx/golib/logherd"
@@ -52,7 +52,7 @@ func (d *ThriftTransport) Flush() (err error) {
 		d.currentTransport.Close()
 		d.currentTransport = nil
 	}
-	return err
+	return errors.Annotate(err, "cannot flush current transport")
 }
 
 // IsOpen will return true if there is a connected underline transport and it is open
@@ -67,7 +67,7 @@ func (d *ThriftTransport) Close() error {
 	}
 	ret := d.currentTransport.Close()
 	d.currentTransport = nil
-	return ret
+	return errors.Annotate(ret, "cannot close current transport")
 }
 
 // Read bytes from underline transport if it is not nil.  Exact definition defined in TTransport
@@ -75,10 +75,13 @@ func (d *ThriftTransport) Read(b []byte) (n int, err error) {
 	if d.currentTransport == nil {
 		return 0, thrift.NewTTransportException(thrift.NOT_OPEN, "")
 	}
-	n, err = d.currentTransport.Read(b)
+	var e1 error
+	var e2 error
+	n, e1 = d.currentTransport.Read(b)
 	if err != nil {
-		d.Close()
+		e2 = d.Close()
 	}
+	err = errors.NewMultiErr([]error{e1, e2})
 	return
 }
 
@@ -87,10 +90,13 @@ func (d *ThriftTransport) Write(b []byte) (n int, err error) {
 	if d.currentTransport == nil {
 		return 0, thrift.NewTTransportException(thrift.NOT_OPEN, "")
 	}
-	n, err = d.currentTransport.Write(b)
+	var e1 error
+	var e2 error
+	n, e1 = d.currentTransport.Write(b)
 	if err != nil {
-		d.Close()
+		e2 = d.Close()
 	}
+	err = errors.NewMultiErr([]error{e1, e2})
 	return
 }
 
@@ -104,6 +110,7 @@ var ErrNoInstanceOpen = errors.New("no thrift instances is open")
 // if no disco service can be dialed
 func (d *ThriftTransport) NextConnection() error {
 	if d.currentTransport != nil && d.currentTransport.IsOpen() {
+		// TODO: Log errors on Close
 		d.currentTransport.Close()
 	}
 	instances := d.service.ServiceInstances()
@@ -130,7 +137,7 @@ func (d *ThriftTransport) NextConnection() error {
 // Open a connection if one does not exist, otherwise do nothing.
 func (d *ThriftTransport) Open() error {
 	if d.currentTransport == nil || !d.currentTransport.IsOpen() {
-		return d.NextConnection()
+		return errors.Annotate(d.NextConnection(), "cannot open next connection")
 	}
 	return nil
 }

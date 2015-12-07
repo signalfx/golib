@@ -1,6 +1,9 @@
 package distconf
 
-import ini "github.com/vaughan0/go-ini"
+import (
+	"github.com/signalfx/golib/errors"
+	ini "github.com/vaughan0/go-ini"
+)
 
 type propertyFileDisco struct {
 	noopCloser
@@ -20,7 +23,7 @@ func (p *propertyFileDisco) Get(key string) ([]byte, error) {
 func Ini(filename string) (Reader, error) {
 	file, err := ini.LoadFile(filename)
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotatef(err, "Unable to open file %s", filename)
 	}
 	return &propertyFileDisco{
 		filename: filename,

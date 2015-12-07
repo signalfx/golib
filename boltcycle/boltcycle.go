@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"container/heap"
 	"encoding/binary"
-	"errors"
 	"sync"
 	"sync/atomic"
+
+	"github.com/signalfx/golib/errors"
 
 	"github.com/boltdb/bolt"
 	"golang.org/x/net/context"
@@ -137,13 +138,13 @@ func New(db *bolt.DB, optionalParameters ...DBConfiguration) (*CycleDB, error) {
 			return c.Delete()
 		},
 	}
-	for _, config := range optionalParameters {
+	for i, config := range optionalParameters {
 		if err := config(ret); err != nil {
-			return nil, err
+			return nil, errors.Annotatef(err, "Cannot execute config parameter %d", i)
 		}
 	}
 	if err := ret.init(); err != nil {
-		return ret, err
+		return ret, errors.Annotate(err, "Cannot initialize database")
 	}
 	if !db.IsReadOnly() {
 		ret.wg.Add(1)
@@ -210,15 +211,16 @@ func (c *CycleDB) init() error {
 	return c.db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(c.bucketTimesIn)
 		if err != nil {
-			return err
+			return errors.Annotatef(err, "Cannot find bucket %s", c.bucketTimesIn)
 		}
 		// If there is no bucket at all, make a first bucket at key=[0,0,0,0, 0,0,0,1]
 		// Because we special case bucket zero, start at 1 not zero.
 		if k, _ := bucket.Cursor().First(); k == nil {
 			var b [8]byte
 
-			_, err := bucket.CreateBucket(nextKey(b[:]))
-			return err
+			nextKeyBytes := nextKey(b[:])
+			_, err := bucket.CreateBucket(nextKeyBytes)
+			return errors.Annotatef(err, "Cannot create bucket %v", nextKeyBytes)
 		}
 		return nil
 	})
@@ -256,7 +258,7 @@ func createHeap(bucket *bolt.Bucket) (cursorHeap, error) {
 		}
 		return nil
 	})
-	return ch, err
+	return ch, errors.Annotate(err, "unable to create heap from bucket")
 }
 
 func verifyHeap(ch cursorHeap) error {
@@ -291,7 +293,7 @@ func (c *CycleDB) VerifyCompressed() error {
 
 		ch, err := createHeapFunc(bucket)
 		if err != nil {
-			return err
+			return errors.Annotate(err, "unable to create heap during compressed verification")
 		}
 		return verifyHeap(ch)
 	})
@@ -319,7 +321,7 @@ func (c *CycleDB) CycleNodes() error {
 		cursor := bucket.Cursor()
 		for k, _ := cursor.First(); k != nil && countBuckets > c.minNumOldBuckets; k, _ = cursor.Next() {
 			if err := bucket.DeleteBucket(k); err != nil {
-				return err
+				return errors.Annotatef(err, "canont remove bucket %v", k)
 			}
 			countBuckets--
 		}
@@ -440,7 +442,7 @@ func (c *CycleDB) indexToLocation(toread [][]byte) ([]readToLocation, error) {
 		}
 		return nil
 	})
-	return res, err
+	return res, errors.Annotate(err, "cannot finish database view function")
 }
 
 func (c *CycleDB) moveRecentReads(readLocations []readToLocation) error {
@@ -470,13 +472,13 @@ func (c *CycleDB) moveRecentReads(readLocations []readToLocation) error {
 		for bucketID, readLocs := range bucketIDToReadLocations {
 			if bucketID != 0 {
 				if err := deleteFromOldBucket(bucketID, readLocs, bucket, c.cursorDelete, &recopyCount, &deletedCount); err != nil {
-					return err
+					return errors.Annotate(err, "cannot remove keys from the old bucket")
 				}
 			}
 			for _, rs := range readLocs {
 				asyncPutCount++
 				if err := lastBucket.Put(rs.key, rs.value); err != nil {
-					return err
+					return errors.Annotate(err, "cannot puts keys into the new bucket")
 				}
 			}
 		}
@@ -498,7 +500,7 @@ func deleteFromOldBucket(bucketID uint64, readLocs []readToLocation, bucket *bol
 			*recopyCount++
 			if k != nil && bytes.Equal(k, rs.key) {
 				if err := cursorDelete(oldBucketCursor); err != nil {
-					return err
+					return errors.Annotatef(err, "cannot delete key %v", rs.key)
 				}
 				*deletedCount++
 			}
@@ -513,7 +515,7 @@ func (c *CycleDB) Read(toread [][]byte) ([][]byte, error) {
 	atomic.AddInt64(&c.stats.TotalReadCount, int64(len(toread)))
 	readLocations, err := c.indexToLocation(toread)
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotatef(err, "fail to convert indexes to read location")
 	}
 
 	if !c.db.IsReadOnly() {
@@ -579,7 +581,7 @@ func (c *CycleDB) Write(towrite []KvPair) error {
 		}
 		for _, p := range towrite {
 			if err := lastBucket.Put(p.Key, p.Value); err != nil {
-				return err
+				return errors.Annotatef(err, "cannot put for key %v", p.Key)
 			}
 		}
 		return nil
@@ -612,7 +614,7 @@ func deleteKeys(keys [][]byte, cursor *bolt.Cursor, ret []bool) error {
 		k, _ := cursor.Seek(key)
 		if bytes.Equal(k, key) {
 			if err := cursor.Delete(); err != nil {
-				return err
+				return errors.Annotatef(err, "cannot delete key %v", k)
 			}
 			ret[index] = true
 		}

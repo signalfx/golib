@@ -1,7 +1,6 @@
 package zkplus
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/zkplus/zktest"
 )
 
@@ -97,7 +97,7 @@ func (z *ZkPlus) ensureRootPath(conn zktest.ZkConnSupported) error {
 		totalPath = totalPath + "/" + p
 		_, err := conn.Create(totalPath, []byte(""), 0, zk.WorldACL(zk.PermAll))
 		if err != nil && err != zk.ErrNodeExists {
-			return err
+			return errors.Annotatef(err, "cannot create path %s", totalPath)
 		}
 	}
 	return nil
@@ -236,7 +236,7 @@ func (z *ZkPlus) Create(path string, data []byte, flags int32, acl []zk.ACL) (st
 	if strings.HasPrefix(p, z.pathPrefix) && z.pathPrefix != "" {
 		p = p[len(z.pathPrefix)+1:]
 	}
-	return p, err
+	return p, errors.Annotatef(err, "cannot create zk path %s", path)
 }
 
 // Set the data of a zk node

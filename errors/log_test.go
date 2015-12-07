@@ -2,9 +2,10 @@ package errors
 
 import (
 	"bytes"
-	. "github.com/smartystreets/goconvey/convey"
 	"log"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestLogging(t *testing.T) {

@@ -2,9 +2,10 @@ package errors
 
 import (
 	"errors"
-	. "github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestBaseError(t *testing.T) {
@@ -54,7 +55,7 @@ func TestNoBaseError(t *testing.T) {
 			So(Details(e), ShouldContainSubstring, "hello world")
 			So(Tail(e).Error(), ShouldEqual, "hello world")
 			So(Next(e), ShouldEqual, nil)
-			})
+		})
 		Convey("Errorf should work", func() {
 			e := Errorf("hello %s", "world")
 			So(e.Error(), ShouldEqual, "hello world")

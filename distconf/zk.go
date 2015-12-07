@@ -9,6 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/errors"
 )
 
 // ZkConn does zookeeper connections
@@ -115,7 +116,7 @@ func (back *zkConfig) Get(key string) ([]byte, error) {
 		if err == zk.ErrNoNode {
 			return nil, nil
 		}
-		return nil, err
+		return nil, errors.Annotatef(err, "cannot load zk node %s", pathToFetch)
 	}
 	return bytes, nil
 }
@@ -132,7 +133,7 @@ func (back *zkConfig) Write(key string, value []byte) error {
 			return nil
 		}
 		_, err := back.conn.Create(path, value, 0, zk.WorldACL(zk.PermAll))
-		return err
+		return errors.Annotatef(err, "cannot create path %s", path)
 	}
 	if value == nil {
 		err = back.conn.Delete(path, stat.Version)
@@ -140,7 +141,7 @@ func (back *zkConfig) Write(key string, value []byte) error {
 		stat, err = back.conn.Set(path, value, stat.Version)
 	}
 
-	return err
+	return errors.Annotatef(err, "cannot change path %s", path)
 }
 
 func (back *zkConfig) Watch(key string, callback backingCallbackFunction) error {
@@ -148,7 +149,7 @@ func (back *zkConfig) Watch(key string, callback backingCallbackFunction) error 
 	path := back.configPath(key)
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
-		return err
+		return errors.Annotatef(err, "cannot watch path %s", path)
 	}
 	back.callbacks.add(path, callback)
 
@@ -233,7 +234,7 @@ func (back *zkConfig) reregisterWatch(path string) error {
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
 		log.WithField("err", err).Info("Unable to reregister watch")
-		return err
+		return errors.Annotatef(err, "unable to reregister watch for node %s", path)
 	}
 	return nil
 }
@@ -252,7 +253,7 @@ func Zk(zkConnector ZkConnector) (ReaderWriter, error) {
 	var err error
 	ret.conn, ret.eventChan, err = zkConnector.Connect()
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotate(err, "cannot create zk connection")
 	}
 	go ret.drainEventChan()
 	return ret, nil
