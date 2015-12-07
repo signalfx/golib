@@ -38,7 +38,7 @@ func TestAdvertiseInZKErrs(t *testing.T) {
 	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
 	d1, _ := New(BuilderConnector(b), "TestDupAdvertise")
 	require.Nil(t, d1.Advertise("service1", "", uint16(1234)))
-	e1 := errors.New("Set error check during delete")
+	e1 := errors.New("set error check during delete")
 
 	z.SetErrorCheck(func(s string) error {
 		if s == "delete" {
