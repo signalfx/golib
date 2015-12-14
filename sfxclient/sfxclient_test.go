@@ -1,132 +1,131 @@
 package sfxclient
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"runtime"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/metricproxy/protocol/signalfx"
-	"github.com/stretchr/testify/assert"
+	"github.com/signalfx/golib/timekeeper/timekeepertest"
+	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
 )
 
-type roundTripTest func(r *http.Request) (*http.Response, error)
-
-func (r roundTripTest) RoundTrip(req *http.Request) (*http.Response, error) {
-	return r(req)
+type testSink struct {
+	retErr         error
+	lastDatapoints chan []*datapoint.Datapoint
 }
 
-func TestReporter(t *testing.T) {
-	x := New("ABCD")
-	testSrvr := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		assert.Equal(t, "abcdefg", req.Header.Get(signalfx.TokenHeaderName))
-		rw.Write([]byte(`"OK"`))
-	}))
-	defer testSrvr.Close()
-	ctx := context.Background()
-	x.Endpoint(testSrvr.URL)
-	x.DefaultDimensions(map[string]string{})
-	x.AuthToken("abcdefg")
+func (t *testSink) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) (err error) {
+	t.lastDatapoints <- points
+	return t.retErr
+}
 
-	v := int64(0)
-	met := x.Cumulative("a_metric_name", &IntAddr{&v})
-	cb := 0
-	x.PrecollectCallback(func() {
-		cb++
+func TestNewScheduler(t *testing.T) {
+	Convey("Default error handler should not panic", t, func() {
+		So(func() { DefaultErrorHandler(errors.New("test")) }, ShouldNotPanic)
+		So(func() { DefaultErrorHandler(nil) }, ShouldPanic)
 	})
-	x.DirectDatapointCallback(func(map[string]string) []*datapoint.Datapoint {
-		cb++
-		return []*datapoint.Datapoint{}
+
+	Convey("with a testing scheduler", t, func() {
+		s := NewScheduler()
+
+		tk := timekeepertest.NewStubClock(time.Now())
+		s.Timer = tk
+
+		sink := &testSink{
+			lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+		}
+		s.Sink = sink
+		s.ReportingDelay(time.Second)
+
+		var handledErrors []error
+		var handleErrRet error
+		s.ErrorHandler = func(e error) error {
+			handledErrors = append(handledErrors, e)
+			return errors.Wrap(handleErrRet, e)
+		}
+
+		ctx := context.Background()
+
+		Convey("removing a callback that doesn't exist should work", func() {
+			s.RemoveCallback(nil)
+			s.RemoveGroupedCallback("_", nil)
+		})
+
+		Convey("a single report should work", func() {
+			So(s.ReportOnce(ctx), ShouldBeNil)
+			firstPoints := <-sink.lastDatapoints
+			So(len(firstPoints), ShouldEqual, 0)
+			So(len(sink.lastDatapoints), ShouldEqual, 0)
+		})
+		Convey("with a single callback", func() {
+			s.AddCallback(GoMetricsSource)
+			Convey("default dimensions should set", func() {
+				s.DefaultDimensions(map[string]string{"host": "bob"})
+				s.GroupedDefaultDimensions("_", map[string]string{"host": "bob2"})
+				So(s.ReportOnce(ctx), ShouldBeNil)
+				firstPoints := <-sink.lastDatapoints
+				So(firstPoints[0].Dimensions["host"], ShouldEqual, "bob")
+				Convey("and var should return previous points", func() {
+					So(s.Var().String(), ShouldContainSubstring, "bob")
+				})
+			})
+			Convey("and made to error out", func() {
+				sink.retErr = errors.New("nope bad done")
+				handleErrRet = errors.New("handle error is bad")
+				Convey("scheduled should end", func() {
+					go func() {
+						for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
+							runtime.Gosched()
+						}
+						tk.Incr(time.Duration(s.ReportingDelayNs))
+					}()
+					err := s.Schedule(ctx)
+					So(err.Error(), ShouldEqual, "nope bad done")
+					So(errors.Details(err), ShouldContainSubstring, "handle error is bad")
+				})
+			})
+			Convey("and scheduled", func() {
+				scheduledContext, cancelFunc := context.WithCancel(ctx)
+				scheduleRetErr := make(chan error)
+				go func() {
+					scheduleRetErr <- s.Schedule(scheduledContext)
+				}()
+				Convey("should collect when time advances", func() {
+					for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
+						runtime.Gosched()
+					}
+					tk.Incr(time.Duration(s.ReportingDelayNs))
+					firstPoints := <-sink.lastDatapoints
+					So(len(firstPoints), ShouldEqual, 30)
+					So(len(sink.lastDatapoints), ShouldEqual, 0)
+					Convey("and should skip an interval if we sleep too long", func() {
+						// Should eventually end
+						for atomic.LoadInt64(&s.stats.resetIntervalCounts) == 0 {
+							// Keep skipping time and draining outstanding points until we skip an interval
+							tk.Incr(time.Duration(s.ReportingDelayNs) * 3)
+							for len(sink.lastDatapoints) > 0 {
+								<-sink.lastDatapoints
+							}
+							runtime.Gosched()
+						}
+					})
+				})
+				Reset(func() {
+					cancelFunc()
+					<-scheduleRetErr
+				})
+			})
+			Reset(func() {
+				s.RemoveCallback(GoMetricsSource)
+			})
+		})
+
+		Reset(func() {
+			close(sink.lastDatapoints)
+		})
 	})
-	x.Bucket("name", map[string]string{})
-	assert.NoError(t, x.Report(ctx))
-	assert.NotNil(t, met)
-	assert.Equal(t, 2, cb)
-	x.Forwarder(nil)
-	s := x.Var().String()
-	assert.Contains(t, s, "a_metric_name")
-}
-
-func TestBadContext(t *testing.T) {
-	x := New("ABCD")
-	testSrvr := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		panic("Should not happen!")
-	}))
-	defer testSrvr.Close()
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	x.Endpoint(testSrvr.URL)
-	cancelFunc()
-	<-ctx.Done()
-	assert.Equal(t, context.Canceled, errors.Tail(x.Report(ctx)))
-}
-
-func TestNoMetrics(t *testing.T) {
-	x := New("ABC")
-	ctx := context.Background()
-	assert.NoError(t, x.Report(ctx))
-}
-
-func TestRemove(t *testing.T) {
-	x := New("ABCD")
-	v := int64(0)
-	met := x.Cumulative("", &IntAddr{&v})
-	assert.NotNil(t, met)
-	assert.Equal(t, 1, len(x.metrics))
-	x.Remove(met)
-	assert.Equal(t, 0, len(x.metrics))
-}
-
-func TestGauge(t *testing.T) {
-	x := New("ABCD")
-	v := int64(0)
-	met := x.Gauge("", &IntAddr{&v})
-	assert.Equal(t, datapoint.Gauge, met.metricType)
-}
-
-func TestCounter(t *testing.T) {
-	x := New("ABCD")
-	v := int64(0)
-	met := x.Counter("", &IntAddr{&v})
-	assert.Equal(t, datapoint.Count, met.metricType)
-}
-
-type readError struct {
-}
-
-func (r *readError) Read([]byte) (int, error) {
-	return 0, errors.New("read error")
-}
-
-func TestVals(t *testing.T) {
-	v := int64(0)
-	x := Int(&v)
-	d, err := x.GetValue()
-	assert.Equal(t, "0", d.String())
-	assert.NoError(t, err)
-
-	v++
-	d, err = x.GetValue()
-	assert.Equal(t, "1", d.String())
-	assert.NoError(t, err)
-
-	u := uint64(0)
-	z := UInt(&u)
-
-	d, err = z.GetValue()
-	assert.Equal(t, "0", d.String())
-	assert.NoError(t, err)
-
-	u++
-	d, err = z.GetValue()
-	assert.Equal(t, "1", d.String())
-	assert.NoError(t, err)
-
-	iv := IntVal(func() int64 {
-		return v
-	})
-	d, err = iv.GetValue()
-	assert.Equal(t, "1", d.String())
-	assert.NoError(t, err)
 }

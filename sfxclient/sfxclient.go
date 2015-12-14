@@ -2,226 +2,216 @@ package sfxclient
 
 import (
 	"expvar"
+
+	"github.com/signalfx/golib/datapoint"
+
 	"fmt"
-	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/logherd"
-
-	// TODO: Figure out a way to not have this dependency
 	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/metricproxy/dp/dpsink"
-	"github.com/signalfx/metricproxy/protocol/signalfx"
+	"github.com/signalfx/golib/timekeeper"
 	"golang.org/x/net/context"
 )
 
-var log *logrus.Logger
+// DefaultReportingDelay is the default interval between new SignalFx schedulers
+const DefaultReportingDelay = time.Second * 20
 
-func init() {
-	log = logherd.New()
+// DefaultErrorHandler is the default way to handle errors by a scheduler.  It simply prints them to stdout
+var DefaultErrorHandler = func(err error) error {
+	fmt.Printf("Unable to handle error: %s", err.Error())
+	return nil
 }
 
-// ClientSink is the expected interface that recieves reported metrics
-type ClientSink interface {
-	dpsink.Sink
-	Endpoint(endpoint string)
-	AuthToken(endpoint string)
+// Sink is anything that can receive points collected by a Scheduler
+type Sink interface {
+	AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) (err error)
 }
 
-// New creates a new SignalFx client
-func New(authToken string) *Reporter {
-	forwarder := signalfx.NewSignalfxJSONForwarder("https://ingest.signalfx.com/v2/datapoint", time.Second*10, authToken, 10, "", "", "")
-	forwarder.UserAgent(fmt.Sprintf("SignalFxGo/0.2 (gover %s)", runtime.Version()))
-	return &Reporter{
-		defaultDimensions:  make(map[string]string),
-		previousDatapoints: []*datapoint.Datapoint{},
-		metrics:            make(map[*Timeseries]struct{}),
-		preCallbacks:       []func(){},
-		buckets:            make(map[*Bucket]struct{}),
-		forwarder:          forwarder,
-	}
+// Collector is anything scheduler can track that emits points
+type Collector interface {
+	Datapoints() []*datapoint.Datapoint
 }
 
-// ErrNoauthToken is returned by Report() if no auth token has been set.
-var ErrNoauthToken = errors.New("no auth token")
-
-// DirectCallback is a functional callback that can be passed to DirectDatapointCallback as a way
-// to have the caller calculate and return their own datapoints
-type DirectCallback func(defaultDims map[string]string) []*datapoint.Datapoint
-
-// A Reporter reports metrics to SignalFx
-type Reporter struct {
+type callbackPair struct {
+	callbacks         map[Collector]struct{}
 	defaultDimensions map[string]string
-
-	forwarder     ClientSink
-	forwarderLock sync.Mutex
-
-	metrics                  map[*Timeseries]struct{}
-	buckets                  map[*Bucket]struct{}
-	preCallbacks             []func()
-	directDatapointCallbacks []DirectCallback
-
-	previousDatapoints []*datapoint.Datapoint
-	mu                 sync.Mutex
+	expectedSize      int
 }
 
-// Endpoint controls which URL metrics are reported to
-func (s *Reporter) Endpoint(endpoint string) {
-	s.forwarderLock.Lock()
-	defer s.forwarderLock.Unlock()
-	s.forwarder.Endpoint(endpoint)
-}
-
-// Forwarder controls where metrics are reported to
-func (s *Reporter) Forwarder(forwarder ClientSink) *Reporter {
-	s.forwarderLock.Lock()
-	defer s.forwarderLock.Unlock()
-	s.forwarder = forwarder
-	return s
-}
-
-// AuthToken sets the auth token used to authenticate this session.
-func (s *Reporter) AuthToken(authToken string) {
-	s.forwarderLock.Lock()
-	defer s.forwarderLock.Unlock()
-	s.forwarder.AuthToken(authToken)
-}
-
-// DefaultDimensions sets default dimensions that are added to any datapoints reported
-func (s *Reporter) DefaultDimensions(defaultDimensions map[string]string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.defaultDimensions = defaultDimensions
-}
-
-// Cumulative creates a new cumulative counter timeseries
-func (s *Reporter) Cumulative(metricName string, value Value) *Timeseries {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	ret := &Timeseries{
-		metricType: datapoint.Counter,
-		metric:     metricName,
-		value:      value,
+func (c *callbackPair) getDatapoints(now time.Time) []*datapoint.Datapoint {
+	ret := make([]*datapoint.Datapoint, 0, c.expectedSize)
+	for callback := range c.callbacks {
+		ret = append(ret, callback.Datapoints()...)
 	}
-	s.metrics[ret] = struct{}{}
-	return ret
-}
-
-// Gauge creates a new Gauge timeseries
-func (s *Reporter) Gauge(metricName string, value Value) *Timeseries {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	ret := &Timeseries{
-		metricType: datapoint.Gauge,
-		metric:     metricName,
-		value:      value,
-	}
-	s.metrics[ret] = struct{}{}
-	return ret
-}
-
-// Counter creates a new Counter timeseries
-func (s *Reporter) Counter(metricName string, value Value) *Timeseries {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	ret := &Timeseries{
-		metricType: datapoint.Count,
-		metric:     metricName,
-		value:      value,
-	}
-	s.metrics[ret] = struct{}{}
-	return ret
-}
-
-// Bucket creates a new value bucket and associates it with the Reporter
-func (s *Reporter) Bucket(metricName string, dimensions map[string]string) *Bucket {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	ret := &Bucket{
-		metricName: metricName,
-		dimensions: dimensions,
-	}
-	s.buckets[ret] = struct{}{}
-	return ret
-}
-
-// Remove any time series from this client
-func (s *Reporter) Remove(timeseries ...*Timeseries) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, t := range timeseries {
-		delete(s.metrics, t)
-	}
-}
-
-// PrecollectCallback adds a function that is called before Report().  This is useful for refetching
-// things like runtime.Memstats() so they are only fetched once per report() call
-func (s *Reporter) PrecollectCallback(f func()) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.preCallbacks = append(s.preCallbacks, f)
-}
-
-// DirectDatapointCallback adds a callback that itself will generate datapoints to report
-func (s *Reporter) DirectDatapointCallback(f DirectCallback) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.directDatapointCallbacks = append(s.directDatapointCallbacks, f)
-}
-
-func (s *Reporter) collectDatapoints(ctx context.Context) ([]*datapoint.Datapoint, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if ctx.Err() != nil {
-		return nil, errors.Annotate(ctx.Err(), "context closed")
-	}
-
-	now := time.Now()
-	for _, f := range s.preCallbacks {
-		f()
-	}
-	datapoints := make([]*datapoint.Datapoint, 0, len(s.metrics))
-	for metric := range s.metrics {
-		dp, err := metric.convertToDatapoint(s.defaultDimensions, now)
-		if err == nil {
-			datapoints = append(datapoints, dp)
+	if len(c.defaultDimensions) > 0 {
+		for _, dp := range ret {
+			// It's a bit dangerous to modify the map (we don't know how it was passed in) so
+			// make a copy to be safe
+			dims := make(map[string]string, len(dp.Dimensions)+len(c.defaultDimensions))
+			for k, v := range c.defaultDimensions {
+				dims[k] = v
+			}
+			for k, v := range dp.Dimensions {
+				dims[k] = v
+			}
+			dp.Dimensions = dims
+			if dp.Timestamp.IsZero() {
+				dp.Timestamp = now
+			}
 		}
 	}
-	for _, c := range s.directDatapointCallbacks {
-		// Note: Add default dimensions
-		datapoints = append(datapoints, c(s.defaultDimensions)...)
+	c.expectedSize = len(ret)
+	return ret
+}
+
+// A Scheduler reports metrics to SignalFx
+type Scheduler struct {
+	Sink             Sink
+	Timer            timekeeper.TimeKeeper
+	SendZeroTime     bool
+	ErrorHandler     func(error) error
+	ReportingDelayNs int64
+
+	callbackMutex      sync.Mutex
+	callbackMap        map[string]*callbackPair
+	previousDatapoints []*datapoint.Datapoint
+	stats              struct {
+		scheduledSleepCounts int64
+		resetIntervalCounts  int64
 	}
-	for b := range s.buckets {
-		datapoints = append(datapoints, b.datapoints(s.defaultDimensions, now)...)
+}
+
+// NewScheduler creates a default SignalFx scheduler that can report metrics to signalfx at some interval
+func NewScheduler() *Scheduler {
+	return &Scheduler{
+		Sink:             NewHTTPDatapointSink(),
+		Timer:            timekeeper.RealTime{},
+		ErrorHandler:     DefaultErrorHandler,
+		ReportingDelayNs: DefaultReportingDelay.Nanoseconds(),
+		callbackMap:      make(map[string]*callbackPair),
 	}
-	return datapoints, nil
 }
 
 // Var returns an expvar variable that prints the values of the previously reported datapoints
-func (s *Reporter) Var() expvar.Var {
+func (s *Scheduler) Var() expvar.Var {
 	return expvar.Func(func() interface{} {
-		s.mu.Lock()
-		defer s.mu.Unlock()
+		s.callbackMutex.Lock()
+		defer s.callbackMutex.Unlock()
 		return s.previousDatapoints
 	})
 }
 
-// Report any metrics saved in this reporter to SignalFx
-func (s *Reporter) Report(ctx context.Context) error {
-	datapoints, err := s.collectDatapoints(ctx)
-	if err != nil {
-		return err
+func (s *Scheduler) collectDatapoints() []*datapoint.Datapoint {
+	ret := make([]*datapoint.Datapoint, 0, len(s.previousDatapoints))
+	now := s.Timer.Now()
+	for _, p := range s.callbackMap {
+		ret = append(ret, p.getDatapoints(now)...)
 	}
-	if len(datapoints) == 0 {
-		return nil
+	return ret
+}
+
+// AddCallback adds a collector to the default group
+func (s *Scheduler) AddCallback(db Collector) {
+	s.AddGroupedCallback("", db)
+}
+
+// DefaultDimensions adds a dimension map that are appended to all metrics in the default group
+func (s *Scheduler) DefaultDimensions(dims map[string]string) {
+	s.GroupedDefaultDimensions("", dims)
+}
+
+// GroupedDefaultDimensions adds default dimensions to a specific group
+func (s *Scheduler) GroupedDefaultDimensions(group string, dims map[string]string) {
+	s.callbackMutex.Lock()
+	defer s.callbackMutex.Unlock()
+	subgroup, exists := s.callbackMap[group]
+	if !exists {
+		subgroup = &callbackPair{
+			callbacks:         make(map[Collector]struct{}, 0),
+			defaultDimensions: dims,
+		}
+		s.callbackMap[group] = subgroup
 	}
-	s.forwarderLock.Lock()
-	defer s.forwarderLock.Unlock()
-	s.mu.Lock()
-	s.previousDatapoints = datapoints
-	s.mu.Unlock()
-	return s.forwarder.AddDatapoints(ctx, datapoints)
+	subgroup.defaultDimensions = dims
+}
+
+// AddGroupedCallback adds a collector to a specific group
+func (s *Scheduler) AddGroupedCallback(group string, db Collector) {
+	s.callbackMutex.Lock()
+	defer s.callbackMutex.Unlock()
+	subgroup, exists := s.callbackMap[group]
+	if !exists {
+		subgroup = &callbackPair{
+			callbacks:         map[Collector]struct{}{db: {}},
+			defaultDimensions: map[string]string{},
+		}
+		s.callbackMap[group] = subgroup
+	}
+	subgroup.callbacks[db] = struct{}{}
+}
+
+// RemoveCallback removes a collector from the default group
+func (s *Scheduler) RemoveCallback(db Collector) {
+	s.RemoveGroupedCallback("", db)
+}
+
+// RemoveGroupedCallback removes a collector from a specific group
+func (s *Scheduler) RemoveGroupedCallback(group string, db Collector) {
+	s.callbackMutex.Lock()
+	defer s.callbackMutex.Unlock()
+	if g, exists := s.callbackMap[group]; exists {
+		delete(g.callbacks, db)
+		if len(g.callbacks) == 0 {
+			delete(s.callbackMap, group)
+		}
+	}
+}
+
+// ReportOnce will report any metrics saved in this reporter to SignalFx
+func (s *Scheduler) ReportOnce(ctx context.Context) error {
+	datapoints := func() []*datapoint.Datapoint {
+		// Only take the mutex here so that we don't hold it during the HTTP call
+		s.callbackMutex.Lock()
+		defer s.callbackMutex.Unlock()
+		datapoints := s.collectDatapoints()
+		s.previousDatapoints = datapoints
+		return datapoints
+	}()
+	return s.Sink.AddDatapoints(ctx, datapoints)
+}
+
+// ReportingDelay sets the interval metrics are reported to SignalFx
+func (s *Scheduler) ReportingDelay(delay time.Duration) {
+	atomic.StoreInt64(&s.ReportingDelayNs, delay.Nanoseconds())
+}
+
+// Schedule will run until either the ErrorHandler returns an error or the context is canceled.  This is intended to
+// be run inside a goroutine.
+func (s *Scheduler) Schedule(ctx context.Context) error {
+	lastReport := s.Timer.Now()
+	for {
+		reportingDelay := time.Duration(atomic.LoadInt64(&s.ReportingDelayNs))
+		wakeupTime := lastReport.Add(reportingDelay)
+		now := s.Timer.Now()
+		if now.After(wakeupTime) {
+			wakeupTime = now.Add(reportingDelay)
+			atomic.AddInt64(&s.stats.resetIntervalCounts, 1)
+		}
+		sleepTime := wakeupTime.Sub(now)
+
+		atomic.AddInt64(&s.stats.scheduledSleepCounts, 1)
+		select {
+		case <-ctx.Done():
+			return errors.Annotate(ctx.Err(), "context closed")
+		case <-s.Timer.After(sleepTime):
+			lastReport = s.Timer.Now()
+			if err := errors.Annotate(s.ReportOnce(ctx), "failed reporting single metric"); err != nil {
+				if err2 := errors.Annotate(s.ErrorHandler(err), "error handler returned an error"); err2 != nil {
+					return err2
+				}
+			}
+		}
+	}
 }

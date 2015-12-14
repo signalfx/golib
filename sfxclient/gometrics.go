@@ -3,69 +3,57 @@ package sfxclient
 import (
 	"runtime"
 	"time"
+
+	"github.com/signalfx/golib/datapoint"
 )
 
-// GolangMetricSource gathers and reports generally useful golang system stats for the client
-type GolangMetricSource struct {
-	ts     []*Timeseries
-	client *Reporter
-	mstat  runtime.MemStats
-}
+var startTime = time.Now()
 
-// NewGolangMetricSource registers the client to report golang system metrics
-func NewGolangMetricSource(client *Reporter) *GolangMetricSource {
+// GoMetricsSource is a singleton that collects basic go system stats
+var GoMetricsSource Collector = &goMetrics{}
+
+type goMetrics struct{}
+
+func (g *goMetrics) Datapoints() []*datapoint.Datapoint {
+	mstat := runtime.MemStats{}
+	runtime.ReadMemStats(&mstat)
 	dims := map[string]string{
 		"instance": "global_stats",
 		"stattype": "golang_sys",
 	}
-	start := time.Now()
-	ret := &GolangMetricSource{
-		client: client,
+	return []*datapoint.Datapoint{
+		Gauge("Alloc", dims, int64(mstat.Alloc)),
+		Cumulative("TotalAlloc", dims, int64(mstat.TotalAlloc)),
+		Gauge("Sys", dims, int64(mstat.Alloc)),
+		Cumulative("Lookups", dims, int64(mstat.Lookups)),
+		Cumulative("Mallocs", dims, int64(mstat.Mallocs)),
+		Cumulative("Frees", dims, int64(mstat.Frees)),
+		Gauge("HeapAlloc", dims, int64(mstat.HeapAlloc)),
+		Gauge("HeapSys", dims, int64(mstat.HeapSys)),
+		Gauge("HeapIdle", dims, int64(mstat.HeapIdle)),
+		Gauge("HeapInuse", dims, int64(mstat.HeapInuse)),
+		Gauge("HeapReleased", dims, int64(mstat.HeapReleased)),
+		Gauge("HeapObjects", dims, int64(mstat.HeapObjects)),
+		Gauge("StackInuse", dims, int64(mstat.StackInuse)),
+		Gauge("StackSys", dims, int64(mstat.StackSys)),
+		Gauge("MSpanInuse", dims, int64(mstat.MSpanInuse)),
+		Gauge("MSpanSys", dims, int64(mstat.MSpanSys)),
+		Gauge("MCacheInuse", dims, int64(mstat.MCacheInuse)),
+		Gauge("MCacheSys", dims, int64(mstat.MCacheSys)),
+		Gauge("BuckHashSys", dims, int64(mstat.BuckHashSys)),
+		Gauge("GCSys", dims, int64(mstat.GCSys)),
+		Gauge("OtherSys", dims, int64(mstat.OtherSys)),
+		Gauge("NextGC", dims, int64(mstat.NextGC)),
+		Gauge("LastGC", dims, int64(mstat.LastGC)),
+		Cumulative("PauseTotalNs", dims, int64(mstat.PauseTotalNs)),
+		Gauge("NumGC", dims, int64(mstat.NumGC)),
+
+		Gauge("GOMAXPROCS", dims, int64(runtime.GOMAXPROCS(0))),
+		Gauge("process.uptime.ns", dims, time.Now().Sub(startTime).Nanoseconds()),
+		Gauge("num_cpu", dims, int64(runtime.NumCPU())),
+
+		Cumulative("num_cgo_call", dims, runtime.NumCgoCall()),
+
+		Gauge("num_goroutine", dims, int64(runtime.NumGoroutine())),
 	}
-	ts := []*Timeseries{
-		client.Gauge("Alloc", UInt(&ret.mstat.Alloc)).Dimensions(dims),
-		client.Cumulative("TotalAlloc", UInt(&ret.mstat.TotalAlloc)).Dimensions(dims),
-		client.Gauge("Sys", UInt(&ret.mstat.Sys)).Dimensions(dims),
-		client.Cumulative("Lookups", UInt(&ret.mstat.Lookups)).Dimensions(dims),
-		client.Cumulative("Mallocs", UInt(&ret.mstat.Mallocs)).Dimensions(dims),
-		client.Cumulative("Frees", UInt(&ret.mstat.Frees)).Dimensions(dims),
-		client.Gauge("HeapAlloc", UInt(&ret.mstat.HeapAlloc)).Dimensions(dims),
-		client.Gauge("HeapSys", UInt(&ret.mstat.HeapSys)).Dimensions(dims),
-		client.Gauge("HeapIdle", UInt(&ret.mstat.HeapIdle)).Dimensions(dims),
-		client.Gauge("HeapInuse", UInt(&ret.mstat.HeapInuse)).Dimensions(dims),
-		client.Gauge("HeapReleased", UInt(&ret.mstat.HeapReleased)).Dimensions(dims),
-		client.Gauge("HeapObjects", UInt(&ret.mstat.HeapObjects)).Dimensions(dims),
-		client.Gauge("StackInuse", UInt(&ret.mstat.StackInuse)).Dimensions(dims),
-		client.Gauge("StackSys", UInt(&ret.mstat.StackSys)).Dimensions(dims),
-		client.Gauge("MSpanInuse", UInt(&ret.mstat.MSpanInuse)).Dimensions(dims),
-		client.Gauge("MSpanSys", UInt(&ret.mstat.MSpanSys)).Dimensions(dims),
-		client.Gauge("MCacheInuse", UInt(&ret.mstat.MCacheInuse)).Dimensions(dims),
-		client.Gauge("MCacheSys", UInt(&ret.mstat.MCacheSys)).Dimensions(dims),
-		client.Gauge("BuckHashSys", UInt(&ret.mstat.BuckHashSys)).Dimensions(dims),
-		client.Gauge("GCSys", UInt(&ret.mstat.GCSys)).Dimensions(dims),
-		client.Gauge("OtherSys", UInt(&ret.mstat.OtherSys)).Dimensions(dims),
-		client.Gauge("NextGC", UInt(&ret.mstat.NextGC)).Dimensions(dims),
-		client.Gauge("LastGC", UInt(&ret.mstat.LastGC)).Dimensions(dims),
-		client.Cumulative("PauseTotalNs", UInt(&ret.mstat.PauseTotalNs)).Dimensions(dims),
-		client.Gauge("NumGC", IntVal(func() int64 { return int64(ret.mstat.NumGC) })).Dimensions(dims),
-
-		client.Gauge("GOMAXPROCS", IntVal(func() int64 { return int64(runtime.GOMAXPROCS(0)) })).Dimensions(dims),
-		client.Gauge("process.uptime.ns", IntVal(func() int64 { return time.Now().Sub(start).Nanoseconds() })).Dimensions(dims),
-		client.Gauge("num_cpu", IntVal(func() int64 { return int64(runtime.NumCPU()) })).Dimensions(dims),
-		client.Cumulative("num_cgo_call", IntVal(runtime.NumCgoCall)).Dimensions(dims),
-		client.Gauge("num_goroutine", IntVal(func() int64 { return int64(runtime.NumGoroutine()) })).Dimensions(dims),
-	}
-	ret.ts = ts
-	client.PrecollectCallback(ret.precollectCallback)
-	return ret
-}
-
-func (g *GolangMetricSource) precollectCallback() {
-	runtime.ReadMemStats(&g.mstat)
-}
-
-// Close the metric source and will stop reporting these system stats to the client
-func (g *GolangMetricSource) Close() error {
-	g.client.Remove(g.ts...)
-	return nil
 }
