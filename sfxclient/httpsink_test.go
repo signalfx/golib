@@ -5,8 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +14,7 @@ import (
 	"github.com/signalfx/golib/errors"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
+	"net"
 )
 
 type errReader struct {
@@ -78,10 +77,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			var blockResponse chan struct{}
 			var cancelCallback func()
 			seenBodyPoints := &com_signalfx_metrics_protobuf.DataPointUploadMessage{}
-			ingestHappening := sync.WaitGroup{}
-			ingest := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-				ingestHappening.Add(1)
-				defer ingestHappening.Done()
+			handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				bodyBytes := bytes.Buffer{}
 				io.Copy(&bodyBytes, req.Body)
 				req.Body.Close()
@@ -93,12 +89,25 @@ func TestHTTPDatapointSink(t *testing.T) {
 						cancelCallback()
 					}
 					select {
-					case <-req.Cancel:
+					case <-cancelChanFromReq(req):
 					case <-blockResponse:
 					}
 				}
-			}))
-			s.Endpoint = ingest.URL
+			})
+
+			// Note: Using httptest created some strange race conditions around their use of wait group, so
+			//       I'm creating my own listener here that I close in Reset()
+			l, err := net.Listen("tcp", "127.0.0.1:0")
+			So(err, ShouldBeNil)
+			server := http.Server{
+				Handler: handler,
+			}
+			serverDone := make(chan struct{})
+			go func() {
+				server.Serve(l)
+				close(serverDone)
+			}()
+			s.Endpoint = "http://" + l.Addr().String()
 			Convey("Send should normally work", func() {
 				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
 			})
@@ -145,21 +154,19 @@ func TestHTTPDatapointSink(t *testing.T) {
 			Convey("context cancel should work", func() {
 				blockResponse = make(chan struct{})
 				ctx, cancelCallback = context.WithCancel(ctx)
-				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "request canceled")
+				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "canceled")
 			})
 			Convey("timeouts should work", func() {
 				blockResponse = make(chan struct{})
-				ctx, _ = context.WithCancel(ctx)
 				s.Client.Timeout = time.Millisecond * 10
-				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "Timeout exceeded")
+				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, timeoutString())
 			})
 			Reset(func() {
 				if blockResponse != nil {
 					close(blockResponse)
 				}
-				//              TODO: Race detector if I uncomment ingest.Close().  I can't figure out the correct way to Close() ingest
-				//					while also slowing down the http request
-				//				ingest.Close()
+				So(l.Close(), ShouldBeNil)
+				<-serverDone
 			})
 		})
 	})

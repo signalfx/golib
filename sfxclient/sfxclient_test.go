@@ -77,13 +77,15 @@ func TestNewScheduler(t *testing.T) {
 				sink.retErr = errors.New("nope bad done")
 				handleErrRet = errors.New("handle error is bad")
 				Convey("scheduled should end", func() {
+					scheduleOver := int64(0)
 					go func() {
-						for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
+						for atomic.LoadInt64(&scheduleOver) == 0 {
+							tk.Incr(time.Duration(s.ReportingDelayNs))
 							runtime.Gosched()
 						}
-						tk.Incr(time.Duration(s.ReportingDelayNs))
 					}()
 					err := s.Schedule(ctx)
+					atomic.StoreInt64(&scheduleOver, 1)
 					So(err.Error(), ShouldEqual, "nope bad done")
 					So(errors.Details(err), ShouldContainSubstring, "handle error is bad")
 				})
@@ -95,10 +97,10 @@ func TestNewScheduler(t *testing.T) {
 					scheduleRetErr <- s.Schedule(scheduledContext)
 				}()
 				Convey("should collect when time advances", func() {
-					for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
+					for len(sink.lastDatapoints) == 0 {
+						tk.Incr(time.Duration(s.ReportingDelayNs))
 						runtime.Gosched()
 					}
-					tk.Incr(time.Duration(s.ReportingDelayNs))
 					firstPoints := <-sink.lastDatapoints
 					So(len(firstPoints), ShouldEqual, 30)
 					So(len(sink.lastDatapoints), ShouldEqual, 0)

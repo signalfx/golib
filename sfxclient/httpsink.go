@@ -83,8 +83,7 @@ func (h *HTTPDatapointSink) AddDatapoints(ctx context.Context, points []*datapoi
 	req.Header.Set("User-Agent", h.UserAgent)
 	req.Header.Set("Connection", "Keep-Alive")
 
-	req.Cancel = ctx.Done()
-	return h.handleResponse(h.Client.Do(req))
+	return h.withCancel(ctx, req)
 }
 
 func (h *HTTPDatapointSink) handleResponse(resp *http.Response, respErr error) (err error) {
