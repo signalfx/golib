@@ -1,0 +1,85 @@
+package log
+
+import (
+	"encoding/json"
+	"io"
+	"fmt"
+	"encoding"
+	"github.com/signalfx/golib/errors"
+	"io/ioutil"
+	"reflect"
+)
+
+type JSONLogger struct {
+	Out io.Writer
+}
+
+var _ ErrorLogger = &JSONLogger{}
+
+func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
+	if w == ioutil.Discard {
+		return Discard
+	}
+	return &ErrorLogLogger{
+		RootLogger: &JSONLogger{
+			Out: w,
+		},
+		ErrHandler: ErrHandler,
+	}
+}
+
+func (j *JSONLogger) Log(keyvals ...interface{}) error {
+	n := (len(keyvals) + 1) / 2 // +1 to handle case when len is odd
+	m := make(map[string]interface{}, n)
+	for i := 0; i < len(keyvals); i += 2 {
+		k := keyvals[i]
+		var v interface{} = ErrMissingValue
+		if i+1 < len(keyvals) {
+			v = keyvals[i+1]
+		}
+		m[mapKey(k)] = mapValue(v)
+	}
+	return errors.Annotate(json.NewEncoder(j.Out).Encode(m), "cannot JSON encode log")
+}
+
+// Different from go-kit.  People just shouldn't pass nil values and should know if they do
+func mapKey(k interface{}) (s string) {
+	defer func() {
+		if panicVal := recover(); panicVal != nil {
+			s = nilCheck(k, panicVal, "NULL").(string)
+		}
+	}()
+	switch x := k.(type) {
+	case string:
+		return x
+	case fmt.Stringer:
+		return x.String()
+	default:
+		return fmt.Sprint(x)
+	}
+}
+
+func nilCheck(ptr, panicVal interface{}, onError interface{}) interface{} {
+	if vl := reflect.ValueOf(ptr); vl.Kind() == reflect.Ptr && vl.IsNil() {
+		return onError
+	}
+	panic(panicVal)
+}
+
+func mapValue(v interface{}) (s interface{}) {
+	defer func() {
+		if panicVal := recover(); panicVal != nil {
+			s = nilCheck(v, panicVal, nil)
+		}
+	}()
+	// See newTypeEncoder
+	switch x := v.(type) {
+	case json.Marshaler:
+	case encoding.TextMarshaler:
+	case error:
+		return x.Error()
+	case fmt.Stringer:
+		return x.String()
+	}
+	return v
+}
