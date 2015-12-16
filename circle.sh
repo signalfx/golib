@@ -28,9 +28,9 @@ function do_cache() {
   mkdir -p "$GO_COMPILER_PATH"
   install_all_go_versions "$GO_COMPILER_PATH"
   install_go_version "$GO_COMPILER_PATH" "$DEFAULT_GOLANG_VERSION"
+  mkdir -p "$GOPATH_INTO"
   install_circletasker "$GOPATH_INTO"
   versioned_goget "github.com/cep21/gobuild:v1.3"
-  mkdir -p "$GOPATH_INTO"
   copy_local_to_path "$SRC_PATH"
 }
 
@@ -58,7 +58,7 @@ function do_test() {
     rm -rf "$GOPATH/pkg"
     go env
     go version
-    go tool cover | go get golang.org/x/tools/cmd/cover
+    go tool cover || go get golang.org/x/tools/cmd/cover
     (
       cd "$SRC_PATH"
       mkdir -p "$CIRCLE_ARTIFACTS/$GO_VERSION"
