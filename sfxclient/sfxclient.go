@@ -49,14 +49,7 @@ func (c *callbackPair) getDatapoints(now time.Time) []*datapoint.Datapoint {
 		for _, dp := range ret {
 			// It's a bit dangerous to modify the map (we don't know how it was passed in) so
 			// make a copy to be safe
-			dims := make(map[string]string, len(dp.Dimensions)+len(c.defaultDimensions))
-			for k, v := range c.defaultDimensions {
-				dims[k] = v
-			}
-			for k, v := range dp.Dimensions {
-				dims[k] = v
-			}
-			dp.Dimensions = dims
+			dp.Dimensions = AddMaps(c.defaultDimensions, dp.Dimensions)
 			if dp.Timestamp.IsZero() {
 				dp.Timestamp = now
 			}
