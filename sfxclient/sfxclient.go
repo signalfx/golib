@@ -34,6 +34,16 @@ type Collector interface {
 	Datapoints() []*datapoint.Datapoint
 }
 
+// CollectorFunc wraps a function to make it a Collector
+type CollectorFunc func() []*datapoint.Datapoint
+
+// Datapoints calls the wrapped function
+func (c CollectorFunc) Datapoints() []*datapoint.Datapoint {
+	return c()
+}
+
+var _ Collector = CollectorFunc(nil)
+
 type callbackPair struct {
 	callbacks         map[Collector]struct{}
 	defaultDimensions map[string]string

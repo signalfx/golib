@@ -54,6 +54,15 @@ func TestNewScheduler(t *testing.T) {
 			s.RemoveCallback(nil)
 			s.RemoveGroupedCallback("_", nil)
 		})
+		Convey("CollectorFunc should work", func() {
+			c := 0
+			cf := CollectorFunc(func() []*datapoint.Datapoint {
+				c++
+				return []*datapoint.Datapoint{}
+			})
+			So(len(cf.Datapoints()), ShouldEqual, 0)
+			So(c, ShouldEqual, 1)
+		})
 
 		Convey("a single report should work", func() {
 			So(s.ReportOnce(ctx), ShouldBeNil)
