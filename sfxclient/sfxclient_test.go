@@ -62,6 +62,7 @@ func TestNewScheduler(t *testing.T) {
 			})
 			So(len(cf.Datapoints()), ShouldEqual, 0)
 			So(c, ShouldEqual, 1)
+			s.AddCallback(cf)
 		})
 
 		Convey("a single report should work", func() {

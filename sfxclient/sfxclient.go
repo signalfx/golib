@@ -34,12 +34,21 @@ type Collector interface {
 	Datapoints() []*datapoint.Datapoint
 }
 
+// HashableCollector is a Collector function that can be inserted into a hashmap
+type HashableCollector struct {
+	Callback func() []*datapoint.Datapoint
+}
+
 // CollectorFunc wraps a function to make it a Collector
-type CollectorFunc func() []*datapoint.Datapoint
+func CollectorFunc (callback func() []*datapoint.Datapoint) *HashableCollector {
+	return &HashableCollector {
+		Callback: callback,
+	}
+}
 
 // Datapoints calls the wrapped function
-func (c CollectorFunc) Datapoints() []*datapoint.Datapoint {
-	return c()
+func (h *HashableCollector) Datapoints() []*datapoint.Datapoint {
+	return h.Callback()
 }
 
 var _ Collector = CollectorFunc(nil)
