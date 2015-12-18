@@ -40,8 +40,8 @@ type HashableCollector struct {
 }
 
 // CollectorFunc wraps a function to make it a Collector
-func CollectorFunc (callback func() []*datapoint.Datapoint) *HashableCollector {
-	return &HashableCollector {
+func CollectorFunc(callback func() []*datapoint.Datapoint) *HashableCollector {
+	return &HashableCollector{
 		Callback: callback,
 	}
 }
