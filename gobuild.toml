@@ -3,6 +3,8 @@
   testCoverage = 100.0
 
 [metalinter]
+  [metalinter.ignored]
+    go14= "^.*has no field or method Cancel.*$" 
   [metalinter.enabled]
     golint = true
     gofmt = true
