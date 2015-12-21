@@ -4,14 +4,12 @@ import (
 	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
 	"io"
-	"runtime"
 	"strconv"
 	"sync"
 	"testing"
 )
 
 func TestWithConcurrent(t *testing.T) {
-	t.Logf("Max proc is %d", runtime.GOMAXPROCS(0))
 	// Create some buckets to count how many events each goroutine logs.
 	const goroutines = 10
 	counts := [goroutines]int{}
