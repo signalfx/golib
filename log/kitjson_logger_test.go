@@ -110,7 +110,7 @@ func TestJSONLoggerStringValue(t *testing.T) {
 
 	for _, test := range tests {
 		buf := &bytes.Buffer{}
-		logger := log.JSONLogger{buf}
+		logger := log.JSONLogger{Out: buf}
 		if err := logger.Log("v", test.v); err != nil {
 			t.Fatal(err)
 		}

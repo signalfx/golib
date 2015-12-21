@@ -1,12 +1,13 @@
 package log
+
 import (
-	"testing"
-	. "github.com/smartystreets/goconvey/convey"
 	"bytes"
-"errors"
+	"errors"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
-type errMarshall struct {}
+type errMarshall struct{}
 
 func (e *errMarshall) MarshalText() (text []byte, err error) {
 	return nil, &errMarshall{}

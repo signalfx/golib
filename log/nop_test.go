@@ -1,4 +1,5 @@
 package log
+
 import "testing"
 import . "github.com/smartystreets/goconvey/convey"
 

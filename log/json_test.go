@@ -1,13 +1,15 @@
 package log
+
 import (
-	"testing"
-	. "github.com/smartystreets/goconvey/convey"
 	"bytes"
 	"encoding/json"
-"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/errors"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 type panicError struct{}
+
 func (p *panicError) Error() string {
 	panic("failure?")
 }
@@ -30,8 +32,8 @@ func TestJSONLogger(t *testing.T) {
 		Convey("should forward errors", func() {
 			c := NewChannelLogger(1, Panic)
 			l := NewJSONLogger(b, c)
-			l.Log("type", func(){})
-			err := errors.Tail(<- c.Err)
+			l.Log("type", func() {})
+			err := errors.Tail(<-c.Err)
 			_, ok := err.(*json.UnsupportedTypeError)
 			So(ok, ShouldBeTrue)
 		})

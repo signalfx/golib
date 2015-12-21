@@ -1,7 +1,8 @@
 package log
+
 import (
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 	"time"
 )
 
@@ -52,22 +53,22 @@ func TestTimeDynamic(t *testing.T) {
 			start := time.Now()
 			l.Log("ts", td)
 			later := time.Now()
-			msg := <- c.Out
+			msg := <-c.Out
 			So(between(start, msg[1].(time.Time), later), ShouldBeTrue)
 		})
 		Convey("UTC should convert", func() {
 			td.UTC = true
 			l.Log("ts", td)
-			msg := <- c.Out
+			msg := <-c.Out
 			So(msg[1].(time.Time).Location(), ShouldEqual, time.UTC)
 		})
 		Convey("Layout should change", func() {
 			td.AsString = true
 			l.Log("ts", td)
-			msg1 := <- c.Out
+			msg1 := <-c.Out
 			td.Layout = time.RFC3339Nano
 			l.Log("ts", td)
-			msg2 := <- c.Out
+			msg2 := <-c.Out
 			So(msg1[1].(string), ShouldNotResemble, msg2[1].(string))
 		})
 	})

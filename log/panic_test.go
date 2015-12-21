@@ -1,7 +1,8 @@
 package log
+
 import (
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 func TestPanicLogger(t *testing.T) {
@@ -11,7 +12,7 @@ func TestPanicLogger(t *testing.T) {
 			So(l.ErrorLogger(nil), ShouldEqual, l)
 		})
 		Convey("should panic", func() {
-			So(func(){
+			So(func() {
 				l.Log()
 			}, ShouldPanic)
 		})

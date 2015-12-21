@@ -1,10 +1,11 @@
 package log
+
 import (
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
-	"sync/atomic"
-	"time"
 	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
 )
 
 func TestChannelLogger(t *testing.T) {
@@ -23,7 +24,7 @@ func TestChannelLogger(t *testing.T) {
 			}()
 			time.Sleep(time.Millisecond)
 			atomic.StoreInt64(&shouldPanic, 1)
-			<- c.Out
+			<-c.Out
 			wg.Wait()
 		})
 		Convey("with a full handler", func() {

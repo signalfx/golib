@@ -11,4 +11,5 @@
     gocyclo = true
     vet = true
     deadcode = true
-
+  [metalinter.ignored]
+    logargs = "no args in Log call"

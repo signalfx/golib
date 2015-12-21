@@ -1,9 +1,9 @@
 package log
-import
-(
-	"testing"
+
+import (
 	. "github.com/smartystreets/goconvey/convey"
 	"sync"
+	"testing"
 )
 
 func TestCounter(t *testing.T) {
@@ -25,16 +25,16 @@ func TestCounter(t *testing.T) {
 			numIter := 10
 			wg := sync.WaitGroup{}
 			wg.Add(numRoutines)
-			for i :=0;i<numRoutines;i++ {
+			for i := 0; i < numRoutines; i++ {
 				go func() {
 					defer wg.Done()
-					for j:=0;j<numIter;j++ {
+					for j := 0; j < numIter; j++ {
 						c.Log("hello")
 					}
 				}()
 			}
 			wg.Wait()
-			So(c.Count, ShouldEqual, numRoutines * numIter)
+			So(c.Count, ShouldEqual, numRoutines*numIter)
 		})
 	})
 }

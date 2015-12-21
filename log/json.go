@@ -1,21 +1,23 @@
 package log
 
 import (
-	"encoding/json"
-	"io"
-	"fmt"
 	"encoding"
+	"encoding/json"
+	"fmt"
 	"github.com/signalfx/golib/errors"
+	"io"
 	"io/ioutil"
 	"reflect"
 )
 
+// JSONLogger logs out JSON objects to a writer
 type JSONLogger struct {
 	Out io.Writer
 }
 
 var _ ErrorLogger = &JSONLogger{}
 
+// NewJSONLogger creates a new JSON logger
 func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 	if w == ioutil.Discard {
 		return Discard
@@ -28,6 +30,7 @@ func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 	}
 }
 
+// Log will format a JSON map and write it to Out
 func (j *JSONLogger) Log(keyvals ...interface{}) error {
 	n := (len(keyvals) + 1) / 2 // +1 to handle case when len is odd
 	m := make(map[string]interface{}, n)

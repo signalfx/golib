@@ -1,12 +1,13 @@
 package log
 
 import (
-	"io"
+	"github.com/signalfx/golib/errors"
 	"gopkg.in/logfmt.v0"
+	"io"
 	"io/ioutil"
-"github.com/signalfx/golib/errors"
 )
 
+// LogfmtLogger logs out in logfmt format
 type LogfmtLogger struct {
 	Out io.Writer
 }
@@ -26,6 +27,7 @@ func NewLogfmtLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 	}
 }
 
+// Log writes the keyvalus in logfmt format to Out
 func (l *LogfmtLogger) Log(keyvals ...interface{}) error {
 	// The Logger interface requires implementations to be safe for concurrent
 	// use by multiple goroutines. For this implementation that means making

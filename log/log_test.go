@@ -1,12 +1,13 @@
 package log
+
 import (
-	"testing"
+	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
-	"sync"
+	"io"
 	"runtime"
 	"strconv"
-	"bytes"
-	"io"
+	"sync"
+	"testing"
 )
 
 func TestWithConcurrent(t *testing.T) {
@@ -91,34 +92,34 @@ func TestLoggingBasics(t *testing.T) {
 		Convey("Should not remember with statements", func() {
 			c.With("name", "john")
 			c.Log()
-			So(len(<- mem.Out), ShouldEqual, 0)
+			So(len(<-mem.Out), ShouldEqual, 0)
 		})
 		Convey("should even out context values on with", func() {
 			c = c.With("name")
 			c.Log()
-			So(len(<- mem.Out), ShouldEqual, 2)
+			So(len(<-mem.Out), ShouldEqual, 2)
 		})
 		Convey("should even out context values on withprefix", func() {
 			c = c.WithPrefix("name")
 			c.Log()
-			So(len(<- mem.Out), ShouldEqual, 2)
+			So(len(<-mem.Out), ShouldEqual, 2)
 		})
 		Convey("should even out context values on log", func() {
 			c.Log("name")
-			So(len(<- mem.Out), ShouldEqual, 2)
+			So(len(<-mem.Out), ShouldEqual, 2)
 		})
 		Convey("Should convey params using with", func() {
 			c = c.With("name", "john")
 			c.Log()
-			So(len(<- mem.Out), ShouldEqual, 2)
+			So(len(<-mem.Out), ShouldEqual, 2)
 			Convey("and Log()", func() {
 				c.Log("age", "10")
-				So(toStr(<- mem.Out), ShouldResemble, []string{"name", "john", "age", "10"})
+				So(toStr(<-mem.Out), ShouldResemble, []string{"name", "john", "age", "10"})
 			})
 			Convey("should put WithPrefix first", func() {
 				c = c.WithPrefix("name", "jack")
 				c.Log()
-				So(toStr(<- mem.Out), ShouldResemble, []string{"name", "jack", "name", "john"})
+				So(toStr(<-mem.Out), ShouldResemble, []string{"name", "jack", "name", "john"})
 			})
 		})
 	})
@@ -126,7 +127,7 @@ func TestLoggingBasics(t *testing.T) {
 
 func BenchmarkEmptyLogDisabled(b *testing.B) {
 	c := NewContext(Discard)
-	for i:=0;i<b.N;i++ {
+	for i := 0; i < b.N; i++ {
 		c.Log()
 	}
 }
@@ -134,7 +135,7 @@ func BenchmarkEmptyLogDisabled(b *testing.B) {
 func BenchmarkEmptyLogNotDisabled(b *testing.B) {
 	count := Counter{}
 	c := NewContext(&count)
-	for i:=0;i<b.N;i++ {
+	for i := 0; i < b.N; i++ {
 		c.Log()
 	}
 }
@@ -143,7 +144,7 @@ func BenchmarkContextWithLog(b *testing.B) {
 	count := Counter{}
 	c := NewContext(&count)
 	c = c.With("hello", "world")
-	for i:=0;i<b.N;i++ {
+	for i := 0; i < b.N; i++ {
 		c.Log("name", "bob")
 	}
 }
@@ -153,7 +154,7 @@ func BenchmarkContextWithOnly(b *testing.B) {
 	c := NewContext(&count)
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i:=0;i<b.N;i++ {
+	for i := 0; i < b.N; i++ {
 		c.With("", "")
 	}
 }
@@ -162,7 +163,7 @@ func BenchmarkContextWithWithLog(b *testing.B) {
 	count := Counter{}
 	c := NewContext(&count)
 	c = c.With("hello", "world")
-	for i:=0;i<b.N;i++ {
+	for i := 0; i < b.N; i++ {
 		c.With("type", "dog").Log("name", "bob")
 	}
 }
@@ -242,7 +243,7 @@ func TestDisabledLog(t *testing.T) {
 
 type lockWriter struct {
 	out io.Writer
-	mu sync.Mutex
+	mu  sync.Mutex
 }
 
 func (l *lockWriter) Write(b []byte) (int, error) {
@@ -257,13 +258,13 @@ func TestNewChannelLoggerRace(t *testing.T) {
 }
 
 func TestNewJSONLoggerRace(t *testing.T) {
-	l := NewJSONLogger(&lockWriter{out:&bytes.Buffer{}}, Discard)
+	l := NewJSONLogger(&lockWriter{out: &bytes.Buffer{}}, Discard)
 	raceCheck(l)
 }
 
 func TestNewLogfmtLoggerRace(t *testing.T) {
 	b := &bytes.Buffer{}
-	l := NewLogfmtLogger(&lockWriter{out:b}, Discard)
+	l := NewLogfmtLogger(&lockWriter{out: b}, Discard)
 	raceCheck(l)
 }
 
@@ -284,7 +285,7 @@ func raceCheckerIter(l Logger, deep int, iter int) {
 	ctx := NewContext(l)
 	wg := sync.WaitGroup{}
 	wg.Add(iter)
-	for i :=0; i < iter; i++ {
+	for i := 0; i < iter; i++ {
 		go func(i int) {
 			raceCheckerIter(ctx.With(strconv.FormatInt(int64(deep), 10), i), deep-1, iter)
 			wg.Done()

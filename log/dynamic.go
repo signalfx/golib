@@ -1,17 +1,21 @@
 package log
 
 import (
-	"time"
-	"gopkg.in/stack.v1"
 	"github.com/signalfx/golib/timekeeper"
+	"gopkg.in/stack.v1"
+	"time"
 )
 
+// Dynamic values are evaluated at Log() time, not when they are added to the context. They are also only evaulated by
+// Context{} objects
 type Dynamic interface {
 	LogValue() interface{}
 }
 
+// DynamicFunc wraps a function to make it Dynamic
 type DynamicFunc func() interface{}
 
+// LogValue calls the wrapped function
 func (d DynamicFunc) LogValue() interface{} {
 	return d()
 }
@@ -37,23 +41,27 @@ func copyIfDynamic(keyvals []interface{}) []interface{} {
 	return newArray
 }
 
+// Caller returns line in the stack trace at Depth stack depth
 type Caller struct {
 	Depth int
 }
 
+// LogValue returs the call stack at Depth depth
 func (c *Caller) LogValue() interface{} {
 	return stack.Caller(c.Depth)
 }
 
+// TimeDynamic returns a time.Time() or time string of when the log message happened
 type TimeDynamic struct {
-	Layout string
+	Layout     string
 	TimeKeeper timekeeper.TimeKeeper
-	UTC bool
-	AsString bool
+	UTC        bool
+	AsString   bool
 }
 
 var _ Dynamic = &TimeDynamic{}
 
+// LogValue returns a timestamp as described by parameters
 func (t *TimeDynamic) LogValue() interface{} {
 	var now time.Time
 	if t.TimeKeeper == nil {
@@ -74,7 +82,10 @@ func (t *TimeDynamic) LogValue() interface{} {
 }
 
 var (
-	DefaultTimestamp *TimeDynamic = &TimeDynamic{AsString: true}
-	DefaultTimestampUTC *TimeDynamic = &TimeDynamic{UTC: true, AsString: true}
+	// DefaultTimestamp returns the local time as a string
+	DefaultTimestamp = &TimeDynamic{AsString: true}
+	// DefaultTimestampUTC returns local UTC time as a string
+	DefaultTimestampUTC = &TimeDynamic{UTC: true, AsString: true}
+	// DefaultCaller is what you probably want when using a context
 	DefaultCaller = &Caller{Depth: 3}
 )

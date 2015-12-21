@@ -1,9 +1,10 @@
 package log
+
 import (
-	"testing"
+	"github.com/go-kit/kit/log"
 	. "github.com/smartystreets/goconvey/convey"
 	"io/ioutil"
-	"github.com/go-kit/kit/log"
+	"testing"
 )
 
 func TestFromGokit(t *testing.T) {
