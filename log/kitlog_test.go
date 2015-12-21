@@ -153,7 +153,7 @@ func TestWithConcurrent(t *testing.T) {
 	// can bucket the event counts.
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	const n = 10000
+	const n = 1000
 	for i := 0; i < goroutines; i++ {
 		go func(idx int) {
 			defer wg.Done()
