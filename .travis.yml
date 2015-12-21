@@ -6,8 +6,8 @@ go:
   - 1.5
 
 before_install:
-  - go get -u github.com/cep21/goverify
   - go get github.com/mattn/goveralls
+  - go get -u github.com/cep21/gobuild
 
 install:
   - echo -e "Host heroku.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
@@ -18,8 +18,7 @@ install:
 script:
   - export PATH=$HOME/gopath/bin:$PATH
   - export GOCOVERDIR_DIR="."
-  - goverify -v
-  - goveralls -coverprofile=coverage.out -service=travis-ci
+  - gobuild
 
 after_script:
   - cat coverage.out
