@@ -59,19 +59,17 @@ type callbackPair struct {
 	expectedSize      int
 }
 
-func (c *callbackPair) getDatapoints(now time.Time) []*datapoint.Datapoint {
+func (c *callbackPair) getDatapoints(now time.Time, sendZeroTime bool) []*datapoint.Datapoint {
 	ret := make([]*datapoint.Datapoint, 0, c.expectedSize)
 	for callback := range c.callbacks {
 		ret = append(ret, callback.Datapoints()...)
 	}
-	if len(c.defaultDimensions) > 0 {
-		for _, dp := range ret {
-			// It's a bit dangerous to modify the map (we don't know how it was passed in) so
-			// make a copy to be safe
-			dp.Dimensions = AddMaps(c.defaultDimensions, dp.Dimensions)
-			if dp.Timestamp.IsZero() {
-				dp.Timestamp = now
-			}
+	for _, dp := range ret {
+		// It's a bit dangerous to modify the map (we don't know how it was passed in) so
+		// make a copy to be safe
+		dp.Dimensions = AddMaps(c.defaultDimensions, dp.Dimensions)
+		if !sendZeroTime && dp.Timestamp.IsZero() {
+			dp.Timestamp = now
 		}
 	}
 	c.expectedSize = len(ret)
@@ -119,7 +117,7 @@ func (s *Scheduler) collectDatapoints() []*datapoint.Datapoint {
 	ret := make([]*datapoint.Datapoint, 0, len(s.previousDatapoints))
 	now := s.Timer.Now()
 	for _, p := range s.callbackMap {
-		ret = append(ret, p.getDatapoints(now)...)
+		ret = append(ret, p.getDatapoints(now, s.SendZeroTime)...)
 	}
 	return ret
 }

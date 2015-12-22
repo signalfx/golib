@@ -5,6 +5,7 @@
 [metalinter]
   [metalinter.ignored]
     go14= "^.*has no field or method Cancel.*$" 
+    logargs = "no args in Log call"
   [metalinter.enabled]
     golint = true
     gofmt = true
@@ -13,5 +14,3 @@
     gocyclo = true
     vet = true
     deadcode = true
-  [metalinter.ignored]
-    logargs = "no args in Log call"
