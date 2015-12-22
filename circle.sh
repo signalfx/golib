@@ -30,7 +30,7 @@ function do_cache() {
   install_go_version "$GO_COMPILER_PATH" "$DEFAULT_GOLANG_VERSION"
   mkdir -p "$GOPATH_INTO"
   install_circletasker "$GOPATH_INTO"
-  versioned_goget "github.com/cep21/gobuild:v1.3"
+  versioned_goget "github.com/cep21/gobuild:v1.4"
   copy_local_to_path "$SRC_PATH"
 }
 
