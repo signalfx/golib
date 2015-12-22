@@ -38,3 +38,18 @@ func TestCounter(t *testing.T) {
 		})
 	})
 }
+
+func BenchmarkCounter(b *testing.B) {
+	counter := &Counter{}
+	for i := 0; i < b.N; i++ {
+		counter.Log("hello", "world")
+	}
+}
+
+func BenchmarkCounterContext(b *testing.B) {
+	counter := &Counter{}
+	ctx := NewContext(counter)
+	for i := 0; i < b.N; i++ {
+		ctx.Log("hello", "world")
+	}
+}
