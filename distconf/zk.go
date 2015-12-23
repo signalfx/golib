@@ -7,9 +7,9 @@ import (
 
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/log"
 )
 
 // ZkConn does zookeeper connections
@@ -100,6 +100,7 @@ type zkConfig struct {
 	eventChan  <-chan zk.Event
 	shouldQuit chan struct{}
 
+	rootLogger   log.Logger
 	callbacks    callbackMap
 	refreshDelay atomicDuration
 }
@@ -110,6 +111,7 @@ func (back *zkConfig) configPath(key string) string {
 
 // Get returns the config value from zookeeper
 func (back *zkConfig) Get(key string) ([]byte, error) {
+	back.rootLogger.Log("method", "get", "key", key)
 	pathToFetch := back.configPath(key)
 	bytes, _, _, err := back.conn.GetW(pathToFetch)
 	if err != nil {
@@ -122,7 +124,7 @@ func (back *zkConfig) Get(key string) ([]byte, error) {
 }
 
 func (back *zkConfig) Write(key string, value []byte) error {
-	log.WithField("key", key).Info("Write")
+	back.rootLogger.Log("method", "write", "key", key)
 	path := back.configPath(key)
 	exists, stat, err := back.conn.Exists(path)
 	if err != nil {
@@ -145,7 +147,7 @@ func (back *zkConfig) Write(key string, value []byte) error {
 }
 
 func (back *zkConfig) Watch(key string, callback backingCallbackFunction) error {
-	log.WithField("key", key).Debug("Watch")
+	back.rootLogger.Log("method", "watch", "key", key)
 	path := back.configPath(key)
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
@@ -161,29 +163,31 @@ func (back *zkConfig) Close() {
 	back.conn.Close()
 }
 
-func (back *zkConfig) logInfoState(e zk.Event) bool {
+func (back *zkConfig) logInfoState(logger log.Logger, e zk.Event) bool {
 	if e.State == zk.StateDisconnected {
-		log.WithField("event", e).Info("Disconnected from zookeeper.  Will attempt to remake connection.")
+		logger.Log("msg", "Disconnected from zookeeper.  Will attempt to remake connection.")
 		return true
 	}
 	if e.State == zk.StateConnecting {
-		log.WithField("event", e).Info("Server is now attempting to reconnect.")
+		logger.Log("msg", "Server is now attempting to reconnect.")
 		return true
 	}
 	return false
 }
 
-func (back *zkConfig) drainEventChan() {
-	defer log.Info("Quitting ZK distconf event loop")
+func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
+	drainContext := log.NewContext(functionLogger).With("method", "drainEventChan")
+	defer drainContext.Log("msg", "Draining done")
 	for {
-		log.Info("Blocking with event")
+		drainContext.Log("msg", "Blocking with event")
 		select {
 		case e := <-back.eventChan:
-			log.WithField("event", e).Info("Event seen")
-			back.logInfoState(e)
+			eventContext := drainContext.With("event", e)
+			eventContext.Log("msg", "event seen")
+			back.logInfoState(eventContext, e)
 			if e.State == zk.StateHasSession {
-				log.WithField("event", e).Info("Server now has a session.")
-				back.refreshWatches()
+				eventContext.Log("msg", "Server now has a session.")
+				back.refreshWatches(eventContext)
 				continue
 			}
 			if e.Path == "" {
@@ -193,33 +197,35 @@ func (back *zkConfig) drainEventChan() {
 				e.Path = e.Path[1:]
 			}
 			{
-				log.WithField("event", e).WithField("len()", back.callbacks.len()).Info("Change state")
+				eventContext.Log("len()", back.callbacks.len(), "msg", "change state")
 				for _, c := range back.callbacks.get(e.Path) {
 					c(e.Path)
 				}
 			}
-			log.WithField("path", e.Path).Info("reregistering watch")
+			eventContext.Log("msg", "reregistering watch")
 
 			// Note: return value currently ignored.  Not sure what to do about it
-			back.reregisterWatch(e.Path)
-			log.WithField("path", e.Path).Info("reregistering watch finished")
+			back.reregisterWatch(e.Path, eventContext)
+			eventContext.Log("msg", "reregistering watch finished")
 		case <-back.shouldQuit:
+			drainContext.Log("msg", "quit message seen")
 			return
 		}
 	}
 }
 
-func (back *zkConfig) refreshWatches() {
+func (back *zkConfig) refreshWatches(functionLogger log.Logger) {
 	for path, callbacks := range back.callbacks.copy() {
+		pathLogger := log.NewContext(functionLogger).With("path", path)
 		for _, c := range callbacks {
 			c(path)
 		}
 		for {
-			err := back.reregisterWatch(path)
+			err := back.reregisterWatch(path, pathLogger)
 			if err == nil {
 				break
 			}
-			log.Warnf("Error reregistering watch: %s  Will sleep and try again", err)
+			pathLogger.Log("err", err, "msg", "Error reregistering watch")
 			time.Sleep(back.refreshDelay.get())
 		}
 	}
@@ -229,19 +235,45 @@ func (back *zkConfig) setRefreshDelay(refreshDelay time.Duration) {
 	back.refreshDelay.set(refreshDelay)
 }
 
-func (back *zkConfig) reregisterWatch(path string) error {
-	log.Infof("Reregistering watch for %s", path)
+func (back *zkConfig) reregisterWatch(path string, logger log.Logger) error {
+	logger = log.NewContext(logger).With("path", path)
+	logger.Log("Reregistering watch")
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
-		log.WithField("err", err).Info("Unable to reregister watch")
+		logger.Log("err", err, "msg", "Unable to reregistering watch")
 		return errors.Annotatef(err, "unable to reregister watch for node %s", path)
 	}
 	return nil
 }
 
+// ZkConfig configures optional settings about a zk distconf
+type ZkConfig struct {
+	Logger log.Logger
+}
+
+// DefaultZkConfig is the configuration used by new Zk readers if any config parameter is unset
+var DefaultZkConfig = &ZkConfig{
+	Logger: DefaultLogger,
+}
+
+func (c *ZkConfig) merge(from *ZkConfig) *ZkConfig {
+	if c == nil {
+		return from
+	}
+	ret := &ZkConfig{
+		Logger: c.Logger,
+	}
+	if ret.Logger == nil {
+		ret.Logger = from.Logger
+	}
+	return ret
+}
+
 // Zk creates a zookeeper readable backing
-func Zk(zkConnector ZkConnector) (ReaderWriter, error) {
+func Zk(zkConnector ZkConnector, conf *ZkConfig) (ReaderWriter, error) {
+	conf = conf.merge(DefaultZkConfig)
 	ret := &zkConfig{
+		rootLogger: log.NewContext(conf.Logger).With("backing", "zk"),
 		shouldQuit: make(chan struct{}),
 		callbacks: callbackMap{
 			callbacks: make(map[string][]backingCallbackFunction),
@@ -255,6 +287,6 @@ func Zk(zkConnector ZkConnector) (ReaderWriter, error) {
 	if err != nil {
 		return nil, errors.Annotate(err, "cannot create zk connection")
 	}
-	go ret.drainEventChan()
+	go ret.drainEventChan(conf.Logger)
 	return ret, nil
 }

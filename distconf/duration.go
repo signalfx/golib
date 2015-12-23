@@ -1,11 +1,10 @@
 package distconf
 
 import (
+	"github.com/signalfx/golib/log"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 // DurationWatch is executed if registered on a Duration variable any time the contents change
@@ -14,6 +13,7 @@ type DurationWatch func(duration *Duration, oldValue time.Duration)
 type durationConf struct {
 	Duration
 	defaultVal time.Duration
+	logger     log.Logger
 }
 
 // Duration is a duration type config inside a Config.
@@ -40,7 +40,7 @@ func (s *durationConf) Update(newValue []byte) error {
 	} else {
 		newValDuration, err := time.ParseDuration(string(newValue))
 		if err != nil {
-			log.WithField("err", err).WithField("newValue", string(newValue)).Warn("Invalid duration string")
+			s.logger.Log("err", err, "newValue", string(newValue), "msg", "Invalid duration string")
 			atomic.StoreInt64(&s.currentVal, int64(s.defaultVal))
 		} else {
 			atomic.StoreInt64(&s.currentVal, int64(newValDuration))

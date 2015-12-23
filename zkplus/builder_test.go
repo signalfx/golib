@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,6 +18,7 @@ func TestInnerBuilder(t *testing.T) {
 
 	builder.AppendPathPrefix("a")
 	builder.AppendPathPrefix("b")
+	builder.Logger(log.Discard)
 
 	zkp, err := builder.Build()
 	assert.NoError(t, err)

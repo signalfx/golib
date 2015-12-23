@@ -61,8 +61,12 @@ func NewContext(logger Logger) *Context {
 	return ctx
 }
 
-// IsDisabled returns true if the wrapped logger implements
+// IsDisabled returns true if the wrapped logger implements Disableable (or is nil).  Will signal that it's not worth
+// sending a logger messages.
 func IsDisabled(l Logger) bool {
+	if l == nil {
+		return true
+	}
 	if disable, ok := l.(Disableable); ok && disable.Disabled() {
 		return true
 	}

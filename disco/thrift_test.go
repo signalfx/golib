@@ -12,6 +12,7 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/nettest"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
@@ -43,7 +44,7 @@ func TestThrift(t *testing.T) {
 		zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
 		return zkp, zkp.EventChan(), err
 	})
-	d1, _ := New(zkConnFunc, "localhost")
+	d1, _ := New(zkConnFunc, "localhost", nil)
 
 	s, err := d1.Services("thriftservice")
 	updated := make(chan struct{}, 5)
@@ -70,7 +71,6 @@ func TestThrift(t *testing.T) {
 	err = trans.Open()
 	assert.Error(t, err)
 
-	log.Infof("ad on %d\n", nettest.TCPPort(l))
 	assert.NoError(t, d1.Advertise("thriftservice", "", nettest.TCPPort(l)))
 	<-updated
 
@@ -159,6 +159,7 @@ func TestNoGoodInstances(t *testing.T) {
 	trans := &ThriftTransport{
 		randSource: rand.New(rand.NewSource(time.Now().UnixNano())),
 		service:    &Service{},
+		logger:     log.Discard,
 	}
 	trans.service.services.Store(instances)
 
@@ -219,10 +220,10 @@ func TestThriftConnect(t *testing.T) {
 		return zkp, zkp.EventChan(), err
 	})
 
-	d1, err := New(zkConnFunc, "localhost")
+	d1, err := New(zkConnFunc, "localhost", nil)
 	assert.NoError(t, err)
 
-	d2, err := New(zkConnFunc2, "localhost")
+	d2, err := New(zkConnFunc2, "localhost", nil)
 	assert.NoError(t, err)
 
 	assert.NoError(t, d1.Advertise("testing", struct{}{}, port1))
@@ -278,7 +279,6 @@ func TestThriftConnect(t *testing.T) {
 		assert.NoError(t, transport.NextConnection())
 		num, err = thriftClient.Add(3, 2)
 		if err != nil {
-			log.Infof("%s", err)
 			continue
 		}
 		found = true

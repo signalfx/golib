@@ -2,15 +2,17 @@ package explorable
 
 import (
 	"fmt"
+	"github.com/signalfx/golib/log"
 	"html"
 	"net/http"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
-
-	"github.com/Sirupsen/logrus"
 )
+
+// DefaultLogger is used by explorable if a handler hasn't set a logger
+var DefaultLogger = log.Logger(log.DefaultLogger.CreateChild())
 
 // Result is the crude explorable representation of an object returned by ExploreObject
 type Result struct {
@@ -23,9 +25,14 @@ type Result struct {
 type Handler struct {
 	Val      interface{}
 	BasePath string
+	Logger   log.Logger
 }
 
 func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	logger := h.Logger
+	if logger == nil {
+		logger = DefaultLogger
+	}
 	pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, h.BasePath), "/")
 	nonEmptyParts := []string{}
 	for _, p := range pathParts {
@@ -33,7 +40,7 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 			nonEmptyParts = append(nonEmptyParts, p)
 		}
 	}
-	logrus.WithField("parts", nonEmptyParts).WithField("url", r.URL).Info("Exploring object")
+	logger.Log("parts", nonEmptyParts, "url", r.URL, "msg", "Exploring object")
 	o := ExploreObject(reflect.ValueOf(h.Val), nonEmptyParts)
 
 	parent := ""

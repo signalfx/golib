@@ -11,7 +11,6 @@ import (
 
 	"sync/atomic"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/nettest"
 	"github.com/signalfx/golib/zkplus"
@@ -50,7 +49,6 @@ func stateMonitor(t *testing.T, zkPlusBuilder *zkplus.Builder, toToChange string
 	assert.NoError(t, z.Write(toToChange, nil))
 	for newValue := range changeValues {
 		assert.NoError(t, z.Write(toToChange, newValue))
-		log.Info("Write finished")
 	}
 }
 
@@ -78,7 +76,6 @@ func doTestWithDisconnects(t *testing.T, triggerConnKill bool) {
 	expectedOldValue := defaultTestValue
 	expectedNewValue := ""
 	s.Watch(func(str *Str, oldValue string) {
-		log.Infof("Watch triggered in code %s vs %s", oldValue, str.Get())
 		assert.Equal(t, expectedOldValue, oldValue)
 		assert.Equal(t, expectedNewValue, s.Get())
 		gotValue <- str.Get()
@@ -90,9 +87,7 @@ func doTestWithDisconnects(t *testing.T, triggerConnKill bool) {
 			assert.NoError(t, dialer.Close())
 		}
 
-		log.Infof("Sending a value to write %s", newValue)
 		changeValues <- []byte(newValue)
-		log.Info("Waiting for response from watch")
 		assert.Equal(t, newValue, <-gotValue)
 		assert.Equal(t, newValue, s.Get())
 	}
