@@ -2,11 +2,13 @@ package log
 
 import (
 	"bytes"
+	"github.com/signalfx/golib/eventcounter"
 	. "github.com/smartystreets/goconvey/convey"
 	"io"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestWithConcurrent(t *testing.T) {
@@ -92,24 +94,27 @@ func TestLoggingBasics(t *testing.T) {
 			c.Log()
 			So(len(<-mem.Out), ShouldEqual, 0)
 		})
-		Convey("should even out context values on with", func() {
-			c = c.With("name")
-			c.Log()
-			So(len(<-mem.Out), ShouldEqual, 2)
+		Convey("panic with odd With params", func() {
+			So(func() {
+				c.With("name")
+			}, ShouldPanic)
 		})
-		Convey("should even out context values on withprefix", func() {
-			c = c.WithPrefix("name")
-			c.Log()
-			So(len(<-mem.Out), ShouldEqual, 2)
+		Convey("panic with odd WithPrefix params", func() {
+			So(func() {
+				c.WithPrefix("name")
+			}, ShouldPanic)
 		})
-		Convey("should even out context values on log", func() {
+		Convey("should not even out context values on log", func() {
 			c.Log("name")
-			So(len(<-mem.Out), ShouldEqual, 2)
+			So(len(<-mem.Out), ShouldEqual, 1)
 		})
 		Convey("Should convey params using with", func() {
 			c = c.With("name", "john")
 			c.Log()
-			So(len(<-mem.Out), ShouldEqual, 2)
+			msgs := <-mem.Out
+			So(len(msgs), ShouldEqual, 2)
+			So(msgs[0].(string), ShouldEqual, "name")
+			So(msgs[1].(string), ShouldEqual, "john")
 			Convey("and Log()", func() {
 				c.Log("age", "10")
 				So(toStr(<-mem.Out), ShouldResemble, []string{"name", "john", "age", "10"})
@@ -139,11 +144,12 @@ func BenchmarkEmptyLogNotDisabled(b *testing.B) {
 }
 
 func BenchmarkContextWithLog(b *testing.B) {
+	b.Logf("At %d", b.N)
 	count := Counter{}
 	c := NewContext(&count)
-	c = c.With("hello", "world")
+	c = c.With("hello", "world").With("hi", "bob")
 	for i := 0; i < b.N; i++ {
-		c.Log("name", "bob")
+		c.Log("hello", "world")
 	}
 }
 
@@ -257,28 +263,88 @@ func (l *lockWriter) Write(b []byte) (int, error) {
 }
 
 func TestNewChannelLoggerRace(t *testing.T) {
-	l := NewChannelLogger(0, Discard)
-	raceCheck(l)
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		return NewChannelLogger(0, Discard), nil
+	})
 }
 
 func TestNewJSONLoggerRace(t *testing.T) {
-	l := NewJSONLogger(&lockWriter{out: &bytes.Buffer{}}, Discard)
-	raceCheck(l)
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		b := &bytes.Buffer{}
+		l := NewJSONLogger(&lockWriter{out: b}, Discard)
+		return l, b
+	})
 }
 
 func TestNewLogfmtLoggerRace(t *testing.T) {
-	b := &bytes.Buffer{}
-	l := NewLogfmtLogger(&lockWriter{out: b}, Discard)
-	raceCheck(l)
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(&lockWriter{out: b}, Discard)
+		return l, b
+	})
+}
+
+func TestHierarchyRace(t *testing.T) {
+	b := Discard
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		return NewHierarchy(b), nil
+	})
 }
 
 func TestCounterRace(t *testing.T) {
-	l := &Counter{}
-	raceCheck(l)
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		return &Counter{}, nil
+	})
 }
 
-func raceCheck(l Logger) {
-	raceCheckerIter(l, 3, 10)
+func TestMultiRace(t *testing.T) {
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		b := &bytes.Buffer{}
+		l := NewJSONLogger(&lockWriter{out: b}, Discard)
+		return MultiLogger([]Logger{Discard, l}), b
+	})
+}
+
+func TestRateLimitedLoggerRace(t *testing.T) {
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		l := &RateLimitedLogger{
+			EventCounter: eventcounter.New(time.Now(), time.Millisecond),
+			Limit:        10,
+			Logger:       &Counter{},
+			Now:          time.Now,
+		}
+		return l, nil
+	})
+}
+
+func TestChannelLoggerRace(t *testing.T) {
+	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
+		return NewChannelLogger(10, Discard), nil
+	})
+}
+
+func fullyVerifyLogger(t *testing.T, factory func() (Logger, *bytes.Buffer)) {
+	Convey("When verifying a logger", t, func() {
+		Convey("Racing should be ok", func() {
+			l, _ := factory()
+			raceCheckerIter(l, 3, 10)
+		})
+		Convey("Odd writes should not panic", func() {
+			l, b := factory()
+			l.Log("hello")
+			if b != nil {
+				So(b.String(), ShouldContainSubstring, "hello")
+			}
+		})
+		Convey("Even writes should not panic", func() {
+			l, b := factory()
+			l.Log("hello", "world")
+			if b != nil {
+				So(b.String(), ShouldContainSubstring, "hello")
+			}
+		})
+	})
+
 }
 
 func raceCheckerIter(l Logger, deep int, iter int) {

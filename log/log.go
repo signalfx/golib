@@ -1,9 +1,5 @@
 package log
 
-import (
-	"errors"
-)
-
 // Logger is the minimal interface for logging methods
 type Logger interface {
 	Log(keyvals ...interface{})
@@ -41,9 +37,6 @@ func (f ErrorHandlerFunc) ErrorLogger(e error) Logger {
 	return f(e)
 }
 
-// ErrMissingValue is the value used for the "value" in odd numbered log statements
-var ErrMissingValue = errors.New("(MISSING)")
-
 // Context allows users to create a logger that appends key/values to log statements
 type Context struct {
 	Logger  Logger
@@ -73,26 +66,16 @@ func IsDisabled(l Logger) bool {
 	return false
 }
 
+// addArrays will add two arrays.  Note that we CANNOT append(a, b...) because that will use the extra
+// capacity of a and if two groutines call this at the same time they will race with each other.
 func addArrays(a, b []interface{}) []interface{} {
-	if len(b) == 0 && len(a) == 0 {
+	if len(a) == 0 && len(b) == 0 {
 		return []interface{}{}
 	}
 	n := len(a) + len(b)
-	if len(a)%2 != 0 {
-		n++
-	}
-	if len(b)%2 != 0 {
-		n++
-	}
 	ret := make([]interface{}, 0, n)
 	ret = append(ret, a...)
-	if len(a)%2 != 0 {
-		ret = append(ret, ErrMissingValue)
-	}
 	ret = append(ret, b...)
-	if len(b)%2 != 0 {
-		ret = append(ret, ErrMissingValue)
-	}
 	return ret
 }
 
@@ -112,6 +95,9 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 	if len(keyvals) == 0 {
 		return l
 	}
+	if len(keyvals)%2 != 0 {
+		panic("Programmer error.  Please call log.Context.With() only with an even number of arguments.")
+	}
 	return &Context{
 		Logger:  l.Logger,
 		KeyVals: addArrays(l.KeyVals, keyvals),
@@ -122,6 +108,9 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	if len(keyvals) == 0 {
 		return l
+	}
+	if len(keyvals)%2 != 0 {
+		panic("Programmer error.  Please call log.Context.WithPrefix() only with an even number of arguments.")
 	}
 	return &Context{
 		Logger:  l.Logger,

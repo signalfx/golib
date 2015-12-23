@@ -58,21 +58,19 @@ func TestContextMissingValue(t *testing.T) {
 	lc := log.NewContext(logger)
 
 	lc.Log("k")
-	if want, have := 2, len(output); want != have {
+	if want, have := 1, len(output); want != have {
 		t.Errorf("want len(output) == %v, have %v", want, have)
-	}
-	if want, have := log.ErrMissingValue, output[1]; want != have {
-		t.Errorf("want %#v, have %#v", want, have)
 	}
 
-	lc.With("k1").WithPrefix("k0").Log("k2")
-	if want, have := 6, len(output); want != have {
-		t.Errorf("want len(output) == %v, have %v", want, have)
-	}
-	for i := 1; i < 6; i += 2 {
-		if want, have := log.ErrMissingValue, output[i]; want != have {
-			t.Errorf("want output[%d] == %#v, have %#v", i, want, have)
-		}
+	var rec interface{}
+	func() {
+		defer func() {
+			rec = recover()
+		}()
+		lc.With("k1").WithPrefix("k0").Log("k2")
+	}()
+	if rec == nil {
+		t.Errorf("Expected an error!")
 	}
 }
 

@@ -9,7 +9,8 @@ import (
 
 // LogfmtLogger logs out in logfmt format
 type LogfmtLogger struct {
-	Out io.Writer
+	Out             io.Writer
+	MissingValueKey string
 }
 
 // NewLogfmtLogger returns a logger that encodes keyvals to the Writer in
@@ -21,7 +22,8 @@ func NewLogfmtLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 	}
 	return &ErrorLogLogger{
 		RootLogger: &LogfmtLogger{
-			Out: w,
+			Out:             w,
+			MissingValueKey: DefaultMissingValueKey,
 		},
 		ErrHandler: ErrHandler,
 	}
@@ -33,6 +35,9 @@ func (l *LogfmtLogger) Log(keyvals ...interface{}) error {
 	// use by multiple goroutines. For this implementation that means making
 	// only one call to l.w.Write() for each call to Log. We first collect all
 	// of the bytes into b, and then call l.w.Write(b).
+	if len(keyvals)%2 != 0 {
+		keyvals = append(keyvals[0:len(keyvals)-1:len(keyvals)-1], l.MissingValueKey, keyvals[len(keyvals)-1])
+	}
 	b, err := logfmt.MarshalKeyvals(keyvals...)
 	if err != nil {
 		return err
