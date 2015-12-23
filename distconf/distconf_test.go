@@ -39,12 +39,9 @@ func (a *allErrorconfigVariable) GenericGet() interface{} {
 	return errNope
 }
 
-func makeConf() (ReaderWriter, *Config) {
+func makeConf() (ReaderWriter, *Distconf) {
 	memConf := Mem()
-	conf := &Config{
-		registeredVars: make(map[string]configVariable),
-		readers:        []Reader{memConf},
-	}
+	conf := New([]Reader{memConf})
 	return memConf, conf
 }
 
@@ -221,10 +218,7 @@ func TestDistconfBool(t *testing.T) {
 }
 
 func TestDistconfErrorBackings(t *testing.T) {
-	conf := &Config{
-		registeredVars: make(map[string]configVariable),
-		readers:        []Reader{&allErrorBacking{}},
-	}
+	conf := New([]Reader{&allErrorBacking{}})
 
 	iVal := conf.Int("testval", 1)
 	assert.Equal(t, int64(1), iVal.Get())

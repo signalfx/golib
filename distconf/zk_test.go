@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/zkplus/zktest"
 	. "github.com/smartystreets/goconvey/convey"
@@ -13,11 +12,11 @@ import (
 )
 
 func TestZkConf(t *testing.T) {
-	log.Info("TestZkConf")
+	DefaultLogger.Log("TestZkConf")
 	zkServer := zktest.New()
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
-	}))
+	}), &ZkConfig{})
 	defer z.Close()
 	assert.NoError(t, err)
 
@@ -28,32 +27,32 @@ func TestZkConf(t *testing.T) {
 	assert.NoError(t, z.Write("TestZkConf", nil))
 
 	signalChan := make(chan string, 4)
-	log.Info("Setting watches")
+	DefaultLogger.Log("Setting watches")
 	z.(Dynamic).Watch("TestZkConf", backingCallbackFunction(func(S string) {
-		log.Info("Watch fired!")
+		DefaultLogger.Log("Watch fired!")
 		assert.Equal(t, "TestZkConf", S)
 		signalChan <- S
 	}))
 
 	// The write should work and I should get a single signal on the chan
-	log.Info("Doing write 1")
+	DefaultLogger.Log("Doing write 1")
 	assert.NoError(t, z.Write("TestZkConf", []byte("newval")))
-	log.Info("Write done")
+	DefaultLogger.Log("Write done")
 	b, err = z.Get("TestZkConf")
-	log.Info("Get done")
+	DefaultLogger.Log("Get done")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("newval"), b)
-	log.Info("Blocking for values")
+	DefaultLogger.Log("Blocking for values")
 	res := <-signalChan
 	assert.Equal(t, "TestZkConf", res)
 
 	// Should send another signal
-	log.Info("Doing write 2")
+	DefaultLogger.Log("Doing write 2")
 	assert.NoError(t, z.Write("TestZkConf", []byte("newval_v2")))
 	res = <-signalChan
 	assert.Equal(t, "TestZkConf", res)
 
-	log.Info("Doing write 3")
+	DefaultLogger.Log("Doing write 3")
 	assert.NoError(t, z.Write("TestZkConf", nil))
 	res = <-signalChan
 	assert.Equal(t, "TestZkConf", res)
@@ -67,7 +66,7 @@ func TestCloseNormal(t *testing.T) {
 
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
-	}))
+	}), nil)
 	assert.NoError(t, err)
 
 	z.Close()
@@ -95,7 +94,7 @@ func TestErrorReregister(t *testing.T) {
 
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
-	}))
+	}), nil)
 	assert.NoError(t, err)
 	defer z.Close()
 	z.(Dynamic).Watch("hello", func(string) {
@@ -109,7 +108,7 @@ func TestErrorReregister(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 		zkServer.SetErrorCheck(nil)
 	}()
-	z.(*zkConfig).refreshWatches()
+	z.(*zkConfig).refreshWatches(DefaultLogger)
 }
 
 func TestCloseQuitChan(t *testing.T) {
@@ -120,7 +119,7 @@ func TestCloseQuitChan(t *testing.T) {
 
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
-	}))
+	}), nil)
 	assert.NoError(t, err)
 
 	// Should not deadlock
@@ -139,7 +138,7 @@ func TestZkConfErrors(t *testing.T) {
 
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
-	}))
+	}), nil)
 	defer z.Close()
 	assert.NoError(t, err)
 
@@ -148,7 +147,7 @@ func TestZkConfErrors(t *testing.T) {
 
 	assert.Error(t, z.(Dynamic).Watch("TestZkConfErrors", nil))
 	assert.Error(t, z.Write("TestZkConfErrors", nil))
-	assert.Error(t, z.(*zkConfig).reregisterWatch("TestZkConfErrors"))
+	assert.Error(t, z.(*zkConfig).reregisterWatch("TestZkConfErrors", DefaultLogger))
 
 	z.(*zkConfig).conn.Close()
 
@@ -163,6 +162,6 @@ func TestZkConfErrors(t *testing.T) {
 func TestErrorLoader(t *testing.T) {
 	_, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return nil, nil, errors.New("nope")
-	}))
+	}), nil)
 	assert.Error(t, err)
 }

@@ -211,6 +211,12 @@ func BenchmarkTenWith(b *testing.B) {
 }
 
 func TestDisabledLog(t *testing.T) {
+	Convey("a nil log", t, func() {
+		var logger Logger
+		Convey("should be disabled", func() {
+			So(IsDisabled(logger), ShouldBeTrue)
+		})
+	})
 	Convey("A log that is disabled", t, func() {
 		count := Counter{}
 		gate := Gate{

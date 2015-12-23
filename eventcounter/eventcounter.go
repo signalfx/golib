@@ -35,18 +35,20 @@ func (a *EventCounter) Event(now time.Time) int64 {
 // Events behaves just like Event() but acts on multiple events at once to reduce the number
 // of atomic increment calls
 func (a *EventCounter) Events(now time.Time, count int64) int64 {
-	nsSince := now.Sub(a.startingTime).Nanoseconds()
-	prevNsSinceStart := atomic.LoadInt64(&a.nsSinceStart)
-	if nsSince-prevNsSinceStart > a.eventDuration.Nanoseconds() {
-		// Note: There is an accepted race here when we transition states that could cause us to
-		//       rarely miss an event that crosses the threshold.  This is an accepted aspect of
-		//       having a very fast non threshold event
-		if atomic.CompareAndSwapInt64(&a.nsSinceStart, prevNsSinceStart, nsSince) {
-			atomic.StoreInt64(&a.eventsThisPeriod, 0)
-		} // else {
-		// In this case we've crossed the boundary twice with one event.  We're just guessing that
-		// it's unlikely the Event() call's nsSinceStart() crossed us into a different region
-		// }
+	for {
+		nsSince := now.Sub(a.startingTime).Nanoseconds()
+		prevNsSinceStart := atomic.LoadInt64(&a.nsSinceStart)
+		if nsSince-prevNsSinceStart >= a.eventDuration.Nanoseconds() {
+			//		 Note: There is an accepted race here when we transition states that could cause us to
+			//		       rarely miss an event that crosses the threshold.  This is an accepted aspect of
+			//		       having a very fast non threshold event
+			if atomic.CompareAndSwapInt64(&a.nsSinceStart, prevNsSinceStart, nsSince) {
+				atomic.StoreInt64(&a.eventsThisPeriod, 0)
+				break
+			}
+		} else {
+			break
+		}
 	}
 	return atomic.AddInt64(&a.eventsThisPeriod, count)
 }

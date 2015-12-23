@@ -8,10 +8,14 @@ import (
 
 	"sync"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/sfxtest"
+	"sync/atomic"
 )
+
+// DefaultLogger is used by zktest if no logger is set
+var DefaultLogger = log.Logger(log.DefaultLogger.CreateChild())
 
 type event struct {
 }
@@ -62,8 +66,10 @@ type MemoryZkServer struct {
 	root       *zkNode
 	rootLock   sync.Mutex
 	GlobalChan chan zk.Event
+	Logger     log.Logger
 
 	events chan event
+	nextID int64
 
 	childrenConnectionsLock sync.Mutex
 	childrenConnections     map[*ZkConn]struct{}
@@ -76,6 +82,7 @@ type ZkConn struct {
 	events        chan zk.Event
 	pathWatch     map[string]chan zk.Event
 	pathWatchLock sync.Mutex
+	Logger        log.Logger
 
 	chanTimeout    time.Duration
 	methodCallLock sync.Mutex
@@ -117,6 +124,7 @@ func New() *MemoryZkServer {
 			stat:     &zk.Stat{},
 		},
 		GlobalChan:          GlobalChan,
+		Logger:              DefaultLogger,
 		events:              make(chan event),
 		childrenConnections: make(map[*ZkConn]struct{}),
 		ChanTimeout:         time.Second,
@@ -134,6 +142,7 @@ func (z *MemoryZkServer) Conn() (ZkConnSupported, <-chan zk.Event, error) {
 func (z *MemoryZkServer) Connect() (*ZkConn, <-chan zk.Event, error) {
 	r := &ZkConn{
 		connectedTo: z,
+		Logger:      log.NewContext(z.Logger).With("id", atomic.AddInt64(&z.nextID, 1)),
 		events:      make(chan zk.Event, 1000),
 		pathWatch:   make(map[string]chan zk.Event),
 		chanTimeout: z.ChanTimeout,
@@ -169,20 +178,21 @@ func (z *MemoryZkServer) removeConnection(c *ZkConn) {
 }
 
 func (z *ZkConn) offerEvent(e zk.Event) {
+	eventLog := log.NewContext(z.Logger).With("event", e)
 	z.pathWatchLock.Lock()
 	defer z.pathWatchLock.Unlock()
 	if z.pathWatch == nil {
 		return
 	}
 	w, exists := z.pathWatch[e.Path]
-	logrus.WithField("e", e).WithField("exists", exists).Info("Event on path")
+	eventLog.Log("exists", exists, "msg", "Event on path")
 	if exists {
-		logrus.WithField("e", e).WithField("exists", exists).Info("Firing event!")
+		eventLog.Log("msg", "Firing event!")
 		delete(z.pathWatch, e.Path)
 		go func() {
 			select {
 			case w <- e:
-				logrus.WithField("e", e).WithField("exists", exists).Info("event sent!")
+				eventLog.Log("msg", "Event sent!")
 			case <-time.After(z.chanTimeout):
 			}
 			close(w)
@@ -191,7 +201,7 @@ func (z *ZkConn) offerEvent(e zk.Event) {
 		go func() {
 			select {
 			case z.events <- e:
-				logrus.WithField("e", e).WithField("exists", exists).Info("event sent!")
+				eventLog.Log("msg", "Event sent again!")
 			case <-time.After(z.chanTimeout):
 			}
 		}()
@@ -353,7 +363,8 @@ func (z *ZkConn) GetW(path string) ([]byte, *zk.Stat, <-chan zk.Event, error) {
 
 func (z *ZkConn) patchWatch(path string) chan zk.Event {
 	path = fixPath(path)
-	logrus.WithField("path", path).Info("Should I set a path watch?")
+	pathWatchLogger := log.NewContext(z.Logger).With("path", path)
+	pathWatchLogger.Log("msg", "Should I set a path watch?")
 	z.pathWatchLock.Lock()
 	defer z.pathWatchLock.Unlock()
 	if z.pathWatch == nil {
@@ -361,7 +372,7 @@ func (z *ZkConn) patchWatch(path string) chan zk.Event {
 	}
 	ch, exists := z.pathWatch[path]
 	if !exists {
-		logrus.WithField("path", path).Info("Setting patch watch")
+		pathWatchLogger.Log("msg", "Setting patch watch")
 		ch = make(chan zk.Event)
 		z.pathWatch[path] = ch
 	}

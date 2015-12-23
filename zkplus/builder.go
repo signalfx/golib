@@ -4,22 +4,27 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/zkplus/zktest"
 )
+
+// DefaultLogger is used by zkplus when no logger is set for the struct
+var DefaultLogger = log.Logger(log.DefaultLogger.CreateChild())
 
 // Builder helps users build a ZkPlus connection
 type Builder struct {
 	pathPrefix  string
 	zkConnector ZkConnector
+	logger      log.Logger
 }
 
 // NewBuilder creates a new builder for making ZkPlus connections
 func NewBuilder() *Builder {
 	return &Builder{
 		pathPrefix: "",
+		logger:     DefaultLogger,
 	}
 }
 
@@ -43,6 +48,12 @@ func (b *Builder) Connector(zkConnector ZkConnector) *Builder {
 // PathPrefix is the prefix any zk operations get
 func (b *Builder) PathPrefix(pathPrefix string) *Builder {
 	b.pathPrefix = pathPrefix
+	return b
+}
+
+// Logger sets where messages are logged by zkplus
+func (b *Builder) Logger(logger log.Logger) *Builder {
+	b.logger = logger
 	return b
 }
 
@@ -78,11 +89,12 @@ func (b *Builder) Build() (*ZkPlus, error) {
 	} else if prefix[len(prefix)-1] == '/' {
 		return nil, errInvalidPathSuffix
 	}
-	// Prefix is of the form /..... (then no ending /) or empty string
-	log.WithField("prefix", prefix).Info("New with prefix")
+	b.logger.Log("prefix", prefix, "msg", "new with prefix")
 
 	ret := &ZkPlus{
-		pathPrefix:  prefix,
+		pathPrefix: prefix,
+		logger:     b.logger,
+
 		zkConnector: b.zkConnector,
 		exposedChan: make(chan zk.Event),
 		shouldQuit:  make(chan chan struct{}),
