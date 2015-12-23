@@ -3,10 +3,11 @@ package log
 import (
 	"os"
 	"sync/atomic"
+	"io/ioutil"
 )
 
 // DefaultLogger is a root hierarchy logger that other packages can point to.  By default it logs to stderr
-var DefaultLogger = NewHierarchy(NewLogfmtLogger(os.Stderr, Discard))
+var DefaultLogger = NewHierarchy(NewLogfmtLogger(ioutil.Discard, Discard))
 
 // Hierarchy is a type of logger that an atomically point to another logger.  It's primary usage is as a hierarchy of
 // loggers where one defaults to another if not set.
