@@ -38,7 +38,7 @@ function do_cache() {
 export IDX=0
 function gobuildit() {
   IDX=$((IDX+1))
-  gobuild -verbose -filename_prefix "$IDX" -verbosefile "$CIRCLE_ARTIFACTS/${IDX}gobuildout.txt" check "$1"
+  env GOLIB_LOG=/dev/null gobuild -verbose -filename_prefix "$IDX" -verbosefile "$CIRCLE_ARTIFACTS/${IDX}gobuildout.txt" check "$1"
   RET="$?"
   return $RET
 }

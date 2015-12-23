@@ -8,6 +8,13 @@ import (
 // DefaultLogger is a root hierarchy logger that other packages can point to.  By default it logs to stderr
 var DefaultLogger = NewHierarchy(NewLogfmtLogger(os.Stderr, Discard))
 
+// LoggingEnv is the env variable that if exported to /dev/null can disable the default logger
+const LoggingEnv = "GOLIB_LOG"
+
+func init() {
+	DefaultLogger.setupFromEnv(os.Getenv)
+}
+
 // Hierarchy is a type of logger that an atomically point to another logger.  It's primary usage is as a hierarchy of
 // loggers where one defaults to another if not set.
 type Hierarchy struct {
@@ -23,6 +30,14 @@ func NewHierarchy(defaultLogger Logger) *Hierarchy {
 	ret := &Hierarchy{}
 	ret.Set(defaultLogger)
 	return ret
+}
+
+func (l *Hierarchy) setupFromEnv(getEnv func(string) string) {
+	v := getEnv(LoggingEnv)
+	if v == "/dev/null" || v == os.DevNull {
+		l.Set(Discard)
+		return
+	}
 }
 
 // Log calls log of the wrapped logger

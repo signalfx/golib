@@ -18,6 +18,15 @@ func TestHierarchy(t *testing.T) {
 	Convey("hierarchy logger", t, func() {
 		counter := &Counter{}
 		p1 := NewHierarchy(counter)
+		Convey("should be able to setup", func() {
+			p1.setupFromEnv(func(string) string { return "" })
+			p1.Log("hello", "world")
+			So(counter.Count, ShouldEqual, 1)
+			p1.setupFromEnv(func(string) string { return "/dev/null" })
+
+			p1.Log("hello", "world")
+			So(counter.Count, ShouldEqual, 1)
+		})
 		Convey("Should log", func() {
 			p1.Log("hello")
 			So(counter.Count, ShouldEqual, 1)
