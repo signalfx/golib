@@ -2,7 +2,6 @@ package disco
 
 import (
 	"bytes"
-	"fmt"
 	"runtime"
 	"strings"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"fmt"
 )
 
 func TestUnableToConn(t *testing.T) {
@@ -276,18 +276,15 @@ func testAdvertise(t *testing.T, zkConnFunc ZkConnCreatorFunc, zkConnFunc2 ZkCon
 	require.NotNil(t, d1)
 	defer d1.Close()
 
-	fmt.Printf("Getting service\n")
 	service, err := d1.Services("TestAdvertiseService")
 	require.NoError(t, err)
 	require.Equal(t, 0, len(service.ServiceInstances()))
 	require.Equal(t, "name=TestAdvertiseService|len(watch)=0|instances=[]", service.String())
 	seen := make(chan struct{}, 5)
 	service.Watch(ChangeWatch(func() {
-		fmt.Printf("Event seen!\n")
 		seen <- struct{}{}
 	}))
 
-	fmt.Printf("d1 Advertise!\n")
 	require.NoError(t, d1.Advertise("TestAdvertiseService", "", (uint16)(1234)))
 	require.Equal(t, "/TestAdvertiseService/"+d1.GUID(), d1.servicePath("TestAdvertiseService"))
 	<-seen
@@ -305,9 +302,7 @@ func testAdvertise(t *testing.T, zkConnFunc ZkConnCreatorFunc, zkConnFunc2 ZkCon
 	require.NotNil(t, d2)
 	defer d2.Close()
 
-	fmt.Printf("About to advertise\n")
 	require.NoError(t, d2.Advertise("TestAdvertiseService", "", (uint16)(1234)))
-	fmt.Printf("Advertise done\n")
 
 	<-seen
 
@@ -330,13 +325,11 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	d1, err := New(zkConnFunc, "TestAdvertise1", nil)
 	require.NoError(t, err)
 
-	fmt.Printf("Ensure delete\n")
 	zktest.EnsureDelete(z2, "/not_here")
 	defer func() {
 		go zktest.EnsureDelete(z2, "/not_here")
 	}()
 
-	fmt.Printf("Services\n")
 	s, err := d1.Services("not_here")
 	require.NoError(t, err)
 	require.Equal(t, 0, len(s.ServiceInstances()))
@@ -346,11 +339,8 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 		onWatchChan <- struct{}{}
 	})
 
-	fmt.Printf("Before create!\n")
-	p1, err := z2.Create("/not_here", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	fmt.Printf("After create: %s\t%s\n", p1, err)
+	_, err = z2.Create("/not_here", []byte(""), 0, zk.WorldACL(zk.PermAll))
 	require.NoError(t, err)
-	fmt.Printf("After create!\n")
 
 	_, err = z2.Create("/not_here/s1", []byte("{}"), 0, zk.WorldACL(zk.PermAll))
 	require.NoError(t, err)

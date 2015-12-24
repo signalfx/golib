@@ -18,7 +18,7 @@ install:
 script:
   - export PATH=$HOME/gopath/bin:$PATH
   - export GOCOVERDIR_DIR="."
-  - env GOLIB_LOG=/dev/null gobuild
+  - env GOCONVEY_REPORTER=silent GOLIB_LOG=/dev/null gobuild
 
 after_script:
   - cat coverage.out

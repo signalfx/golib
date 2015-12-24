@@ -24,7 +24,7 @@ func (e *errWriter) Write([]byte) (int, error) {
 	return 0, errors.New("nope")
 }
 
-func TestNewLogfmtLogger1(t *testing.T) {
+func TestNewLogfmtLogger(t *testing.T) {
 	Convey("A NewLogfmtLogger logger", t, func() {
 		buf := &bytes.Buffer{}
 		l := NewLogfmtLogger(buf, Panic)

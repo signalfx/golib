@@ -1,16 +1,15 @@
 package maestro
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 
 type envMap map[string]string
 
 func (e envMap) get(key string) string {
-	fmt.Printf("Checking %s\n", key)
 	r, exist := e[key]
 	if !exist {
 		return ""
@@ -41,8 +40,6 @@ func testPath(t *testing.T, e envMap, err error, key string, f func() (string, e
 
 func TestMaestro(t *testing.T) {
 	i = 0
-	fmt.Printf("Start\n")
-	defer fmt.Printf("Done\n")
 	e := make(envMap)
 	m := New(e.get)
 
@@ -78,7 +75,6 @@ func TestMaestro(t *testing.T) {
 	assert.Equal(t, []string{"INST1", "inst2"}, m.getServiceInstanceNames("ZOOKEEPER"))
 
 	assert.Equal(t, []string{"host1:123", "host2:124"}, m.GetNodeList("ZOOKEEPER", []string{"client"}))
-	fmt.Printf("A\n")
 	p, err := m.GetPort("client")
 	assert.NoError(t, err)
 	assert.Equal(t, uint16(125), p)

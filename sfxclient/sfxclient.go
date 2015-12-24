@@ -5,7 +5,6 @@ import (
 
 	"github.com/signalfx/golib/datapoint"
 
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/timekeeper"
 	"golang.org/x/net/context"
+	"github.com/signalfx/golib/log"
 )
 
 // DefaultReportingDelay is the default interval between new SignalFx schedulers
@@ -20,7 +20,7 @@ const DefaultReportingDelay = time.Second * 20
 
 // DefaultErrorHandler is the default way to handle errors by a scheduler.  It simply prints them to stdout
 var DefaultErrorHandler = func(err error) error {
-	fmt.Printf("Unable to handle error: %s", err.Error())
+	log.DefaultLogger.Log("err", err, "Unable to handle error")
 	return nil
 }
 

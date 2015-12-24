@@ -227,7 +227,6 @@ func testExistsW(t *testing.T, z ZkConnSupported, e <-chan zk.Event) {
 	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
 	z.Create("/test/testEvents", []byte(""), 0, zk.WorldACL(zk.PermAll))
 	prefix := fmt.Sprintf("/test/testEvents/%d", rand.Intn(10000))
-	fmt.Printf("Prefix is %s\n", prefix)
 
 	// Drain events chan before going forward
 out1:
