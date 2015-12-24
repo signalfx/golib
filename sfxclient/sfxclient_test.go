@@ -26,7 +26,6 @@ func (t *testSink) AddDatapoints(ctx context.Context, points []*datapoint.Datapo
 func TestNewScheduler(t *testing.T) {
 	Convey("Default error handler should not panic", t, func() {
 		So(func() { DefaultErrorHandler(errors.New("test")) }, ShouldNotPanic)
-		So(func() { DefaultErrorHandler(nil) }, ShouldPanic)
 	})
 
 	Convey("with a testing scheduler", t, func() {
