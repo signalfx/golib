@@ -36,7 +36,7 @@ func TestJSONLoggerMissingValue(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := log.NewJSONLogger(buf, &panicLogger{})
 	logger.Log("k")
-	if want, have := `{"k":"(MISSING)"}`+"\n", buf.String(); want != have {
+	if want, have := `{"msg":"k"}`+"\n", buf.String(); want != have {
 		t.Errorf("\nwant %#v\nhave %#v", want, have)
 	}
 }

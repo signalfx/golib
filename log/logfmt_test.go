@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	. "github.com/smartystreets/goconvey/convey"
+	"strings"
 	"testing"
 )
 
@@ -23,10 +24,22 @@ func (e *errWriter) Write([]byte) (int, error) {
 	return 0, errors.New("nope")
 }
 
-func TestNewLogfmtLogger(t *testing.T) {
+func TestNewLogfmtLogger1(t *testing.T) {
 	Convey("A NewLogfmtLogger logger", t, func() {
 		buf := &bytes.Buffer{}
 		l := NewLogfmtLogger(buf, Panic)
+		Convey("should write messages", func() {
+			l.Log("name", "john")
+			So(strings.TrimSpace(buf.String()), ShouldResemble, "name=john")
+		})
+		Convey("should write old len messages", func() {
+			l.Log("name")
+			So(strings.TrimSpace(buf.String()), ShouldResemble, "msg=name")
+		})
+		Convey("should write escaped messages", func() {
+			l.Log("name", "john doe")
+			So(strings.TrimSpace(buf.String()), ShouldResemble, `name="john doe"`)
+		})
 		Convey("should forward marshall errors", func() {
 			So(func() {
 				l.Log(&errMarshall{}, &errMarshall{})

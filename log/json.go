@@ -12,10 +12,14 @@ import (
 
 // JSONLogger logs out JSON objects to a writer
 type JSONLogger struct {
-	Out io.Writer
+	Out             io.Writer
+	MissingValueKey string
 }
 
 var _ ErrorLogger = &JSONLogger{}
+
+// DefaultMissingValueKey is used as the "key" for log messages that are of odd length
+var DefaultMissingValueKey = "msg"
 
 // NewJSONLogger creates a new JSON logger
 func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
@@ -24,7 +28,8 @@ func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 	}
 	return &ErrorLogLogger{
 		RootLogger: &JSONLogger{
-			Out: w,
+			Out:             w,
+			MissingValueKey: DefaultMissingValueKey,
 		},
 		ErrHandler: ErrHandler,
 	}
@@ -35,10 +40,11 @@ func (j *JSONLogger) Log(keyvals ...interface{}) error {
 	n := (len(keyvals) + 1) / 2 // +1 to handle case when len is odd
 	m := make(map[string]interface{}, n)
 	for i := 0; i < len(keyvals); i += 2 {
-		k := keyvals[i]
-		var v interface{} = ErrMissingValue
-		if i+1 < len(keyvals) {
-			v = keyvals[i+1]
+		var k, v interface{}
+		if i == len(keyvals)-1 {
+			k, v = j.MissingValueKey, keyvals[i]
+		} else {
+			k, v = keyvals[i], keyvals[i+1]
 		}
 		m[mapKey(k)] = mapValue(v)
 	}

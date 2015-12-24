@@ -2,17 +2,25 @@ package log
 
 import "log"
 
-type panicLogger struct{}
+type panicLogger struct {
+	err error
+}
 
 // Panic is a logger that always panics
 var Panic ErrorHandlingLogger = &panicLogger{}
 
 // Log calls the stdlib log with panic for keyvals
 func (n *panicLogger) Log(keyvals ...interface{}) {
-	log.Panic(keyvals...)
+	r := keyvals
+	if n.err != nil {
+		r = append(r[0:len(r):len(r)], n.err)
+	}
+	log.Panic(r)
 }
 
 // ErrorLogger returns the wrapped logger
-func (n *panicLogger) ErrorLogger(error) Logger {
-	return n
+func (n *panicLogger) ErrorLogger(err error) Logger {
+	return &panicLogger{
+		err: err,
+	}
 }
