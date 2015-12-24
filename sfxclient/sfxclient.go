@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/timekeeper"
 	"golang.org/x/net/context"
-	"github.com/signalfx/golib/log"
 )
 
 // DefaultReportingDelay is the default interval between new SignalFx schedulers

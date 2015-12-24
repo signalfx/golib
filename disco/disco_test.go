@@ -9,13 +9,13 @@ import (
 
 	"github.com/signalfx/golib/errors"
 
+	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"fmt"
 )
 
 func TestUnableToConn(t *testing.T) {
