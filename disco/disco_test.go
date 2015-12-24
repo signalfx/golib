@@ -280,6 +280,7 @@ func testAdvertise(t *testing.T, zkConnFunc ZkConnCreatorFunc, zkConnFunc2 ZkCon
 	service, err := d1.Services("TestAdvertiseService")
 	require.NoError(t, err)
 	require.Equal(t, 0, len(service.ServiceInstances()))
+	require.Equal(t, "name=TestAdvertiseService|len(watch)=0|instances=[]", service.String())
 	seen := make(chan struct{}, 5)
 	service.Watch(ChangeWatch(func() {
 		fmt.Printf("Event seen!\n")
