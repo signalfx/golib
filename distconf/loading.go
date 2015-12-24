@@ -20,7 +20,7 @@ func FromLoaders(loaders []BackingLoader) *Distconf {
 	for _, l := range loaders {
 		r, err := l.Get()
 		if err != nil {
-			DefaultLogger.Log("err", err, "msg", "Unable to load reader")
+			DefaultLogger.Log("err", err, "Unable to load reader")
 			continue
 		}
 		readers = append(readers, r)

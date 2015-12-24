@@ -111,7 +111,7 @@ func (z *ZkPlus) eventLoop() {
 	for {
 		select {
 		case eventToSend = <-whenI(!haveEventToSend && z.connectedChan != nil, z.connectedChan):
-			z.logger.Log("event", eventToSend, "pre", z.pathPrefix, "msg", "ZkPlus event")
+			z.logger.Log("event", eventToSend, "pre", z.pathPrefix, "ZkPlus event")
 			if strings.HasPrefix(eventToSend.Path, z.pathPrefix) {
 				eventToSend.Path = eventToSend.Path[len(z.pathPrefix):]
 				if eventToSend.Path == "" {
@@ -140,7 +140,7 @@ func (z *ZkPlus) onQuit(c chan struct{}) {
 		z.connectedConn.Close()
 		z.connectedConn = nil
 	}
-	z.logger.Log("msg", "Close on event loop")
+	z.logger.Log("Close on event loop")
 }
 
 func (z *ZkPlus) setupConn() {
@@ -151,7 +151,7 @@ func (z *ZkPlus) setupConn() {
 	z.connectedConn = c
 	z.connectedChan = e
 	if err := z.ensureRootPath(c); err != nil {
-		z.logger.Log("err", err, "msg", "Unable to ensure root path")
+		z.logger.Log("err", err, "Unable to ensure root path")
 		z.connectedConn.Close()
 		z.connectedConn = nil
 		z.connectedChan = nil

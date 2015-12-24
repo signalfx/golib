@@ -89,7 +89,7 @@ func (b *Builder) Build() (*ZkPlus, error) {
 	} else if prefix[len(prefix)-1] == '/' {
 		return nil, errInvalidPathSuffix
 	}
-	b.logger.Log("prefix", prefix, "msg", "new with prefix")
+	b.logger.Log("prefix", prefix, "new with prefix")
 
 	ret := &ZkPlus{
 		pathPrefix: prefix,

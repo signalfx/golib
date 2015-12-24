@@ -185,14 +185,14 @@ func (z *ZkConn) offerEvent(e zk.Event) {
 		return
 	}
 	w, exists := z.pathWatch[e.Path]
-	eventLog.Log("exists", exists, "msg", "Event on path")
+	eventLog.Log("exists", exists, "Event on path")
 	if exists {
-		eventLog.Log("msg", "Firing event!")
+		eventLog.Log("Firing event!")
 		delete(z.pathWatch, e.Path)
 		go func() {
 			select {
 			case w <- e:
-				eventLog.Log("msg", "Event sent!")
+				eventLog.Log("Event sent!")
 			case <-time.After(z.chanTimeout):
 			}
 			close(w)
@@ -201,7 +201,7 @@ func (z *ZkConn) offerEvent(e zk.Event) {
 		go func() {
 			select {
 			case z.events <- e:
-				eventLog.Log("msg", "Event sent again!")
+				eventLog.Log("Event sent again!")
 			case <-time.After(z.chanTimeout):
 			}
 		}()
@@ -364,7 +364,7 @@ func (z *ZkConn) GetW(path string) ([]byte, *zk.Stat, <-chan zk.Event, error) {
 func (z *ZkConn) patchWatch(path string) chan zk.Event {
 	path = fixPath(path)
 	pathWatchLogger := log.NewContext(z.Logger).With("path", path)
-	pathWatchLogger.Log("msg", "Should I set a path watch?")
+	pathWatchLogger.Log("Should I set a path watch?")
 	z.pathWatchLock.Lock()
 	defer z.pathWatchLock.Unlock()
 	if z.pathWatch == nil {
@@ -372,7 +372,7 @@ func (z *ZkConn) patchWatch(path string) chan zk.Event {
 	}
 	ch, exists := z.pathWatch[path]
 	if !exists {
-		pathWatchLogger.Log("msg", "Setting patch watch")
+		pathWatchLogger.Log("Setting patch watch")
 		ch = make(chan zk.Event)
 		z.pathWatch[path] = ch
 	}

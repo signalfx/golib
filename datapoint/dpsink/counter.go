@@ -86,7 +86,7 @@ func (c *Counter) AddDatapoints(ctx context.Context, points []*datapoint.Datapoi
 	if err != nil {
 		atomic.AddInt64(&c.TotalProcessErrors, 1)
 		atomic.AddInt64(&c.ProcessErrorPoints, int64(len(points)))
-		c.logger().Log("err", err, "msg", "Unable to process datapoints")
+		c.logger().Log("err", err, "Unable to process datapoints")
 	}
 	return err
 }
@@ -110,7 +110,7 @@ func (c *Counter) AddEvents(ctx context.Context, events []*event.Event, next Sin
 	if err != nil {
 		atomic.AddInt64(&c.TotalProcessErrors, 1)
 		atomic.AddInt64(&c.ProcessErrorPoints, int64(len(events)))
-		c.logger().Log("err", err, "msg", "Unable to process datapoints")
+		c.logger().Log("err", err, "Unable to process datapoints")
 	}
 	return err
 }

@@ -124,7 +124,7 @@ func (d *ThriftTransport) NextConnection() error {
 		instance := &instances[(startIndex+i)%len(instances)]
 		conn, err := d.Dialer.Dial("tcp", instance.DialString())
 		if err != nil {
-			d.logger.Log("err", err, "msg", "Unable to dial instance")
+			d.logger.Log("err", err, "Unable to dial instance")
 			continue
 		}
 		d.currentTransport = d.WrappedFactory.GetTransport(thrift.NewTSocketFromConnTimeout(conn, d.Dialer.Timeout))

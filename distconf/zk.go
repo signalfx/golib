@@ -165,11 +165,11 @@ func (back *zkConfig) Close() {
 
 func (back *zkConfig) logInfoState(logger log.Logger, e zk.Event) bool {
 	if e.State == zk.StateDisconnected {
-		logger.Log("msg", "Disconnected from zookeeper.  Will attempt to remake connection.")
+		logger.Log("Disconnected from zookeeper.  Will attempt to remake connection.")
 		return true
 	}
 	if e.State == zk.StateConnecting {
-		logger.Log("msg", "Server is now attempting to reconnect.")
+		logger.Log("Server is now attempting to reconnect.")
 		return true
 	}
 	return false
@@ -177,16 +177,16 @@ func (back *zkConfig) logInfoState(logger log.Logger, e zk.Event) bool {
 
 func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
 	drainContext := log.NewContext(functionLogger).With("method", "drainEventChan")
-	defer drainContext.Log("msg", "Draining done")
+	defer drainContext.Log("Draining done")
 	for {
-		drainContext.Log("msg", "Blocking with event")
+		drainContext.Log("Blocking with event")
 		select {
 		case e := <-back.eventChan:
 			eventContext := drainContext.With("event", e)
-			eventContext.Log("msg", "event seen")
+			eventContext.Log("event seen")
 			back.logInfoState(eventContext, e)
 			if e.State == zk.StateHasSession {
-				eventContext.Log("msg", "Server now has a session.")
+				eventContext.Log("Server now has a session.")
 				back.refreshWatches(eventContext)
 				continue
 			}
@@ -197,18 +197,18 @@ func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
 				e.Path = e.Path[1:]
 			}
 			{
-				eventContext.Log("len()", back.callbacks.len(), "msg", "change state")
+				eventContext.Log("len()", back.callbacks.len(), "change state")
 				for _, c := range back.callbacks.get(e.Path) {
 					c(e.Path)
 				}
 			}
-			eventContext.Log("msg", "reregistering watch")
+			eventContext.Log("reregistering watch")
 
 			// Note: return value currently ignored.  Not sure what to do about it
 			back.reregisterWatch(e.Path, eventContext)
-			eventContext.Log("msg", "reregistering watch finished")
+			eventContext.Log("reregistering watch finished")
 		case <-back.shouldQuit:
-			drainContext.Log("msg", "quit message seen")
+			drainContext.Log("quit message seen")
 			return
 		}
 	}
@@ -225,7 +225,7 @@ func (back *zkConfig) refreshWatches(functionLogger log.Logger) {
 			if err == nil {
 				break
 			}
-			pathLogger.Log("err", err, "msg", "Error reregistering watch")
+			pathLogger.Log("err", err, "Error reregistering watch")
 			time.Sleep(back.refreshDelay.get())
 		}
 	}
@@ -240,7 +240,7 @@ func (back *zkConfig) reregisterWatch(path string, logger log.Logger) error {
 	logger.Log("Reregistering watch")
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
-		logger.Log("err", err, "msg", "Unable to reregistering watch")
+		logger.Log("err", err, "Unable to reregistering watch")
 		return errors.Annotatef(err, "unable to reregister watch for node %s", path)
 	}
 	return nil
