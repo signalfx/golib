@@ -12,6 +12,7 @@ type RateLimitedLogger struct {
 	EventCounter eventcounter.EventCounter
 	Limit        int64
 	Logger       Logger
+	LimitLogger  Logger
 	Now          func() time.Time
 }
 
@@ -26,6 +27,9 @@ func (r *RateLimitedLogger) now() time.Time {
 func (r *RateLimitedLogger) Log(kvs ...interface{}) {
 	now := r.now()
 	if r.EventCounter.Event(now) > r.Limit {
+		if r.LimitLogger != nil {
+			r.LimitLogger.Log(kvs...)
+		}
 		return
 	}
 	r.Logger.Log(kvs...)

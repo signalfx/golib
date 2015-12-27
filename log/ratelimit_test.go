@@ -20,16 +20,19 @@ func TestRateLimitedLogger(t *testing.T) {
 		Convey("setup to count", func() {
 			tk := timekeepertest.NewStubClock(time.Now())
 			counter := &Counter{}
+			counter2 := &Counter{}
 			r = RateLimitedLogger{
 				EventCounter: eventcounter.New(tk.Now(), time.Second*2),
 				Now:          tk.Now,
 				Limit:        10,
 				Logger:       counter,
+				LimitLogger:  counter2,
 			}
 			Convey("Should log 9 times", func() {
 				for i := int64(1); i <= r.Limit-1; i++ {
 					r.Log()
 					So(counter.Count, ShouldEqual, i)
+					So(counter2.Count, ShouldEqual, 0)
 				}
 				Convey("and a 10th when time advances", func() {
 					tk.Incr(time.Second)
@@ -39,6 +42,7 @@ func TestRateLimitedLogger(t *testing.T) {
 						for i := int64(1); i <= r.Limit; i++ {
 							r.Log()
 							So(counter.Count, ShouldEqual, r.Limit)
+							So(counter2.Count, ShouldEqual, i)
 						}
 						Convey("until time advances", func() {
 							tk.Incr(time.Second)
