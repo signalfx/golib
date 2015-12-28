@@ -10,6 +10,7 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 )
 
 // ThriftTransport can be used as the transport layer for thrift, connecting to services discovered
@@ -40,7 +41,7 @@ func NewThriftTransportWithMaxBufferSize(service *Service, timeout time.Duration
 		Dialer: net.Dialer{
 			Timeout: timeout,
 		},
-		logger: log.NewContext(service.stateLog).With("protocol", "thrift"),
+		logger: log.NewContext(service.stateLog).With(logkey.Protocol, "thrift"),
 	}
 }
 
@@ -124,7 +125,7 @@ func (d *ThriftTransport) NextConnection() error {
 		instance := &instances[(startIndex+i)%len(instances)]
 		conn, err := d.Dialer.Dial("tcp", instance.DialString())
 		if err != nil {
-			d.logger.Log("err", err, "Unable to dial instance")
+			d.logger.Log(log.Err, err, "Unable to dial instance")
 			continue
 		}
 		d.currentTransport = d.WrappedFactory.GetTransport(thrift.NewTSocketFromConnTimeout(conn, d.Dialer.Timeout))

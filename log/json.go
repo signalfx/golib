@@ -13,13 +13,10 @@ import (
 // JSONLogger logs out JSON objects to a writer
 type JSONLogger struct {
 	Out             io.Writer
-	MissingValueKey string
+	MissingValueKey Key
 }
 
 var _ ErrorLogger = &JSONLogger{}
-
-// DefaultMissingValueKey is used as the "key" for log messages that are of odd length
-var DefaultMissingValueKey = "msg"
 
 // NewJSONLogger creates a new JSON logger
 func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
@@ -29,7 +26,7 @@ func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 	return &ErrorLogLogger{
 		RootLogger: &JSONLogger{
 			Out:             w,
-			MissingValueKey: DefaultMissingValueKey,
+			MissingValueKey: Msg,
 		},
 		ErrHandler: ErrHandler,
 	}

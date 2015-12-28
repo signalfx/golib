@@ -10,7 +10,7 @@ import (
 // LogfmtLogger logs out in logfmt format
 type LogfmtLogger struct {
 	Out             io.Writer
-	MissingValueKey string
+	MissingValueKey Key
 }
 
 // NewLogfmtLogger returns a logger that encodes keyvals to the Writer in
@@ -23,7 +23,7 @@ func NewLogfmtLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 	return &ErrorLogLogger{
 		RootLogger: &LogfmtLogger{
 			Out:             w,
-			MissingValueKey: DefaultMissingValueKey,
+			MissingValueKey: Msg,
 		},
 		ErrHandler: ErrHandler,
 	}

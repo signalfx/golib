@@ -2,6 +2,7 @@ package distconf
 
 import (
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,7 +41,7 @@ func (s *durationConf) Update(newValue []byte) error {
 	} else {
 		newValDuration, err := time.ParseDuration(string(newValue))
 		if err != nil {
-			s.logger.Log("err", err, "newValue", string(newValue), "Invalid duration string")
+			s.logger.Log(log.Err, err, logkey.DistconfNewVal, string(newValue), "Invalid duration string")
 			atomic.StoreInt64(&s.currentVal, int64(s.defaultVal))
 		} else {
 			atomic.StoreInt64(&s.currentVal, int64(newValDuration))

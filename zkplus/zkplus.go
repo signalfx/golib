@@ -9,6 +9,7 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 	"github.com/signalfx/golib/zkplus/zktest"
 )
 
@@ -111,7 +112,7 @@ func (z *ZkPlus) eventLoop() {
 	for {
 		select {
 		case eventToSend = <-whenI(!haveEventToSend && z.connectedChan != nil, z.connectedChan):
-			z.logger.Log("event", eventToSend, "pre", z.pathPrefix, "ZkPlus event")
+			z.logger.Log(logkey.ZkEvent, eventToSend, logkey.ZkPrefix, z.pathPrefix, "ZkPlus event")
 			if strings.HasPrefix(eventToSend.Path, z.pathPrefix) {
 				eventToSend.Path = eventToSend.Path[len(z.pathPrefix):]
 				if eventToSend.Path == "" {
@@ -187,50 +188,50 @@ func (z *ZkPlus) blockOnConn() zktest.ZkConnSupported {
 
 // Exists returns true if the path exists
 func (z *ZkPlus) Exists(path string) (bool, *zk.Stat, error) {
-	z.forPath(path).Log("action", "Exists")
+	z.forPath(path).Log(logkey.ZkMethod, "Exists")
 	return z.blockOnConn().Exists(z.realPath(path))
 }
 
 // ExistsW is like Exists but also sets a watch.  Note: We DO NOT change paths on the returned
 // channel nor do we reconnect it.  Use the global channel instead
 func (z *ZkPlus) ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error) {
-	z.forPath(path).Log("action", "ExistsW")
+	z.forPath(path).Log(logkey.ZkMethod, "ExistsW")
 	return z.blockOnConn().ExistsW(z.realPath(path))
 }
 
 // Get the bytes of a zk path
 func (z *ZkPlus) Get(path string) ([]byte, *zk.Stat, error) {
-	z.forPath(path).Log("action", "Get")
+	z.forPath(path).Log(logkey.ZkMethod, "Get")
 	return z.blockOnConn().Get(z.realPath(path))
 }
 
 // GetW is like Get, but also sets a watch
 func (z *ZkPlus) GetW(path string) ([]byte, *zk.Stat, <-chan zk.Event, error) {
-	z.forPath(path).Log("action", "GetW")
+	z.forPath(path).Log(logkey.ZkMethod, "GetW")
 	return z.blockOnConn().GetW(z.realPath(path))
 }
 
 // Children gets children of a path
 func (z *ZkPlus) Children(path string) ([]string, *zk.Stat, error) {
-	z.forPath(path).Log("action", "Children")
+	z.forPath(path).Log(logkey.ZkMethod, "Children")
 	return z.blockOnConn().Children(z.realPath(path))
 }
 
 // ChildrenW is like children but also sets a watch
 func (z *ZkPlus) ChildrenW(path string) ([]string, *zk.Stat, <-chan zk.Event, error) {
-	z.forPath(path).Log("action", "ChildrenW")
+	z.forPath(path).Log(logkey.ZkMethod, "ChildrenW")
 	return z.blockOnConn().ChildrenW(z.realPath(path))
 }
 
 // Delete a Zk node
 func (z *ZkPlus) Delete(path string, version int32) error {
-	z.forPath(path).Log("action", "Delete")
+	z.forPath(path).Log(logkey.ZkMethod, "Delete")
 	return z.blockOnConn().Delete(z.realPath(path), version)
 }
 
 // Create a Zk node
 func (z *ZkPlus) Create(path string, data []byte, flags int32, acl []zk.ACL) (string, error) {
-	z.forPath(path).Log("action", "Create")
+	z.forPath(path).Log(logkey.ZkMethod, "Create")
 	p, err := z.blockOnConn().Create(z.realPath(path), data, flags, acl)
 	if strings.HasPrefix(p, z.pathPrefix) && z.pathPrefix != "" {
 		p = p[len(z.pathPrefix)+1:]
@@ -240,10 +241,10 @@ func (z *ZkPlus) Create(path string, data []byte, flags int32, acl []zk.ACL) (st
 
 // Set the data of a zk node
 func (z *ZkPlus) Set(path string, data []byte, version int32) (*zk.Stat, error) {
-	z.forPath(path).Log("action", "Set")
+	z.forPath(path).Log(logkey.ZkMethod, "Set")
 	return z.blockOnConn().Set(z.realPath(path), data, version)
 }
 
 func (z *ZkPlus) forPath(path string) log.Logger {
-	return log.NewContext(z.logger).With("path", z.realPath(path))
+	return log.NewContext(z.logger).With(logkey.ZkPath, z.realPath(path))
 }

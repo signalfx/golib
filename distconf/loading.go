@@ -1,5 +1,7 @@
 package distconf
 
+import "github.com/signalfx/golib/log"
+
 // A BackingLoader should run a single time and get a Reader for Config
 type BackingLoader interface {
 	Get() (Reader, error)
@@ -20,7 +22,7 @@ func FromLoaders(loaders []BackingLoader) *Distconf {
 	for _, l := range loaders {
 		r, err := l.Get()
 		if err != nil {
-			DefaultLogger.Log("err", err, "Unable to load reader")
+			DefaultLogger.Log(log.Err, err, "Unable to load reader")
 			continue
 		}
 		readers = append(readers, r)

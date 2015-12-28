@@ -7,6 +7,7 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 	"github.com/signalfx/golib/zkplus/zktest"
 )
 
@@ -89,7 +90,7 @@ func (b *Builder) Build() (*ZkPlus, error) {
 	} else if prefix[len(prefix)-1] == '/' {
 		return nil, errInvalidPathSuffix
 	}
-	b.logger.Log("prefix", prefix, "new with prefix")
+	b.logger.Log(logkey.ZkPrefix, prefix, "new with prefix")
 
 	ret := &ZkPlus{
 		pathPrefix: prefix,

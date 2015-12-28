@@ -22,6 +22,7 @@ import (
 
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 	"github.com/signalfx/golib/zkplus"
 )
 
@@ -166,7 +167,7 @@ func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (*D
 		watchedServices:      make(map[string]*Service),
 		manualEvents:         make(chan zk.Event),
 	}
-	d.stateLog = log.NewContext(conf.Logger).With("GUID", d.GUID())
+	d.stateLog = log.NewContext(conf.Logger).With(logkey.GUID, d.GUID())
 	d.zkConn, d.eventChan, err = zkConnCreator.Connect()
 	if err != nil {
 		return nil, errors.Annotate(err, "cannot create first zk connection")
@@ -204,18 +205,18 @@ var errServiceDoesNotExist = errors.New("could not find service to refresh")
 
 func (d *Disco) logInfoState(e *zk.Event) bool {
 	if e.State == zk.StateDisconnected {
-		d.stateLog.Log("event", e, "Disconnected from zookeeper.  Will attempt to remake connection.")
+		d.stateLog.Log(logkey.ZkEvent, e, "Disconnected from zookeeper.  Will attempt to remake connection.")
 		return true
 	}
 	if e.State == zk.StateConnecting {
-		d.stateLog.Log("event", e, "Server is now attempting to reconnect.")
+		d.stateLog.Log(logkey.ZkEvent, e, "Server is now attempting to reconnect.")
 		return true
 	}
 	return false
 }
 
 func (d *Disco) processZkEvent(e *zk.Event) error {
-	d.stateLog.Log("event", e, "disco event seen")
+	d.stateLog.Log(logkey.ZkEvent, e, "disco event seen")
 	d.logInfoState(e)
 	if e.State == zk.StateHasSession {
 		return d.refreshAll()
@@ -231,7 +232,7 @@ func (d *Disco) processZkEvent(e *zk.Event) error {
 		serviceName = parts[0]
 	}
 	if serviceName != "" {
-		d.stateLog.Log("service", serviceName, "refresh on service")
+		d.stateLog.Log(logkey.DiscoService, serviceName, "refresh on service")
 		service, err := func() (*Service, error) {
 			d.watchedMutex.Lock()
 			defer d.watchedMutex.Unlock()
@@ -242,9 +243,9 @@ func (d *Disco) processZkEvent(e *zk.Event) error {
 			return nil, errServiceDoesNotExist
 		}()
 		if err != nil {
-			d.stateLog.Log("event", e, "parent", serviceName, "err", err, "Unable to find parent")
+			d.stateLog.Log(logkey.ZkEvent, e, logkey.DiscoService, serviceName, log.Err, err, "Unable to find parent")
 		} else {
-			d.stateLog.Log("service", service, "refreshing")
+			d.stateLog.Log(logkey.DiscoService, service, "refreshing")
 			return service.refresh(d.zkConn)
 		}
 	}
@@ -287,7 +288,7 @@ func (d *Disco) refreshAll() error {
 	d.watchedMutex.Lock()
 	defer d.watchedMutex.Unlock()
 	for serviceName, serviceInstance := range d.myAdvertisedServices {
-		d.stateLog.Log("service", serviceName, "refresh for service")
+		d.stateLog.Log(logkey.DiscoService, serviceName, "refresh for service")
 		d.advertiseInZK(false, serviceName, serviceInstance)
 	}
 	for _, service := range d.watchedServices {
@@ -312,7 +313,7 @@ func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceD
 		return nil
 	}
 	if exists {
-		d.stateLog.Log("servicePath", servicePath, "Clearing out old service path")
+		d.stateLog.Log(logkey.ZkPath, servicePath, "Clearing out old service path")
 		// clear out the old version
 		if err = d.zkConn.Delete(servicePath, stat.Version); err != nil {
 			return errors.Annotatef(err, "unhandled ZK Delete of %s", servicePath)
@@ -335,13 +336,13 @@ var ErrDuplicateAdvertise = errors.New("service name already advertised")
 // Advertise yourself as hosting a service
 func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) (err error) {
 	if d.ninjaMode {
-		d.stateLog.Log("serviceName", serviceName, "Not advertising because disco is in ninja mode")
+		d.stateLog.Log(logkey.DiscoService, serviceName, "Not advertising because disco is in ninja mode")
 		return nil
 	}
 	// Note: Important to defer after we release the mutex since the chan send could be a blocking
 	//       operation
 	defer func() {
-		d.stateLog.Log("err", err, "advertised result")
+		d.stateLog.Log(log.Err, err, "advertised result")
 		if err == nil {
 			d.manualEvents <- zk.Event{
 				Type:  zk.EventNodeChildrenChanged,
@@ -352,7 +353,7 @@ func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) 
 	}()
 	d.watchedMutex.Lock()
 	defer d.watchedMutex.Unlock()
-	d.stateLog.Log("name", serviceName, "Advertising myself on a service")
+	d.stateLog.Log(logkey.DiscoService, serviceName, "Advertising myself on a service")
 	_, exists := d.myAdvertisedServices[serviceName]
 	if exists {
 		return ErrDuplicateAdvertise
@@ -390,7 +391,7 @@ func (d *Disco) Services(serviceName string) (*Service, error) {
 	}
 	ret := &Service{
 		name:     serviceName,
-		stateLog: log.NewContext(d.stateLog).With("service", serviceName),
+		stateLog: log.NewContext(d.stateLog).With(logkey.DiscoService, serviceName),
 	}
 	ret.services.Store([]ServiceInstance{})
 	refreshRes := ret.refresh(d.zkConn)
@@ -466,14 +467,14 @@ func (s *Service) refresh(zkConn ZkConn) error {
 	oldHash := s.byteHashes()
 	children, _, _, err := zkConn.ChildrenW(fmt.Sprintf("/%s", s.name))
 	if err != nil && errors.Tail(err) != zk.ErrNoNode {
-		s.stateLog.Log("err", err, "Error getting children")
+		s.stateLog.Log(log.Err, err, "Error getting children")
 		return errors.Annotatef(err, "unexpected zk error on childrenw")
 	}
 
 	if errors.Tail(err) == zk.ErrNoNode {
 		exists, _, _, err := zkConn.ExistsW(fmt.Sprintf("/%s", s.name))
 		if exists || err != nil {
-			s.stateLog.Log("err", err, "Unable to register exists watch!")
+			s.stateLog.Log(log.Err, err, "Unable to register exists watch!")
 		}
 		s.services.Store(make([]ServiceInstance, 0))
 	} else {

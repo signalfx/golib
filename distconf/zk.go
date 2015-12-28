@@ -10,6 +10,7 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 )
 
 // ZkConn does zookeeper connections
@@ -111,7 +112,7 @@ func (back *zkConfig) configPath(key string) string {
 
 // Get returns the config value from zookeeper
 func (back *zkConfig) Get(key string) ([]byte, error) {
-	back.rootLogger.Log("method", "get", "key", key)
+	back.rootLogger.Log(logkey.ZkMethod, "get", logkey.ZkPath, key)
 	pathToFetch := back.configPath(key)
 	bytes, _, _, err := back.conn.GetW(pathToFetch)
 	if err != nil {
@@ -124,7 +125,7 @@ func (back *zkConfig) Get(key string) ([]byte, error) {
 }
 
 func (back *zkConfig) Write(key string, value []byte) error {
-	back.rootLogger.Log("method", "write", "key", key)
+	back.rootLogger.Log(logkey.ZkMethod, "write", logkey.ZkPath, key)
 	path := back.configPath(key)
 	exists, stat, err := back.conn.Exists(path)
 	if err != nil {
@@ -147,7 +148,7 @@ func (back *zkConfig) Write(key string, value []byte) error {
 }
 
 func (back *zkConfig) Watch(key string, callback backingCallbackFunction) error {
-	back.rootLogger.Log("method", "watch", "key", key)
+	back.rootLogger.Log(logkey.ZkMethod, "watch", logkey.ZkPath, key)
 	path := back.configPath(key)
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
@@ -176,13 +177,13 @@ func (back *zkConfig) logInfoState(logger log.Logger, e zk.Event) bool {
 }
 
 func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
-	drainContext := log.NewContext(functionLogger).With("method", "drainEventChan")
+	drainContext := log.NewContext(functionLogger).With(logkey.Func, "drainEventChan")
 	defer drainContext.Log("Draining done")
 	for {
 		drainContext.Log("Blocking with event")
 		select {
 		case e := <-back.eventChan:
-			eventContext := drainContext.With("event", e)
+			eventContext := drainContext.With(logkey.ZkEvent, e)
 			eventContext.Log("event seen")
 			back.logInfoState(eventContext, e)
 			if e.State == zk.StateHasSession {
@@ -197,7 +198,7 @@ func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
 				e.Path = e.Path[1:]
 			}
 			{
-				eventContext.Log("len()", back.callbacks.len(), "change state")
+				eventContext.Log(logkey.ArrLen, back.callbacks.len(), "change state")
 				for _, c := range back.callbacks.get(e.Path) {
 					c(e.Path)
 				}
@@ -216,7 +217,7 @@ func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
 
 func (back *zkConfig) refreshWatches(functionLogger log.Logger) {
 	for path, callbacks := range back.callbacks.copy() {
-		pathLogger := log.NewContext(functionLogger).With("path", path)
+		pathLogger := log.NewContext(functionLogger).With(logkey.ZkPath, path)
 		for _, c := range callbacks {
 			c(path)
 		}
@@ -225,7 +226,7 @@ func (back *zkConfig) refreshWatches(functionLogger log.Logger) {
 			if err == nil {
 				break
 			}
-			pathLogger.Log("err", err, "Error reregistering watch")
+			pathLogger.Log(log.Err, err, "Error reregistering watch")
 			time.Sleep(back.refreshDelay.get())
 		}
 	}
@@ -236,11 +237,11 @@ func (back *zkConfig) setRefreshDelay(refreshDelay time.Duration) {
 }
 
 func (back *zkConfig) reregisterWatch(path string, logger log.Logger) error {
-	logger = log.NewContext(logger).With("path", path)
+	logger = log.NewContext(logger).With(logkey.ZkPath, path)
 	logger.Log("Reregistering watch")
 	_, _, _, err := back.conn.ExistsW(path)
 	if err != nil {
-		logger.Log("err", err, "Unable to reregistering watch")
+		logger.Log(log.Err, err, "Unable to reregistering watch")
 		return errors.Annotatef(err, "unable to reregister watch for node %s", path)
 	}
 	return nil
@@ -273,7 +274,7 @@ func (c *ZkConfig) merge(from *ZkConfig) *ZkConfig {
 func Zk(zkConnector ZkConnector, conf *ZkConfig) (ReaderWriter, error) {
 	conf = conf.merge(DefaultZkConfig)
 	ret := &zkConfig{
-		rootLogger: log.NewContext(conf.Logger).With("backing", "zk"),
+		rootLogger: log.NewContext(conf.Logger).With(logkey.DistconfBacking, "zk"),
 		shouldQuit: make(chan struct{}),
 		callbacks: callbackMap{
 			callbacks: make(map[string][]backingCallbackFunction),

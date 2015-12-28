@@ -20,7 +20,7 @@ const DefaultReportingDelay = time.Second * 20
 
 // DefaultErrorHandler is the default way to handle errors by a scheduler.  It simply prints them to stdout
 var DefaultErrorHandler = func(err error) error {
-	log.DefaultLogger.Log("err", err, "Unable to handle error")
+	log.DefaultLogger.Log(log.Err, err, "Unable to handle error")
 	return nil
 }
 

@@ -3,6 +3,7 @@ package explorable
 import (
 	"fmt"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 	"html"
 	"net/http"
 	"reflect"
@@ -40,7 +41,7 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 			nonEmptyParts = append(nonEmptyParts, p)
 		}
 	}
-	logger.Log("parts", nonEmptyParts, "url", r.URL, "Exploring object")
+	logger.Log(logkey.ExplorableParts, nonEmptyParts, logkey.URL, r.URL, "Exploring object")
 	o := ExploreObject(reflect.ValueOf(h.Val), nonEmptyParts)
 
 	parent := ""

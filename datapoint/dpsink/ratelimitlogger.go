@@ -33,7 +33,7 @@ func (e *RateLimitErrorLogging) throttleLog(err error) {
 		if sinceLastLogNs > e.LogThrottle.Nanoseconds() {
 			nowUnixNs := now.UnixNano()
 			if atomic.CompareAndSwapInt64(&e.lastLogTimeNs, lastLogTimeNs, nowUnixNs) {
-				e.Logger.Log("err", err)
+				e.Logger.Log(log.Err, err)
 			}
 		}
 	}

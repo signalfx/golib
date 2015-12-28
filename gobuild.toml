@@ -6,6 +6,7 @@
   [metalinter.ignored]
     go14= "^.*has no field or method Cancel.*$" 
     logargs = "no args in Log call"
+    coverageignored = "ignored is unused"
   [metalinter.enabled]
     golint = true
     gofmt = true
