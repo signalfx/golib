@@ -86,6 +86,12 @@ func toStr(in []interface{}) []string {
 }
 
 func TestLoggingBasics(t *testing.T) {
+	Convey("A nil logger should work as expected", t, func() {
+		var l *Context
+		So(IsDisabled(l), ShouldBeTrue)
+		So(l.With("a", "b"), ShouldBeNil)
+		So(l.WithPrefix("a", "b"), ShouldBeNil)
+	})
 	Convey("A normal logger", t, func() {
 		mem := NewChannelLogger(10, nil)
 		c := NewContext(mem)
@@ -103,6 +109,10 @@ func TestLoggingBasics(t *testing.T) {
 			So(func() {
 				c.WithPrefix("name")
 			}, ShouldPanic)
+		})
+		Convey("should be disablable", func() {
+			c.Logger = Discard
+			So(IsDisabled(c), ShouldBeTrue)
 		})
 		Convey("should not even out context values on log", func() {
 			c.Log("name")

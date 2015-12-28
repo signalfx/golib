@@ -37,7 +37,8 @@ func (f ErrorHandlerFunc) ErrorLogger(e error) Logger {
 	return f(e)
 }
 
-// Context allows users to create a logger that appends key/values to log statements
+// Context allows users to create a logger that appends key/values to log statements.  Note that a nil Context is ok to
+// use and works generally as expected, allowing optional logging in default struct{} objects.
 type Context struct {
 	Logger  Logger
 	KeyVals []interface{}
@@ -84,19 +85,24 @@ func (l *Context) Log(keyvals ...interface{}) {
 	// Note: The assumption here is that copyIfDynamic is "slow" since dynamic values
 	//       could be slow to calculate.  So to optimize the case of "logs are turned off"
 	//       we enable the ability to early return if the logger is off.
-	if IsDisabled(l.Logger) {
+	if l == nil || IsDisabled(l.Logger) {
 		return
 	}
 	l.Logger.Log(copyIfDynamic(addArrays(l.KeyVals, keyvals))...)
 }
 
+// Disabled returns true if the wrapped logger is disabled
+func (l *Context) Disabled() bool {
+	return l == nil || IsDisabled(l.Logger)
+}
+
 // With returns a new context that adds key/values to log statements
 func (l *Context) With(keyvals ...interface{}) *Context {
-	if len(keyvals) == 0 {
-		return l
-	}
 	if len(keyvals)%2 != 0 {
 		panic("Programmer error.  Please call log.Context.With() only with an even number of arguments.")
+	}
+	if len(keyvals) == 0 || l == nil {
+		return l
 	}
 	return &Context{
 		Logger:  l.Logger,
@@ -106,11 +112,11 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 
 // WithPrefix is like With but adds keyvalus to the beginning of the eventual log statement
 func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
-	if len(keyvals) == 0 {
-		return l
-	}
 	if len(keyvals)%2 != 0 {
 		panic("Programmer error.  Please call log.Context.WithPrefix() only with an even number of arguments.")
+	}
+	if len(keyvals) == 0 || l == nil {
+		return l
 	}
 	return &Context{
 		Logger:  l.Logger,
