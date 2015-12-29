@@ -11,6 +11,7 @@ import (
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/logkey"
+	"github.com/signalfx/golib/pointer"
 )
 
 // ZkConn does zookeeper connections
@@ -257,22 +258,9 @@ var DefaultZkConfig = &ZkConfig{
 	Logger: DefaultLogger,
 }
 
-func (c *ZkConfig) merge(from *ZkConfig) *ZkConfig {
-	if c == nil {
-		return from
-	}
-	ret := &ZkConfig{
-		Logger: c.Logger,
-	}
-	if ret.Logger == nil {
-		ret.Logger = from.Logger
-	}
-	return ret
-}
-
 // Zk creates a zookeeper readable backing
 func Zk(zkConnector ZkConnector, conf *ZkConfig) (ReaderWriter, error) {
-	conf = conf.merge(DefaultZkConfig)
+	conf = pointer.FillDefaultFrom(conf, DefaultZkConfig).(*ZkConfig)
 	ret := &zkConfig{
 		rootLogger: log.NewContext(conf.Logger).With(logkey.DistconfBacking, "zk"),
 		shouldQuit: make(chan struct{}),

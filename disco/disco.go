@@ -23,6 +23,7 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/logkey"
+	"github.com/signalfx/golib/pointer"
 	"github.com/signalfx/golib/zkplus"
 )
 
@@ -125,31 +126,14 @@ type Config struct {
 }
 
 // DefaultConfig is used if any config values are nil
-var DefaultConfig = Config{
+var DefaultConfig = &Config{
 	RandomSource: rand.Reader,
 	Logger:       log.DefaultLogger.CreateChild(),
 }
 
-func (c *Config) merge(from Config) *Config {
-	if c == nil {
-		return &DefaultConfig
-	}
-	ret := &Config{
-		RandomSource: c.RandomSource,
-		Logger:       c.Logger,
-	}
-	if ret.Logger == nil {
-		ret.Logger = from.Logger
-	}
-	if ret.RandomSource == nil {
-		ret.RandomSource = from.RandomSource
-	}
-	return ret
-}
-
 // New creates a disco discovery/publishing service
 func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (*Disco, error) {
-	conf := config.merge(DefaultConfig)
+	conf := pointer.FillDefaultFrom(config, DefaultConfig).(*Config)
 	var GUID [16]byte
 	_, err := io.ReadFull(conf.RandomSource, GUID[:16])
 	if err != nil {
