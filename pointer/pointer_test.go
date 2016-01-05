@@ -29,6 +29,9 @@ type Person struct {
 	Uint32 *uint32
 	Uint   *uint
 	Uint16 *uint16
+
+	Int   *int
+	Int64 *int64
 }
 
 type NotAPerson struct {
@@ -42,6 +45,8 @@ type NotAPerson struct {
 	Uint32 *uint32
 	Uint   *uint
 	Uint16 *uint16
+	Int    *int
+	Int64  *int64
 }
 
 func TestFillDefaultFrom(t *testing.T) {
@@ -55,6 +60,8 @@ func TestFillDefaultFrom(t *testing.T) {
 			Uint32:      Uint32(1),
 			Uint:        Uint(2),
 			Uint16:      Uint16(3),
+			Int:         Int(5),
+			Int64:       Int64(6),
 			Coworkers: []Person{
 				{
 					Name: String("jack"),
@@ -71,6 +78,8 @@ func TestFillDefaultFrom(t *testing.T) {
 			So(*p.Uint32, ShouldEqual, 1)
 			So(*p.Uint, ShouldEqual, 2)
 			So(*p.Uint16, ShouldEqual, 3)
+			So(*p.Int, ShouldEqual, 5)
+			So(*p.Int64, ShouldEqual, 6)
 			So(p.Job.Pay(), ShouldEqual, 100)
 			So(len(p.Coworkers), ShouldEqual, 1)
 			So(*p.Coworkers[0].Name, ShouldEqual, "jack")
