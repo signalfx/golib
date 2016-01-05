@@ -12,15 +12,18 @@ import (
 	"strings"
 )
 
-// ExpvarHandler can serve via HTTP expvar variables as well as custom variables inside
+// Handler can serve via HTTP expvar variables as well as custom variables inside
 // Exported
-type ExpvarHandler struct {
+type Handler struct {
 	Exported map[string]expvar.Var
 }
 
-// Init the ExpvarHandler, creating any datastructures needed
-func (e *ExpvarHandler) Init() {
-	e.Exported = make(map[string]expvar.Var)
+// New creates and returns a new handler
+func New() *Handler {
+	e := Handler{
+		Exported: make(map[string]expvar.Var),
+	}
+	return &e
 }
 
 // EnviromentalVariables returns an expvar that also shows env variables
@@ -42,7 +45,7 @@ func enviromentalVariables(osEnviron func() []string) expvar.Var {
 	})
 }
 
-var _ http.Handler = &ExpvarHandler{}
+var _ http.Handler = &Handler{}
 
 type filterSet map[string]struct{}
 
@@ -54,7 +57,7 @@ func (s filterSet) shouldFilter(search string) bool {
 	return !exists
 }
 
-func (e *ExpvarHandler) initialDump(w io.Writer, onlyFetch filterSet) {
+func (e *Handler) initialDump(w io.Writer, onlyFetch filterSet) {
 	fmt.Fprintf(w, "{")
 	first := true
 	usedKeys := map[string]struct{}{}
@@ -94,7 +97,7 @@ func asSet(items []string) filterSet {
 
 // ServeHTTP is a copy/past of the private expvar.expvarHandler that I sometimes want to
 // register to my own handler.
-func (e *ExpvarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (e *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	prettyPrint, _ := strconv.ParseBool(r.URL.Query().Get("pretty"))
 	onlyFetch := asSet(strings.Split(r.URL.Query().Get("filter"), ","))
