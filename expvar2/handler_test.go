@@ -24,8 +24,7 @@ func TestExpvarHandler(t *testing.T) {
 	Convey("When setup", t, func() {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/bob", nil)
-		e := ExpvarHandler{}
-		e.Init()
+		e := New()
 		Convey("And hello world registered", func() {
 			e.Exported["hello"] = expvar.Func(func() interface{} {
 				return "world"

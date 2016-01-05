@@ -36,6 +36,11 @@ func (m *RequestCounter) ServeHTTP(rw http.ResponseWriter, r *http.Request, next
 	atomic.AddInt64(&m.TotalProcessingTimeNs, reqDuration.Nanoseconds())
 }
 
+// Datapoints satisfies the new sfxclient.Collector interface by returning Stats(...)
+func (m *RequestCounter) Datapoints() []*datapoint.Datapoint {
+	return m.Stats(nil)
+}
+
 // Stats returns stats on total connections, active connections, and total processing time
 func (m *RequestCounter) Stats(dimensions map[string]string) []*datapoint.Datapoint {
 	ret := []*datapoint.Datapoint{}

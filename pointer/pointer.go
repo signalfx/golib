@@ -36,6 +36,16 @@ func String(i string) *string {
 	return &i
 }
 
+// Int returns a pointer to an int
+func Int(i int) *int {
+	return &i
+}
+
+// Int64 returns a pointer to an int64
+func Int64(i int64) *int64 {
+	return &i
+}
+
 func canNil(k reflect.Kind) bool {
 	return k == reflect.Chan || k == reflect.Func || k == reflect.Map || k == reflect.Ptr || k == reflect.Interface || k == reflect.Slice
 }
