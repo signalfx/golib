@@ -49,6 +49,13 @@ function do_test() {
   # The go get install only works on go 1.5+ (no -f parameter)
   install_go_version "$GO_COMPILER_PATH" "$DEFAULT_GOLANG_VERSION"
   (
+    (
+      # Fixes https://github.com/openshift/vagrant-openshift/pull/322/files
+      go get golang.org/x/tools/cmd/vet
+      cd "$GOPATH/src/golang.org/x/tools/cmd/vet"
+      git checkout c262de870b618eed648983aa994b03bc04641c72
+      go get github.com/opennota/check/cmd/aligncheck github.com/opennota/check/cmd/structcheck github.com/opennota/check/cmd/varcheck
+    )
     cd "$SRC_PATH"
     gobuild -verbose install
   )

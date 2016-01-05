@@ -5,6 +5,7 @@
 [metalinter]
   [metalinter.ignored]
     go14= "^.*has no field or method Cancel.*$" 
+    go14trace= "^.*Trace not declared by package pprof.*$" 
     logargs = "no args in Log call"
     coverageignored = "ignored is unused"
   [metalinter.enabled]
