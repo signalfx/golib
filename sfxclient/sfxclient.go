@@ -1,3 +1,8 @@
+// package sfxclient does stuff
+//
+//  See it do things
+//      more things
+//      moar
 package sfxclient
 
 import (
