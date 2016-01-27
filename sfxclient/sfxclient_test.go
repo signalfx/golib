@@ -182,3 +182,15 @@ func TestNewScheduler(t *testing.T) {
 		})
 	})
 }
+
+func ExampleScheduler() {
+	s := NewScheduler()
+	s.Sink.(*HTTPDatapointSink).AuthToken = "ABCD-XYZ"
+	s.AddCallback(GoMetricsSource)
+	bucket := NewRollingBucket("req.time", map[string]string{"env":"test"})
+	s.AddCallback(bucket)
+	bucket.Add(1.2)
+	bucket.Add(3)
+	ctx := context.Background()
+	go s.Schedule(ctx)
+}

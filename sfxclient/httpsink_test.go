@@ -178,3 +178,18 @@ func TestHTTPDatapointSink(t *testing.T) {
 		})
 	})
 }
+
+func ExampleHTTPDatapointSink() {
+	sink := NewHTTPDatapointSink()
+	sink.AuthToken = "ABCDEFG"
+	ctx := context.Background()
+	err := sink.AddDatapoints(ctx, []*datapoint.Datapoint{
+		// Sending a gauge with the value 1.2
+		GaugeF("a.gauge", nil, 1.2),
+		// Sending a cumulative counter with dimensions
+		Cumulative("a.counter", map[string]string{"type":"dev"}, 100),
+	})
+	if err != nil {
+		panic(err)
+	}
+}
