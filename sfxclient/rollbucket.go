@@ -29,21 +29,21 @@ var DefaultMaxBufferSize = 100
 // and sum of square from a set of points.
 type RollingBucket struct {
 	// MetricName is the metric name used when the RollingBucket is reported to SignalFx
-	MetricName         string
+	MetricName string
 	// Dimensions are the dimensions used when the RollingBucket is reported to SignalFx
-	Dimensions         map[string]string
+	Dimensions map[string]string
 	// Quantiles are an array of values [0 - 1.0] that are the histogram quantiles reported to
 	// SignalFx during a Datapoints() call.  For example, [.5] would only report the median.
-	Quantiles          []float64
+	Quantiles []float64
 	// BucketWidth is how long in time a bucket accumulates values before a flush is forced
-	BucketWidth        time.Duration
+	BucketWidth time.Duration
 	// Hist is an efficient tracker of numeric values for a histogram
-	Hist               *gohistogram.NumericHistogram
+	Hist *gohistogram.NumericHistogram
 	// MaxFlushBufferSize is the maximum size of a window to keep for the RollingBucket before
 	// quantiles are dropped.  It is ideally close to len(quantiles) * 3 + 15
 	MaxFlushBufferSize int
 	// Timer is used to track time.Now() during default value add calls
-	Timer              timekeeper.TimeKeeper
+	Timer timekeeper.TimeKeeper
 
 	// Inclusive
 	bucketStartTime time.Time

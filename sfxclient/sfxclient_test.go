@@ -187,7 +187,7 @@ func ExampleScheduler() {
 	s := NewScheduler()
 	s.Sink.(*HTTPDatapointSink).AuthToken = "ABCD-XYZ"
 	s.AddCallback(GoMetricsSource)
-	bucket := NewRollingBucket("req.time", map[string]string{"env":"test"})
+	bucket := NewRollingBucket("req.time", map[string]string{"env": "test"})
 	s.AddCallback(bucket)
 	bucket.Add(1.2)
 	bucket.Add(3)

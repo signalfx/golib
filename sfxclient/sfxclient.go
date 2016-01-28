@@ -1,4 +1,4 @@
-// Package signalfx creates convenient go functions and wrappers to send metrics to SignalFx.
+// Package sfxclient creates convenient go functions and wrappers to send metrics to SignalFx.
 //
 // The core of the library is HTTPDatapointSink which allows users to send metrics to SignalFx
 // ad-hoc.  A Scheduler is built on top of this to facility easy management of metrics for multiple
