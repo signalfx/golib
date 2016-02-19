@@ -59,8 +59,9 @@ type ChangeWatch func()
 
 // Service is a set of ServiceInstance that describe a discovered service
 type Service struct {
-	services atomic.Value // []ServiceInstance
-	name     string
+	services      atomic.Value // []ServiceInstance
+	name          string
+	ignoreUpdates int64
 
 	stateLog  log.Logger
 	watchLock sync.Mutex
@@ -391,6 +392,18 @@ func (s *Service) ServiceInstances() []ServiceInstance {
 	return s.services.Load().([]ServiceInstance)
 }
 
+// ForceInstances overrides a disco service to have exactly the passed instances forever.  Useful
+// for debugging.
+func (s *Service) ForceInstances(instances []ServiceInstance) {
+	atomic.StoreInt64(&s.ignoreUpdates, 1)
+	s.watchLock.Lock()
+	defer s.watchLock.Unlock()
+	s.services.Store(instances)
+	for _, watch := range s.watches {
+		watch()
+	}
+}
+
 // Watch for changes to the members of this service
 func (s *Service) Watch(watch ChangeWatch) {
 	s.watchLock.Lock()
@@ -447,6 +460,10 @@ func childrenServices(logger log.Logger, serviceName string, children []string, 
 }
 
 func (s *Service) refresh(zkConn ZkConn) error {
+	if atomic.LoadInt64(&s.ignoreUpdates) != 0 {
+		s.stateLog.Log("refresh flag set.  Ignoring refresh")
+		return nil
+	}
 	s.stateLog.Log("refresh called")
 	oldHash := s.byteHashes()
 	children, _, _, err := zkConn.ChildrenW(fmt.Sprintf("/%s", s.name))
