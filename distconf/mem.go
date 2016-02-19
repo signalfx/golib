@@ -1,11 +1,16 @@
 package distconf
 
+import "sync"
+
 type memConfig struct {
 	vals    map[string][]byte
 	watches map[string][]backingCallbackFunction
+	mu      sync.Mutex
 }
 
 func (m *memConfig) Get(key string) ([]byte, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	b, exists := m.vals[key]
 	if !exists {
 		return nil, nil
@@ -14,11 +19,13 @@ func (m *memConfig) Get(key string) ([]byte, error) {
 }
 
 func (m *memConfig) Write(key string, value []byte) error {
+	m.mu.Lock()
 	if value == nil {
 		delete(m.vals, key)
 	} else {
 		m.vals[key] = value
 	}
+	m.mu.Unlock()
 
 	for _, calls := range m.watches[key] {
 		calls(key)
@@ -27,6 +34,8 @@ func (m *memConfig) Write(key string, value []byte) error {
 }
 
 func (m *memConfig) Watch(key string, callback backingCallbackFunction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	_, existing := m.watches[key]
 	if !existing {
 		m.watches[key] = []backingCallbackFunction{}
