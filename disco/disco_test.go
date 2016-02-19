@@ -361,14 +361,5 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	<-onWatchChan
 	require.Nil(t, s.refresh(nil))
 	<-doneForce
-	// Eventually this should pass.  This happens because atomic.Value doesn't respect
-	// goroutine boundaries with `go test -race`
-	for {
-		name := s.ServiceInstances()[0].Name
-		if name == "bob" {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
 
 }
