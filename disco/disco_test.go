@@ -347,4 +347,18 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	<-onWatchChan
 
 	require.Equal(t, 1, len(s.ServiceInstances()))
+	doneForce := make(chan struct{})
+	// go b/c onWatchChan has zero size
+	go func() {
+		s.ForceInstances([]ServiceInstance{
+			{
+				Name: "bob",
+			},
+		})
+		close(doneForce)
+	}()
+	<-onWatchChan
+	require.Nil(t, s.refresh(nil))
+	<-doneForce
+	require.Equal(t, "bob", s.ServiceInstances()[0].Name)
 }
