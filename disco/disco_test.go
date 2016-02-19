@@ -16,6 +16,7 @@ import (
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"time"
 )
 
 func TestUnableToConn(t *testing.T) {
@@ -360,5 +361,14 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	<-onWatchChan
 	require.Nil(t, s.refresh(nil))
 	<-doneForce
-	require.Equal(t, "bob", s.ServiceInstances()[0].Name)
+	// Eventually this should pass.  This happens because atomic.Value doesn't respect
+	// goroutine boundaries with `go test -race`
+	for {
+		name := s.ServiceInstances()[0].Name
+		if name == "bob" {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+
 }

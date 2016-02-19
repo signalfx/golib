@@ -21,7 +21,12 @@ type Distconf struct {
 	readers []Reader
 
 	varsMutex      sync.Mutex
-	registeredVars map[string]configVariable
+	registeredVars map[string]*registeredVariableTracker
+}
+
+type registeredVariableTracker struct {
+	distvar        configVariable
+	hasInitialized sync.Once
 }
 
 // New creates a Distconf from a list of backing readers
@@ -29,7 +34,7 @@ func New(readers []Reader) *Distconf {
 	return &Distconf{
 		Logger:         DefaultLogger,
 		readers:        readers,
-		registeredVars: make(map[string]configVariable),
+		registeredVars: make(map[string]*registeredVariableTracker),
 	}
 }
 
@@ -54,7 +59,7 @@ func (c *Distconf) Var() expvar.Var {
 
 		m := make(map[string]interface{})
 		for name, v := range c.registeredVars {
-			m[name] = v.GenericGet()
+			m[name] = v.distvar.GenericGet()
 		}
 		return m
 	})
@@ -69,7 +74,7 @@ func (c *Distconf) Int(key string, defaultVal int64) *Int {
 		},
 	}
 	// Note: in race conditions 's' may not be the thing actually returned
-	ret, okCast := c.register(key, s).(*intConf)
+	ret, okCast := c.createOrGet(key, s).(*intConf)
 	if !okCast {
 		c.Logger.Log(logkey.DistconfKey, key, "Registering key with multiple types!  FIX ME!!!!")
 		return nil
@@ -86,7 +91,7 @@ func (c *Distconf) Float(key string, defaultVal float64) *Float {
 		},
 	}
 	// Note: in race conditions 's' may not be the thing actually returned
-	ret, okCast := c.register(key, s).(*floatConf)
+	ret, okCast := c.createOrGet(key, s).(*floatConf)
 	if !okCast {
 		c.Logger.Log(logkey.DistconfKey, key, "Registering key with multiple types!  FIX ME!!!!")
 		return nil
@@ -101,7 +106,7 @@ func (c *Distconf) Str(key string, defaultVal string) *Str {
 	}
 	s.currentVal.Store(defaultVal)
 	// Note: in race conditions 's' may not be the thing actually returned
-	ret, okCast := c.register(key, s).(*strConf)
+	ret, okCast := c.createOrGet(key, s).(*strConf)
 	if !okCast {
 		c.Logger.Log(logkey.DistconfKey, key, "Registering key with multiple types!  FIX ME!!!!")
 		return nil
@@ -125,7 +130,7 @@ func (c *Distconf) Bool(key string, defaultVal bool) *Bool {
 		},
 	}
 	// Note: in race conditions 's' may not be the thing actually returned
-	ret, okCast := c.register(key, s).(*boolConf)
+	ret, okCast := c.createOrGet(key, s).(*boolConf)
 	if !okCast {
 		c.Logger.Log(logkey.DistconfKey, key, "Registering key with multiple types!  FIX ME!!!!")
 		return nil
@@ -143,7 +148,7 @@ func (c *Distconf) Duration(key string, defaultVal time.Duration) *Duration {
 		logger: log.NewContext(c.Logger).With(logkey.DistconfKey, key),
 	}
 	// Note: in race conditions 's' may not be the thing actually returned
-	ret, okCast := c.register(key, s).(*durationConf)
+	ret, okCast := c.createOrGet(key, s).(*durationConf)
 	if !okCast {
 		c.Logger.Log(logkey.DistconfKey, key, "Registering key with multiple types!  FIX ME!!!!")
 		return nil
@@ -158,24 +163,6 @@ func (c *Distconf) Close() {
 	for _, backing := range c.readers {
 		backing.Close()
 	}
-}
-
-func (c *Distconf) register(key string, configVariable configVariable) configVariable {
-	c.varsMutex.Lock()
-	defer c.varsMutex.Unlock()
-	existing, exists := c.registeredVars[key]
-	if exists {
-		// Don't log if everything else is the same?
-		c.Logger.Log(logkey.DistconfKey, key, "Possible race registering key")
-		c.refresh(key, existing)
-		return existing
-	}
-	dynamicOnPath := c.refresh(key, configVariable)
-	if dynamicOnPath {
-		c.watch(key, configVariable)
-	}
-	c.registeredVars[key] = configVariable
-	return configVariable
 }
 
 func (c *Distconf) refresh(key string, configVar configVariable) bool {
@@ -223,6 +210,26 @@ func (c *Distconf) watch(key string, configVar configVariable) {
 	}
 }
 
+func (c *Distconf) createOrGet(key string, defaultVar configVariable) configVariable {
+	c.varsMutex.Lock()
+	rv, exists := c.registeredVars[key]
+	if !exists {
+		rv = &registeredVariableTracker{
+			distvar: defaultVar,
+		}
+		c.registeredVars[key] = rv
+	}
+	c.varsMutex.Unlock()
+
+	rv.hasInitialized.Do(func() {
+		dynamicOnPath := c.refresh(key, rv.distvar)
+		if dynamicOnPath {
+			c.watch(key, rv.distvar)
+		}
+	})
+	return rv.distvar
+}
+
 func (c *Distconf) onBackingChange(key string) {
 	c.varsMutex.Lock()
 	m, exists := c.registeredVars[key]
@@ -231,7 +238,7 @@ func (c *Distconf) onBackingChange(key string) {
 		c.Logger.Log(logkey.DistconfKey, key, "Backing callback on variable that doesn't exist")
 		return
 	}
-	c.refresh(key, m)
+	c.refresh(key, m.distvar)
 }
 
 // Reader can get a []byte value for a config key
