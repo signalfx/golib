@@ -177,6 +177,10 @@ func (back *zkConfig) logInfoState(logger log.Logger, e zk.Event) bool {
 	return false
 }
 
+func eventToString(ev zk.Event) string {
+	return fmt.Sprintf("%s %s %s", ev.Path, ev.State.String(), ev.Type.String())
+}
+
 func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
 	drainContext := log.NewContext(functionLogger).With(logkey.Func, "drainEventChan")
 	defer drainContext.Log("Draining done")
@@ -184,7 +188,7 @@ func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
 		drainContext.Log("Blocking with event")
 		select {
 		case e := <-back.eventChan:
-			eventContext := drainContext.With(logkey.ZkEvent, e)
+			eventContext := drainContext.With(logkey.ZkEvent, eventToString(e))
 			eventContext.Log("event seen")
 			back.logInfoState(eventContext, e)
 			if e.State == zk.StateHasSession {

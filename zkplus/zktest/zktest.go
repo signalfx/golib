@@ -178,7 +178,7 @@ func (z *MemoryZkServer) removeConnection(c *ZkConn) {
 }
 
 func (z *ZkConn) offerEvent(e zk.Event) {
-	eventLog := log.NewContext(z.Logger).With("event", e)
+	eventLog := log.NewContext(z.Logger).With("event", e.Path)
 	z.pathWatchLock.Lock()
 	defer z.pathWatchLock.Unlock()
 	if z.pathWatch == nil {
