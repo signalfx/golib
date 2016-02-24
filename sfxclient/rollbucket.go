@@ -183,7 +183,7 @@ func (r *RollingBucket) AddAt(v float64, t time.Time) {
 
 	r.count++
 	r.sum += v
-	r.sumOfSquares += float64(v) * float64(v)
+	r.sumOfSquares += v * v
 	r.Hist.Add(v)
 
 	r.mu.Unlock()

@@ -2,8 +2,9 @@
 set -ex
 
 CIRCLEUTIL_TAG="v1.39"
-GO_TESTED_VERSIONS="1.4.3 1.5.1"
-DEFAULT_GOLANG_VERSION="1.5.1"
+#GO_TESTED_VERSIONS="1.4.3 1.5.1 1.6"
+GO_TESTED_VERSIONS="1.6"
+DEFAULT_GOLANG_VERSION="1.6"
 IMPORT_PATH="github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
 
 export GOROOT="$HOME/go_circle"
@@ -30,7 +31,7 @@ function do_cache() {
   install_go_version "$GO_COMPILER_PATH" "$DEFAULT_GOLANG_VERSION"
   mkdir -p "$GOPATH_INTO"
   install_circletasker "$GOPATH_INTO"
-  versioned_goget "github.com/cep21/gobuild:v1.4"
+  versioned_goget "github.com/cep21/gobuild:v1.5"
   copy_local_to_path "$SRC_PATH"
 }
 
