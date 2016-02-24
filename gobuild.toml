@@ -16,3 +16,6 @@
     gocyclo = true
     vet = true
     deadcode = true
+    unconvert = true
+    structcheck = true
+    ineffassign = true
