@@ -11,6 +11,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestZkNewlyCreated(t *testing.T) {
+	zkServer := zktest.New()
+	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		return zkServer.Connect()
+	}), &ZkConfig{})
+	defer z.Close()
+	assert.NoError(t, err)
+	seenCallbacks := make(chan string, 2)
+	callback := func(s string) {
+		seenCallbacks <- s
+	}
+	z.(Dynamic).Watch("hello", callback)
+	assert.Equal(t, 0, len(seenCallbacks))
+	assert.Nil(t, z.Write("hello", []byte("test")))
+	seenString := <-seenCallbacks
+	assert.Equal(t, "hello", seenString)
+}
+
 func TestZkConf(t *testing.T) {
 	DefaultLogger.Log("TestZkConf")
 	zkServer := zktest.New()
