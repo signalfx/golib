@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,13 +20,18 @@ func TestAfterClose(t *testing.T) {
 	assert.Nil(t, z.patchWatch("/"))
 	z.offerEvent(zk.Event{})
 }
+
+func ensureCreate(s string, err error) {
+	log.IfErr(log.Panic, err)
+}
+
 func TestEnsureDelete(t *testing.T) {
 	assert.Equal(t, ErrDeleteOnRoot, EnsureDelete(nil, "/"))
 
 	s := New()
 	z, _, _ := s.Connect()
-	z.Create("/bob", []byte(""), 0, nil)
-	z.Create("/bob/bob2", []byte(""), 0, nil)
+	ensureCreate(z.Create("/bob", []byte(""), 0, nil))
+	ensureCreate(z.Create("/bob/bob2", []byte(""), 0, nil))
 	i := 0
 	z.SetErrorCheck(func(s string) error {
 		if s == "delete" {
@@ -120,8 +126,8 @@ func TestBasics(t *testing.T) {
 
 func testBasics(t *testing.T, z ZkConnSupported) {
 	rand.Seed(time.Now().UnixNano())
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z.Create("/test/testBasics", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
+	ensureCreate(z.Create("/test/testBasics", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	prefix := fmt.Sprintf("/test/testBasics/%d", rand.Intn(10000))
 	EnsureDeleteTesting(t, z, prefix)
 	time.Sleep(time.Millisecond * 100)
@@ -196,8 +202,8 @@ func TestSet(t *testing.T) {
 
 func testSet(t *testing.T, z ZkConnSupported) {
 	rand.Seed(time.Now().UnixNano())
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z.Create("/test/testSet", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
+	ensureCreate(z.Create("/test/testSet", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	prefix := fmt.Sprintf("/test/testSet/%d", rand.Intn(10000))
 
 	_, err := z.Set(prefix, []byte(""), 0)
@@ -224,8 +230,8 @@ func TestExistsW(t *testing.T) {
 
 func testExistsW(t *testing.T, z ZkConnSupported, e <-chan zk.Event) {
 	rand.Seed(time.Now().UnixNano())
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z.Create("/test/testEvents", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
+	ensureCreate(z.Create("/test/testEvents", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	prefix := fmt.Sprintf("/test/testEvents/%d", rand.Intn(10000))
 
 	// Drain events chan before going forward
@@ -276,8 +282,8 @@ func TestGetW(t *testing.T) {
 
 func testGetW(t *testing.T, z ZkConnSupported, e <-chan zk.Event) {
 	rand.Seed(time.Now().UnixNano())
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z.Create("/test/testGetW", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
+	ensureCreate(z.Create("/test/testGetW", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	prefix := fmt.Sprintf("/test/testGetW/%d", rand.Intn(10000))
 
 	// Drain events chan before going forward
@@ -326,8 +332,8 @@ func TestChildrenW(t *testing.T) {
 
 func testChildrenW(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e <-chan zk.Event) {
 	rand.Seed(time.Now().UnixNano())
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z.Create("/test/testChildrenW", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
+	ensureCreate(z.Create("/test/testChildrenW", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	prefix := fmt.Sprintf("/test/testChildrenW/%d", rand.Intn(10000))
 
 	EnsureDeleteTesting(t, z, prefix)
@@ -383,8 +389,8 @@ func TestChildrenWNotHere(t *testing.T) {
 
 func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e <-chan zk.Event) {
 	rand.Seed(time.Now().UnixNano())
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z.Create("/test/testChildrenWNotHere", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
+	ensureCreate(z.Create("/test/testChildrenWNotHere", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	prefix := fmt.Sprintf("/test/testChildrenWNotHere/%d", rand.Intn(10000))
 	EnsureDeleteTesting(t, z, prefix)
 	defer func() {
@@ -393,8 +399,8 @@ func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e
 
 	_, _, e, err := z.ChildrenW(prefix)
 	assert.Equal(t, zk.ErrNoNode, err)
-	z2.Create(prefix, []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z2.Create(prefix+"/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	ensureCreate(z2.Create(prefix, []byte(""), 0, zk.WorldACL(zk.PermAll)))
+	ensureCreate(z2.Create(prefix+"/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	select {
 	case <-e:
 		panic("Should never see event!")

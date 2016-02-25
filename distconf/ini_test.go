@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/signalfx/golib/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,8 +18,10 @@ func TestIniConf(t *testing.T) {
 
 	file, err := ioutil.TempFile("", "TestIniConf")
 	assert.NoError(t, err)
-	defer os.Remove(file.Name())
-	file.Close()
+	defer func() {
+		log.IfErr(log.Panic, os.Remove(file.Name()))
+	}()
+	log.IfErr(log.Panic, file.Close())
 	assert.NoError(t, ioutil.WriteFile(file.Name(), []byte(`
 val1=abc
 	`), 0))

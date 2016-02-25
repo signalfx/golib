@@ -5,7 +5,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"testing/iotest"
 
 	"github.com/signalfx/golib/errors"
 
@@ -24,10 +23,7 @@ func TestUnableToConn(t *testing.T) {
 }
 
 func TestBadRandomSource(t *testing.T) {
-	r := iotest.TimeoutReader(strings.NewReader(""))
-	r.Read([]byte{})
-	r.Read([]byte{})
-	r.Read([]byte{})
+	r := strings.NewReader("")
 	_, err := New(nil, "", &Config{RandomSource: r, Logger: log.Discard})
 	require.Error(t, err)
 }
@@ -36,7 +32,8 @@ func TestAdvertiseInZKErrs(t *testing.T) {
 	s := zktest.New()
 	z, ch, _ := s.Connect()
 	b := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch})
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	log.IfErr(log.Panic, err)
 	d1, _ := New(BuilderConnector(b), "TestDupAdvertise", nil)
 	require.Nil(t, d1.Advertise("service1", "", uint16(1234)))
 	e1 := errors.New("set error check during delete")
@@ -71,9 +68,11 @@ func testDupAdvertise(t *testing.T, z zktest.ZkConnSupported, ch <-chan zk.Event
 	guidStr := "41414141414141414141414141414141"
 	d1, _ := New(BuilderConnector(b), "TestDupAdvertise", &Config{RandomSource: bytes.NewBufferString(myID)})
 	defer d1.Close()
-	z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	z.Create("/test/t1", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	_, err := z.Create(fmt.Sprintf("/test/t1/%s", guidStr), []byte("nope"), 0, zk.WorldACL(zk.PermAll))
+	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	log.IfErr(log.Panic, err)
+	_, err = z.Create("/test/t1", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	log.IfErr(log.Panic, err)
+	_, err = z.Create(fmt.Sprintf("/test/t1/%s", guidStr), []byte("nope"), 0, zk.WorldACL(zk.PermAll))
 	require.Nil(t, err)
 	require.Nil(t, d1.Advertise("t1", "", uint16(1234)))
 	data, _, err := z.Get(fmt.Sprintf("/test/t1/%s", guidStr))
@@ -240,7 +239,8 @@ func TestInvalidServiceJson(t *testing.T) {
 
 	d1, _ := New(zkConnFunc, "TestInvalidServiceJson", nil)
 	// Give root paths time to create
-	zkp.Exists("/")
+	_, _, err := zkp.Exists("/")
+	log.IfErr(log.Panic, err)
 	exists, _, err := z.Exists("/test")
 	require.NoError(t, err)
 	require.True(t, exists)
@@ -325,9 +325,11 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	d1, err := New(zkConnFunc, "TestAdvertise1", nil)
 	require.NoError(t, err)
 
-	zktest.EnsureDelete(z2, "/not_here")
+	log.IfErr(log.Panic, zktest.EnsureDelete(z2, "/not_here"))
 	defer func() {
-		go zktest.EnsureDelete(z2, "/not_here")
+		go func() {
+			log.IfErr(log.Panic, zktest.EnsureDelete(z2, "/not_here"))
+		}()
 	}()
 
 	s, err := d1.Services("not_here")

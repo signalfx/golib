@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/zkplus/zktest"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,7 @@ func TestZkNewlyCreated(t *testing.T) {
 	callback := func(s string) {
 		seenCallbacks <- s
 	}
-	z.(Dynamic).Watch("hello", callback)
+	log.IfErr(log.Panic, z.(Dynamic).Watch("hello", callback))
 	assert.Equal(t, 0, len(seenCallbacks))
 	assert.Nil(t, z.Write("hello", []byte("test")))
 	seenString := <-seenCallbacks
@@ -46,11 +47,11 @@ func TestZkConf(t *testing.T) {
 
 	signalChan := make(chan string, 4)
 	DefaultLogger.Log("Setting watches")
-	z.(Dynamic).Watch("TestZkConf", backingCallbackFunction(func(S string) {
+	log.IfErr(log.Panic, z.(Dynamic).Watch("TestZkConf", backingCallbackFunction(func(S string) {
 		DefaultLogger.Log("Watch fired!")
 		assert.Equal(t, "TestZkConf", S)
 		signalChan <- S
-	}))
+	})))
 
 	// The write should work and I should get a single signal on the chan
 	DefaultLogger.Log("Doing write 1")
@@ -115,9 +116,9 @@ func TestErrorReregister(t *testing.T) {
 	}), nil)
 	assert.NoError(t, err)
 	defer z.Close()
-	z.(Dynamic).Watch("hello", func(string) {
+	log.IfErr(log.Panic, z.(Dynamic).Watch("hello", func(string) {
 
-	})
+	}))
 	zkServer.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
 	})

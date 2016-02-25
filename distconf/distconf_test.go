@@ -1,11 +1,12 @@
 package distconf
 
 import (
-	"errors"
 	"testing"
 
 	"time"
 
+	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,7 +59,7 @@ func TestDistconfInt(t *testing.T) {
 	}))
 
 	// update valid
-	memConf.Write("testval", []byte("2"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("2")))
 	assert.Equal(t, int64(2), val.Get())
 
 	// check already registered
@@ -67,11 +68,11 @@ func TestDistconfInt(t *testing.T) {
 	assert.Equal(t, nilInt, conf.Int("testval_other", 0))
 
 	// update to invalid
-	memConf.Write("testval", []byte("invalidint"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("invalidint")))
 	assert.Equal(t, int64(2), val.Get())
 
 	// update to nil
-	memConf.Write("testval", nil)
+	log.IfErr(log.Panic, memConf.Write("testval", nil))
 	assert.Equal(t, int64(1), val.Get())
 
 	// check callback
@@ -93,7 +94,7 @@ func TestDistconfFloat(t *testing.T) {
 	}))
 
 	// update to valid
-	memConf.Write("testval", []byte("4.771"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("4.771")))
 	assert.Equal(t, float64(4.771), val.Get())
 
 	// check already registered
@@ -102,11 +103,11 @@ func TestDistconfFloat(t *testing.T) {
 	assert.Equal(t, nilFloat, conf.Float("testval_other", 0.0))
 
 	// update to invalid
-	memConf.Write("testval", []byte("invalidfloat"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("invalidfloat")))
 	assert.Equal(t, float64(4.771), val.Get())
 
 	// update to nil
-	memConf.Write("testval", nil)
+	log.IfErr(log.Panic, memConf.Write("testval", nil))
 	assert.Equal(t, float64(3.14), val.Get())
 
 	// check callback
@@ -127,7 +128,7 @@ func TestDistconfStr(t *testing.T) {
 	}))
 
 	// update to valid
-	memConf.Write("testval", []byte("newval"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("newval")))
 	assert.Equal(t, "newval", val.Get())
 
 	// check already registered
@@ -136,7 +137,7 @@ func TestDistconfStr(t *testing.T) {
 	assert.Equal(t, nilStr, conf.Str("testval_other", ""))
 
 	// update to nil
-	memConf.Write("testval", nil)
+	log.IfErr(log.Panic, memConf.Write("testval", nil))
 	assert.Equal(t, "default", val.Get())
 
 	// check callback
@@ -159,7 +160,7 @@ func TestDistconfDuration(t *testing.T) {
 	}))
 
 	// update valid
-	memConf.Write("testval", []byte("10ms"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("10ms")))
 	assert.Equal(t, time.Millisecond*10, val.Get())
 
 	// check already registered
@@ -168,11 +169,11 @@ func TestDistconfDuration(t *testing.T) {
 	assert.Equal(t, nilDuration, conf.Duration("testval_other", 0))
 
 	// update to invalid
-	memConf.Write("testval", []byte("abcd"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("abcd")))
 	assert.Equal(t, time.Second, val.Get())
 
 	// update to nil
-	memConf.Write("testval", nil)
+	log.IfErr(log.Panic, memConf.Write("testval", nil))
 	assert.Equal(t, time.Second, val.Get())
 
 	assert.Equal(t, 2, totalWatches)
@@ -193,11 +194,11 @@ func TestDistconfBool(t *testing.T) {
 	}))
 
 	// update valid
-	memConf.Write("testval", []byte("true"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("true")))
 	assert.True(t, val.Get())
 
 	// update valid
-	memConf.Write("testval", []byte("FALSE"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("FALSE")))
 	assert.False(t, val.Get())
 
 	// check already registered
@@ -206,11 +207,11 @@ func TestDistconfBool(t *testing.T) {
 	assert.Equal(t, nilBool, conf.Bool("testval_other", true))
 
 	// update to invalid
-	memConf.Write("testval", []byte("__"))
+	log.IfErr(log.Panic, memConf.Write("testval", []byte("__")))
 	assert.False(t, val.Get())
 
 	// update to nil
-	memConf.Write("testval", nil)
+	log.IfErr(log.Panic, memConf.Write("testval", nil))
 	assert.False(t, val.Get())
 
 	assert.Equal(t, 2, totalWatches)

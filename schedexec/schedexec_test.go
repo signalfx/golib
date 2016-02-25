@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/timekeeper/timekeepertest"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +32,7 @@ func TestNewScheduleExecutor(t *testing.T) {
 		err = se.Start(scheduled.runOneIteration)
 		close(doneChan)
 	}()
-	se.Close()
+	log.IfErr(log.Panic, se.Close())
 	<-doneChan
 	assert.Nil(t, err)
 }
@@ -96,7 +97,7 @@ func TestScheduleExecutorUpdateScheduleRate(t *testing.T) {
 	<-msgChan
 	assert.Equal(t, int32(2), atomic.LoadInt32(&scheduled.calledIteratorCount))
 
-	se.Close()
+	log.IfErr(log.Panic, se.Close())
 	<-doneChan
 	assert.Equal(t, scheduled.runOneIterationError, err)
 
