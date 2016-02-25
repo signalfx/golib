@@ -63,13 +63,14 @@ func TestDupAdvertise(t *testing.T) {
 }
 
 func testDupAdvertise(t *testing.T, z zktest.ZkConnSupported, ch <-chan zk.Event) {
+	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	log.IfErr(log.Panic, err)
+
 	b := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch})
 	myID := "AAAAAAAAAAAAAAAA"
 	guidStr := "41414141414141414141414141414141"
 	d1, _ := New(BuilderConnector(b), "TestDupAdvertise", &Config{RandomSource: bytes.NewBufferString(myID)})
 	defer d1.Close()
-	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-	log.IfErr(log.Panic, err)
 	_, err = z.Create("/test/t1", []byte(""), 0, zk.WorldACL(zk.PermAll))
 	log.IfErr(log.Panic, err)
 	_, err = z.Create(fmt.Sprintf("/test/t1/%s", guidStr), []byte("nope"), 0, zk.WorldACL(zk.PermAll))
