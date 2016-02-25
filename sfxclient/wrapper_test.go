@@ -52,9 +52,11 @@ func ExampleCumulativeP() {
 	go func() {
 		atomic.AddInt64(&countThing, 1)
 	}()
-	client.AddDatapoints(ctx, []*datapoint.Datapoint{
+	if err := client.AddDatapoints(ctx, []*datapoint.Datapoint{
 		CumulativeP("server.request_count", nil, &countThing),
-	})
+	}); err != nil {
+		panic("Could not send datapoints")
+	}
 }
 
 func ExampleWithDimensions() {

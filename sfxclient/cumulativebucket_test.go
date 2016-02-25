@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/log"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
 )
@@ -127,5 +128,5 @@ func ExampleCumulativeBucket() {
 	client := NewHTTPDatapointSink()
 	ctx := context.Background()
 	// Will expect it to send count=2, sum=4, sumofsquare=10
-	client.AddDatapoints(ctx, cb.Datapoints())
+	log.IfErr(log.Panic, client.AddDatapoints(ctx, cb.Datapoints()))
 }

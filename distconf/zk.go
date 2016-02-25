@@ -211,7 +211,7 @@ func (back *zkConfig) drainEventChan(functionLogger log.Logger) {
 			eventContext.Log("reregistering watch")
 
 			// Note: return value currently ignored.  Not sure what to do about it
-			back.reregisterWatch(e.Path, eventContext)
+			log.IfErr(eventContext, back.reregisterWatch(e.Path, eventContext))
 			eventContext.Log("reregistering watch finished")
 		case <-back.shouldQuit:
 			drainContext.Log("quit message seen")

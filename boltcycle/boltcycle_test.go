@@ -13,6 +13,7 @@ import (
 	"bytes"
 
 	"github.com/boltdb/bolt"
+	"github.com/signalfx/golib/log"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -133,7 +134,9 @@ func TestCursorHeap(t *testing.T) {
 
 func TestErrUnexpectedNonBucket(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(testRun.cdb.bucketTimesIn).Put([]byte("hi"), []byte("world"))
 	}))
@@ -147,7 +150,9 @@ func TestErrUnexpectedNonBucket(t *testing.T) {
 
 func TestErrUnexpectedBucketBytes(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.Bucket(testRun.cdb.bucketTimesIn).CreateBucket([]byte("_"))
 		return err
@@ -157,7 +162,9 @@ func TestErrUnexpectedBucketBytes(t *testing.T) {
 
 func TestVerifyCompressed(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.canWrite("hello", "world")
 	testRun.canWrite("hello2", "world")
 	testRun.canCycle()
@@ -177,11 +184,13 @@ func TestVerifyCompressed(t *testing.T) {
 
 func TestErrNoLastBucket(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.cdb.bucketTimesIn = []byte("empty_bucket")
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucket(testRun.cdb.bucketTimesIn)
-		b.Put([]byte("hello"), []byte("invalid_setup"))
+		log.IfErr(log.Panic, b.Put([]byte("hello"), []byte("invalid_setup")))
 		return err
 	}))
 	require.Equal(t, errNoLastBucket, testRun.cdb.moveRecentReads(nil))
@@ -197,7 +206,9 @@ func TestErrNoLastBucket(t *testing.T) {
 
 func TestMoveRecentReads(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.canWrite("hello", "world")
 	testRun.canCycle()
 	testRun.canClose()
@@ -208,7 +219,9 @@ func TestMoveRecentReads(t *testing.T) {
 
 func TestAsyncWriteEventuallyHappens(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.cdb.AsyncWrite(context.Background(), []KvPair{{Key: []byte("hello"), Value: []byte("world")}})
 	for testRun.cdb.Stats().TotalItemsAsyncPut == 0 {
 		runtime.Gosched()
@@ -218,7 +231,9 @@ func TestAsyncWriteEventuallyHappens(t *testing.T) {
 
 func TestAsyncWriteBadDelete(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.canClose()
 	testRun.failedDelete = true
 	testRun.canOpen()
@@ -232,7 +247,7 @@ func TestAsyncWriteBadDelete(t *testing.T) {
 func TestBoltCycleRead(t *testing.T) {
 	Convey("when setup to fail", t, func() {
 		testRun := setupCdb(t, 5)
-		testRun.Close()
+		log.IfErr(log.Panic, testRun.Close())
 		testRun.readMovementsBacklog = 0
 		testRun.failedDelete = true
 		testRun.canOpen()
@@ -252,7 +267,7 @@ func TestBoltCycleRead(t *testing.T) {
 				<-testRun.asyncErrors
 			}()
 
-			testRun.Close()
+			log.IfErr(log.Panic, testRun.Close())
 			close(testRun.asyncErrors)
 		})
 	})
@@ -273,20 +288,26 @@ func TestAsyncWrite(t *testing.T) {
 
 func TestAsyncWriteBadValue(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.cdb.AsyncWrite(context.Background(), []KvPair{{Key: []byte(""), Value: []byte("world")}})
 	require.Equal(t, bolt.ErrKeyRequired, errors.Tail(<-testRun.asyncErrors))
 }
 
 func TestErrOnWrite(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	require.Error(t, testRun.cdb.Write([]KvPair{{}}))
 }
 
 func TestErrOnDelete(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.canWrite("hello", "world")
 	testRun.canCycle()
 
@@ -301,7 +322,9 @@ func TestErrOnDelete(t *testing.T) {
 
 func TestErrUnableToFindRootBucket(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.cdb.bucketTimesIn = []byte("not_here")
 	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.VerifyBuckets())
 	require.Equal(t, errUnableToFindRootBucket, testRun.cdb.VerifyCompressed())
@@ -320,7 +343,9 @@ func TestErrUnableToFindRootBucket(t *testing.T) {
 
 func TestDatabaseInit(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.canClose()
 	testRun.canOpen()
 	_, err := New(testRun.cdb.db, BucketTimesIn([]byte{}))
@@ -329,7 +354,9 @@ func TestDatabaseInit(t *testing.T) {
 
 func TestCycleNodes(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.cdb.minNumOldBuckets = 0
 	require.NoError(t, testRun.cdb.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(testRun.cdb.bucketTimesIn).Put([]byte("hi"), []byte("world"))
@@ -339,7 +366,9 @@ func TestCycleNodes(t *testing.T) {
 
 func TestDatabaseCycle(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 	testRun.isVerified()
 
 	testRun.isEmpty("hello")
@@ -382,7 +411,9 @@ func TestDatabaseCycle(t *testing.T) {
 
 func TestReadDelete(t *testing.T) {
 	testRun := setupCdb(t, 5)
-	defer testRun.Close()
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
 
 	testRun.isEmpty("hello")
 	testRun.canDelete("hello", false)

@@ -52,7 +52,7 @@ func (d *ThriftTransport) Flush() (err error) {
 	}
 	err = d.currentTransport.Flush()
 	if err != nil {
-		d.currentTransport.Close()
+		log.IfErr(d.logger, d.currentTransport.Close())
 		d.currentTransport = nil
 	}
 	return errors.Annotate(err, "cannot flush current transport")
@@ -114,7 +114,7 @@ var ErrNoInstanceOpen = errors.New("no thrift instances is open")
 func (d *ThriftTransport) NextConnection() error {
 	if d.currentTransport != nil && d.currentTransport.IsOpen() {
 		// TODO: Log errors on Close
-		d.currentTransport.Close()
+		log.IfErr(d.logger, d.currentTransport.Close())
 	}
 	instances := d.service.ServiceInstances()
 	if len(instances) == 0 {

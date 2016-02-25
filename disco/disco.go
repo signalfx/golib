@@ -43,8 +43,8 @@ type ServiceInstance struct {
 
 func (s *ServiceInstance) uniqueHash() []byte {
 	buf := new(bytes.Buffer)
-	buf.Write([]byte(s.ID))
-	binary.Write(buf, binary.BigEndian, s.RegistrationTimeUTC)
+	errors.PanicIfErrWrite(buf.Write([]byte(s.ID)))
+	log.IfErr(log.Panic, binary.Write(buf, binary.BigEndian, s.RegistrationTimeUTC))
 	return buf.Bytes()
 }
 
@@ -179,9 +179,9 @@ func (d *Disco) eventLoop() {
 		case <-d.shouldQuit:
 			return
 		case e := <-d.manualEvents:
-			d.processZkEvent(&e)
+			log.IfErr(d.stateLog, d.processZkEvent(&e))
 		case e := <-d.eventChan:
-			d.processZkEvent(&e)
+			log.IfErr(d.stateLog, d.processZkEvent(&e))
 		}
 	}
 }
@@ -273,11 +273,12 @@ func (d *Disco) refreshAll() error {
 	d.watchedMutex.Lock()
 	defer d.watchedMutex.Unlock()
 	for serviceName, serviceInstance := range d.myAdvertisedServices {
-		d.stateLog.Log(logkey.DiscoService, serviceName, "refresh for service")
-		d.advertiseInZK(false, serviceName, serviceInstance)
+		l := log.NewContext(d.stateLog).With(logkey.DiscoService, serviceName)
+		l.Log("refresh for service")
+		log.IfErr(l, d.advertiseInZK(false, serviceName, serviceInstance))
 	}
 	for _, service := range d.watchedServices {
-		service.refresh(d.zkConn)
+		log.IfErr(d.stateLog, service.refresh(d.zkConn))
 	}
 	return nil
 }

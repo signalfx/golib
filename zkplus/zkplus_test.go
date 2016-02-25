@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,7 +21,9 @@ func TestPrefix(t *testing.T) {
 }
 
 func testPrefix(t *testing.T, zkp *ZkPlus) {
-	defer zktest.EnsureDelete(zkp, "modifyNode")
+	defer func() {
+		log.IfErr(log.Panic, zktest.EnsureDelete(zkp, "modifyNode"))
+	}()
 	s, err := zkp.Create("modifyNode", []byte("v1"), 0, zk.WorldACL(zk.PermAll))
 
 	assert.NoError(t, err)
@@ -89,7 +92,9 @@ func TestWatches(t *testing.T) {
 
 func testWatches(t *testing.T, zkp *ZkPlus) {
 	ch := zkp.EventChan()
-	defer zktest.EnsureDelete(zkp, "testWatches")
+	defer func() {
+		log.IfErr(log.Panic, zktest.EnsureDelete(zkp, "testWatches"))
+	}()
 
 	create(t, zkp)
 

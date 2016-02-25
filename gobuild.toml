@@ -19,3 +19,4 @@
     unconvert = true
     structcheck = true
     ineffassign = true
+    errcheck = true

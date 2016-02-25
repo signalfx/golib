@@ -22,7 +22,9 @@ import (
 func TestThrift(t *testing.T) {
 	l, err := net.Listen("tcp", "localhost:0")
 	assert.NoError(t, err)
-	defer l.Close()
+	defer func() {
+		log.IfErr(log.Panic, l.Close())
+	}()
 	go func() {
 		c, err := l.Accept()
 		assert.NoError(t, err)
@@ -53,7 +55,9 @@ func TestThrift(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	trans := NewThriftTransport(s, time.Second)
-	defer trans.Close()
+	defer func() {
+		log.IfErr(log.Panic, trans.Close())
+	}()
 	trans.WrappedFactory = thrift.NewTTransportFactory()
 	assert.NotNil(t, trans)
 
@@ -128,6 +132,7 @@ var _ thrift.TTransport = &errorTransport{}
 func TestCurrentTransportErrors(t *testing.T) {
 	trans := &ThriftTransport{
 		currentTransport: &errorTransport{},
+		logger:           log.Discard,
 	}
 	assert.Error(t, trans.Close())
 	trans.currentTransport = &errorTransport{}
@@ -188,7 +193,9 @@ func (c *calcHandler) Start(listenPort uint16, timeout time.Duration) {
 	if err != nil {
 		panic("Unable to listen")
 	}
-	go c.server.AcceptLoop()
+	go func() {
+		_ = c.server.AcceptLoop()
+	}()
 }
 
 func (c *calcHandler) Add(num1 int32, num2 int32) (r int32, err error) {
@@ -233,7 +240,7 @@ func TestThriftConnect(t *testing.T) {
 	assert.NoError(t, err)
 
 	transport := NewThriftTransport(service, time.Millisecond*250)
-	transport.Open()
+	log.IfErr(log.Panic, transport.Open())
 
 	time.Sleep(time.Millisecond * 10)
 
@@ -272,7 +279,9 @@ func TestThriftConnect(t *testing.T) {
 
 	listenSocket, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port1))
 	assert.NoError(t, err)
-	defer listenSocket.Close()
+	defer func() {
+		log.IfErr(log.Panic, listenSocket.Close())
+	}()
 
 	found := false
 	for j := 0; j < 32; j++ {
