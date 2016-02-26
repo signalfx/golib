@@ -7,6 +7,7 @@
     go14= "^.*has no field or method Cancel.*$" 
     go14trace= "^.*Trace not declared by package pprof.*$" 
     logargs = "no args in Log call"
+    logval = "in Log call is a function value, not a function call"
     coverageignored = "ignored is unused"
   [metalinter.enabled]
     golint = true
