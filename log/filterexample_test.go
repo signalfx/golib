@@ -11,10 +11,14 @@ import (
 
 func ExampleFilter() {
 	console := NewLogfmtLogger(os.Stderr, Discard)
-	f := &Filter{
-		PassTo:          console,
+	filter := &RegexFilter{
+		Log:             console,
 		MissingValueKey: Msg,
 		ErrCallback:     Panic,
+	}
+	logout := MultiFilter{
+		Filters: []Filter{filter},
+		PassTo:  console,
 	}
 	ticker := time.NewTicker(time.Millisecond * 500)
 	finished := make(chan struct{})
@@ -23,7 +27,7 @@ func ExampleFilter() {
 		for {
 			select {
 			case t := <-ticker.C:
-				f.Log("attime", t, "id", 1, "Got a message!")
+				logout.Log("attime", t, "id", 1, "Got a message!")
 			case <-finished:
 				return
 			}
@@ -33,10 +37,10 @@ func ExampleFilter() {
 	IfErr(Panic, err)
 	fmt.Fprintf(os.Stderr, "Listening on http://%s/debug/logs\n", socket.Addr().String())
 	handler := &FilterChangeHandler{
-		Filter: f,
+		Filter: filter,
 		Log:    console,
 	}
-	expvar.Publish("test", f.Var())
+	expvar.Publish("test", filter.Var())
 	http.DefaultServeMux.Handle("/debug/logs", handler)
 	IfErr(console, http.Serve(socket, nil))
 }

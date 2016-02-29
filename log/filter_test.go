@@ -13,48 +13,37 @@ import (
 
 func TestFilter(t *testing.T) {
 	Convey("filtered logger", t, func() {
-		counter := &Counter{}
 		counter2 := &Counter{}
-		logger := &Filter{
-			PassTo:          counter,
+		filter := &RegexFilter{
+			Log:             Discard,
 			ErrCallback:     counter2,
 			MissingValueKey: "msg",
 		}
-		So(counter.Count, ShouldEqual, 0)
 		Convey("should start disabled", func() {
-			So(IsDisabled(logger), ShouldBeTrue)
-			So(logger.Disabled(), ShouldBeTrue)
+			So(filter.Disabled(), ShouldBeTrue)
 		})
 		Convey("should not log at first", func() {
-			logger.Log("hello world")
-			So(counter.Count, ShouldEqual, 0)
+			So(filter.WouldLog("hello world"), ShouldBeFalse)
 		})
 		Convey("When enabled", func() {
-			logger.SetFilters(map[string]*regexp.Regexp{
+			filter.SetFilters(map[string]*regexp.Regexp{
 				"msg": regexp.MustCompile("hello bob"),
 			})
-			So(logger.Disabled(), ShouldBeFalse)
-			So(counter.Count, ShouldEqual, 1)
+			So(filter.Disabled(), ShouldBeFalse)
 			Convey("should export stats", func() {
-				So(logger.Var().String(), ShouldContainSubstring, "hello bob")
+				So(filter.Var().String(), ShouldContainSubstring, "hello bob")
 			})
 			Convey("Should log", func() {
-				logger.Log("hello world")
-				So(counter.Count, ShouldEqual, 1)
-				logger.Log("hello bob")
-				So(counter.Count, ShouldEqual, 2)
-				logger.Log("hello bob two")
-				So(counter.Count, ShouldEqual, 3)
+				So(filter.WouldLog("hello world"), ShouldBeFalse)
+				So(filter.WouldLog("hello bob"), ShouldBeTrue)
+				So(filter.WouldLog("hello bob two"), ShouldBeTrue)
 			})
 			Convey("Should not log missing dimensions", func() {
-				logger.Log("missing", "10")
-				So(counter.Count, ShouldEqual, 1)
+				So(filter.WouldLog("missing", "10"), ShouldBeFalse)
 			})
 			Convey("Should not log unconvertable dimensions", func() {
 				So(counter2.Count, ShouldEqual, 0)
-
-				logger.Log(func() {})
-				So(counter.Count, ShouldEqual, 1)
+				So(filter.WouldLog(func() {}), ShouldBeFalse)
 				So(counter2.Count, ShouldEqual, 1)
 			})
 		})
@@ -75,12 +64,13 @@ func TestMultiFilter(t *testing.T) {
 		})
 		Convey("Can add a filter", func() {
 			counter := &Counter{}
-			logger := &Filter{
-				PassTo:          counter,
+			logger := &RegexFilter{
+				Log:             counter,
 				ErrCallback:     counter,
 				MissingValueKey: "msg",
 			}
 			mf.Filters = append(mf.Filters, logger)
+			mf.PassTo = counter
 			So(mf.Disabled(), ShouldBeTrue)
 			mf.Log("hello")
 			So(counter.Count, ShouldEqual, 0)
@@ -92,7 +82,6 @@ func TestMultiFilter(t *testing.T) {
 			So(counter.Count, ShouldEqual, 1)
 			mf.Log("hello bob")
 			So(counter.Count, ShouldEqual, 2)
-			So(mf.Var().String(), ShouldContainSubstring, "hello bob")
 		})
 	})
 }
@@ -108,8 +97,8 @@ func (e *errResponseWriter) Write([]byte) (int, error) {
 func TestFilterChangeHandler(t *testing.T) {
 	Convey("A filter and handler", t, func() {
 		counter := &Counter{}
-		logger := &Filter{
-			PassTo:          counter,
+		logger := &RegexFilter{
+			Log:             counter,
 			ErrCallback:     Panic,
 			MissingValueKey: Msg,
 		}
@@ -202,13 +191,15 @@ func TestFilterChangeHandler(t *testing.T) {
 
 func BenchmarkFilterDisabled(b *testing.B) {
 	counter := &Counter{}
-	logger := &Filter{
-		PassTo:          counter,
-		ErrCallback:     counter,
-		MissingValueKey: "msg",
+	filter := &RegexFilter{
+		Log:             Discard,
+		ErrCallback:     Panic,
+		MissingValueKey: Msg,
 	}
 	for i := 0; i < b.N; i++ {
-		logger.Log("hello world")
+		if filter.WouldLog("hello world") {
+			b.Error("Expected log to not happen")
+		}
 	}
 	if counter.Count != 0 {
 		b.Errorf("Expected a zero count, got %d\n", counter.Count)
@@ -216,13 +207,12 @@ func BenchmarkFilterDisabled(b *testing.B) {
 }
 
 func BenchmarkFilterEnabled(b *testing.B) {
-	counter := &Counter{}
-	logger := &Filter{
-		PassTo:          counter,
-		ErrCallback:     counter,
-		MissingValueKey: "msg",
+	filter := &RegexFilter{
+		Log:             Discard,
+		ErrCallback:     Panic,
+		MissingValueKey: Msg,
 	}
-	logger.SetFilters(map[string]*regexp.Regexp{
+	filter.SetFilters(map[string]*regexp.Regexp{
 		"id": regexp.MustCompile(`^1234$`),
 	})
 	for i := 0; i < b.N; i++ {
@@ -232,21 +222,19 @@ func BenchmarkFilterEnabled(b *testing.B) {
 		} else {
 			idToLog = 1234
 		}
-		logger.Log("id", idToLog, "hello world")
-	}
-	if int(counter.Count) != b.N/2 {
-		b.Errorf("Expected %d count, got %d\n", b.N/2, counter.Count)
+		if filter.WouldLog("id", idToLog, "hello world") && idToLog != 1234 {
+			b.Error("Logging when I didn't expect to")
+		}
 	}
 }
 
 func BenchmarkFilterEnabled30(b *testing.B) {
-	counter := &Counter{}
-	logger := &Filter{
-		PassTo:          counter,
-		ErrCallback:     counter,
+	filter := &RegexFilter{
+		Log:             Discard,
+		ErrCallback:     Panic,
 		MissingValueKey: "msg",
 	}
-	logger.SetFilters(map[string]*regexp.Regexp{
+	filter.SetFilters(map[string]*regexp.Regexp{
 		"id": regexp.MustCompile(`^1234$`),
 	})
 	wg := sync.WaitGroup{}
@@ -260,13 +248,12 @@ func BenchmarkFilterEnabled30(b *testing.B) {
 				} else {
 					idToLog = 1234
 				}
-				logger.Log("id", idToLog, "hello world")
+				if filter.WouldLog("id", idToLog, "hello world") && idToLog != 1234 {
+					b.Error("Unexpected wouldlog")
+				}
 			}
 			wg.Done()
 		}()
 	}
 	wg.Wait()
-	if int(counter.Count) != b.N/2*30 {
-		b.Errorf("Expected %d count, got %d\n", b.N/2*30, counter.Count)
-	}
 }

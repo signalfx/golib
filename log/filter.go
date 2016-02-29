@@ -13,9 +13,16 @@ import (
 	"text/template"
 )
 
+// A Filter controls if logging should happen.
+type Filter interface {
+	WouldLog(keyvals ...interface{}) bool
+	Disableable
+}
+
 // MultiFilter logs to the first filter that passes.
 type MultiFilter struct {
-	Filters []*Filter
+	Filters []Filter
+	PassTo  Logger
 }
 
 // Disabled returns true if all inner filters are disabled
@@ -37,27 +44,17 @@ func (f *MultiFilter) Log(keyvals ...interface{}) {
 		return
 	}
 	for _, filter := range f.Filters {
-		if filter.didLog(keyvals...) {
+		if filter.WouldLog(keyvals...) {
+			f.PassTo.Log(keyvals...)
 			return
 		}
 	}
 }
 
-// Var returns an expvar that is the expvar of all the inner filters
-func (f *MultiFilter) Var() expvar.Var {
-	return expvar.Func(func() interface{} {
-		ret := make([]interface{}, 0, len(f.Filters))
-		for _, f := range f.Filters {
-			ret = append(ret, f.varStats())
-		}
-		return ret
-	})
-}
-
-// Filter controls logging to only happen to logs that have a dimension that matches all the regex
-type Filter struct {
-	PassTo            Logger
+// RegexFilter controls logging to only happen to logs that have a dimension that matches all the regex
+type RegexFilter struct {
 	MissingValueKey   Key
+	Log               Logger
 	ErrCallback       ErrorHandler
 	filterChangeIndex int64
 	currentFilters    map[string]*regexp.Regexp
@@ -65,7 +62,7 @@ type Filter struct {
 }
 
 // Disabled returns true if there are no current filters enabled.
-func (f *Filter) Disabled() bool {
+func (f *RegexFilter) Disabled() bool {
 	f.mu.RLock()
 	if len(f.currentFilters) == 0 {
 		f.mu.RUnlock()
@@ -75,12 +72,8 @@ func (f *Filter) Disabled() bool {
 	return false
 }
 
-// Log out keyvals only if currentFilters is non empty and all match
-func (f *Filter) Log(keyvals ...interface{}) {
-	f.didLog(keyvals...)
-}
-
-func (f *Filter) didLog(keyvals ...interface{}) bool {
+// WouldLog returns true if the regex matches keyvals dimensions
+func (f *RegexFilter) WouldLog(keyvals ...interface{}) bool {
 	if f.Disabled() {
 		return false
 	}
@@ -92,13 +85,12 @@ func (f *Filter) didLog(keyvals ...interface{}) bool {
 	}
 	f.mu.RUnlock()
 	if shouldPass {
-		f.PassTo.Log(keyvals...)
 		return true
 	}
 	return false
 }
 
-func (f *Filter) varStats() interface{} {
+func (f *RegexFilter) varStats() interface{} {
 	filters := f.GetFilters()
 	ret := struct {
 		Stats   Stats
@@ -114,7 +106,7 @@ func (f *Filter) varStats() interface{} {
 }
 
 // Var is an expvar that exports various internal stats and the regex filters
-func (f *Filter) Var() expvar.Var {
+func (f *RegexFilter) Var() expvar.Var {
 	return expvar.Func(f.varStats)
 }
 
@@ -125,7 +117,7 @@ type Stats struct {
 }
 
 // Stats returns a Stats object that describes the filter
-func (f *Filter) Stats() Stats {
+func (f *RegexFilter) Stats() Stats {
 	return Stats{
 		ChangeIndex: atomic.LoadInt64(&f.filterChangeIndex),
 		FilterLen:   len(f.GetFilters()),
@@ -133,7 +125,7 @@ func (f *Filter) Stats() Stats {
 }
 
 // GetFilters returns the currently used regex filters.  Do not modify this map.
-func (f *Filter) GetFilters() map[string]*regexp.Regexp {
+func (f *RegexFilter) GetFilters() map[string]*regexp.Regexp {
 	f.mu.RLock()
 	ret := f.currentFilters
 	f.mu.RUnlock()
@@ -144,8 +136,8 @@ func (f *Filter) GetFilters() map[string]*regexp.Regexp {
 var FilterCount = Key("filter_count")
 
 // SetFilters changes the internal regex map
-func (f *Filter) SetFilters(filters map[string]*regexp.Regexp) {
-	f.PassTo.Log(FilterCount, len(filters), "Changing filters")
+func (f *RegexFilter) SetFilters(filters map[string]*regexp.Regexp) {
+	f.Log.Log(FilterCount, len(filters), "Changing filters")
 	f.mu.Lock()
 	f.currentFilters = filters
 	atomic.AddInt64(&f.filterChangeIndex, 1)
@@ -176,7 +168,7 @@ func matches(filters map[string]*regexp.Regexp, m map[string]interface{}, onErr 
 
 // FilterChangeHandler allows changing filters via HTTP calls
 type FilterChangeHandler struct {
-	Filter *Filter
+	Filter *RegexFilter
 	Log    Logger
 }
 
