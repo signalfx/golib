@@ -31,6 +31,11 @@ func TestFilter(t *testing.T) {
 		chain := FromChain(Discard, NextWrap(i))
 		ctx := context.Background()
 		So(len(i.Datapoints()), ShouldEqual, 4)
+		Convey("nil item flaggers should support Read operations", func() {
+			i = nil
+			So(i.HasDatapointFlag(dp1), ShouldBeFalse)
+			So(i.HasEventFlag(ev1), ShouldBeFalse)
+		})
 		Convey("should not flag by default", func() {
 			So(chain.AddDatapoints(ctx, []*datapoint.Datapoint{dp1, dp2}), ShouldBeNil)
 			So(i.HasDatapointFlag(dp1), ShouldBeFalse)

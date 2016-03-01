@@ -49,6 +49,9 @@ func (f *ItemFlagger) SetEventFlag(ev *event.Event) {
 
 // HasEventFlag return true if the event is connected to this item
 func (f *ItemFlagger) HasEventFlag(ev *event.Event) bool {
+	if f == nil {
+		return false
+	}
 	setTo, exists := ev.Meta[f.EventMetaName]
 	return exists && setTo == f
 }
