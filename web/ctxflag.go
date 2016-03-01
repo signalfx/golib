@@ -16,6 +16,13 @@ type HeaderCtxFlag struct {
 	expectedVal string
 }
 
+// CreateMiddleware creates a handler that calls next as the next in the chain
+func (m *HeaderCtxFlag) CreateMiddleware(next ContextHandler) ContextHandler {
+	return HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+		m.ServeHTTPC(ctx, rw, r, next)
+	})
+}
+
 // SetFlagStr enabled flag setting for HeaderName if it's equal to headerVal
 func (m *HeaderCtxFlag) SetFlagStr(headerVal string) {
 	m.mu.Lock()

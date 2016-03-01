@@ -29,7 +29,7 @@ func TestHeaderCtxFlag(t *testing.T) {
 			req, err := http.NewRequest("", "", nil)
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
-			h.ServeHTTPC(ctx, rw, req, &hs)
+			h.CreateMiddleware(&hs).ServeHTTPC(ctx, rw, req)
 			So(len(hs), ShouldEqual, 1)
 			So(h.HasFlag(hs[0].ctx), ShouldBeFalse)
 		})

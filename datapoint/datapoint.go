@@ -94,7 +94,6 @@ type metadata int
 
 const (
 	stringProperties metadata = iota
-	logProperties
 )
 
 //SetProperty sets a property to be used when the time series associated with the datapoint is created
