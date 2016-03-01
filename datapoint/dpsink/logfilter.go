@@ -133,7 +133,7 @@ func (f *ItemFlagger) Datapoints() []*datapoint.Datapoint {
 // ServeHTTP supports GET to see the current dimensions and POST to change the current dimensions.
 // POST expects (and GET returns) a JSON encoded map[string]string
 func (f *ItemFlagger) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodPost {
+	if req.Method == "POST" {
 		var newDimensions map[string]string
 		err := json.NewDecoder(req.Body).Decode(&newDimensions)
 		if err != nil {
@@ -146,7 +146,7 @@ func (f *ItemFlagger) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(rw, "Dimensions updated!")
 		return
 	}
-	if req.Method == http.MethodGet {
+	if req.Method == "GET" {
 		log.IfErr(f.Logger, json.NewEncoder(rw).Encode(f.GetDimensions()))
 		return
 	}

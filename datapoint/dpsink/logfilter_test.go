@@ -80,7 +80,7 @@ func TestFilter(t *testing.T) {
 		})
 
 		Convey("Invalid POST should return an error", func() {
-			req, err := http.NewRequest(http.MethodPost, "", strings.NewReader(`_INVALID_JSON`))
+			req, err := http.NewRequest("POST", "", strings.NewReader(`_INVALID_JSON`))
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
 			i.ServeHTTP(rw, req)
@@ -88,14 +88,14 @@ func TestFilter(t *testing.T) {
 		})
 
 		Convey("POST should change dimensions", func() {
-			req, err := http.NewRequest(http.MethodPost, "", strings.NewReader(`{"name":"jack"}`))
+			req, err := http.NewRequest("POST", "", strings.NewReader(`{"name":"jack"}`))
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
 			i.ServeHTTP(rw, req)
 			So(rw.Code, ShouldEqual, http.StatusOK)
 			So(i.GetDimensions(), ShouldResemble, map[string]string{"name": "jack"})
 			Convey("and GET should return them", func() {
-				req, err := http.NewRequest(http.MethodGet, "", nil)
+				req, err := http.NewRequest("GET", "", nil)
 				So(err, ShouldBeNil)
 				rw := httptest.NewRecorder()
 				i.ServeHTTP(rw, req)
@@ -104,7 +104,7 @@ func TestFilter(t *testing.T) {
 			})
 		})
 		Convey("PATCH should 404", func() {
-			req, err := http.NewRequest(http.MethodPatch, "", strings.NewReader(`{"name":"jack"}`))
+			req, err := http.NewRequest("PATCH", "", strings.NewReader(`{"name":"jack"}`))
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
 			i.ServeHTTP(rw, req)
