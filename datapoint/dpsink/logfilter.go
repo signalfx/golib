@@ -1,10 +1,14 @@
 package dpsink
 
 import (
+	"encoding/json"
 	"expvar"
+	"fmt"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
+	"github.com/signalfx/golib/log"
 	"golang.org/x/net/context"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,6 +23,7 @@ type FlagCheck interface {
 // connection context has a flag set.
 type ItemFlagger struct {
 	CtxFlagCheck        FlagCheck
+	Logger              log.Logger
 	EventMetaName       string
 	MetricDimensionName string
 	dimensions          map[string]string
@@ -123,6 +128,29 @@ func (f *ItemFlagger) Datapoints() []*datapoint.Datapoint {
 		datapoint.New("totalDpDimSignals", nil, datapoint.NewIntValue(f.stats.totalDpDimSignals), datapoint.Counter, time.Time{}),
 		datapoint.New("totalEvDimSignals", nil, datapoint.NewIntValue(f.stats.totalEvDimSignals), datapoint.Counter, time.Time{}),
 	}
+}
+
+// ServeHTTP supports GET to see the current dimensions and POST to change the current dimensions.
+// POST expects (and GET returns) a JSON encoded map[string]string
+func (f *ItemFlagger) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if req.Method == http.MethodPost {
+		var newDimensions map[string]string
+		err := json.NewDecoder(req.Body).Decode(&newDimensions)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(rw, "Cannot decode request JSON: %s", err.Error())
+			return
+		}
+		log.IfErr(f.Logger, req.Body.Close())
+		f.SetDimensions(newDimensions)
+		fmt.Fprintf(rw, "Dimensions updated!")
+		return
+	}
+	if req.Method == http.MethodGet {
+		log.IfErr(f.Logger, json.NewEncoder(rw).Encode(f.GetDimensions()))
+		return
+	}
+	http.NotFound(rw, req)
 }
 
 // Var returns the dimensions that are being filtered
