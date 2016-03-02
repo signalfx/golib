@@ -2,9 +2,8 @@
 set -ex
 
 CIRCLEUTIL_TAG="v1.39"
-#GO_TESTED_VERSIONS="1.4.3 1.5.1 1.6"
-GO_TESTED_VERSIONS="1.6"
 DEFAULT_GOLANG_VERSION="1.6"
+GO_TESTED_VERSIONS="1.4.3 1.5.1 1.6"
 IMPORT_PATH="github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
 
 export GOROOT="$HOME/go_circle"
@@ -65,12 +64,23 @@ function do_test() {
       mkdir -p "$CIRCLE_ARTIFACTS/$GO_VERSION"
       go clean -x ./...
       go get -d -v -t ./...
+      # Test all versions of Go, lint checks only work in go1.6
+      if [ "$CIRCLE_NODE_INDEX" == "0" ]; then
+        go test -race ./...
+      fi
+    )
+  done
+  (
+      install_go_version "$GO_COMPILER_PATH" "$DEFAULT_GOLANG_VERSION"
+      cd "$SRC_PATH"
+      go clean -x ./...
+      go get -d -v -t ./...
+      # gobuild lint checks only work in go 1.6
       if [ "$CIRCLE_NODE_INDEX" == "0" ]; then
         gobuild list | circletasker serve &
       fi
       circletasker_execute gobuildit 
-    )
-  done
+  )
 }
 
 # Deploy phase of circleci
