@@ -40,6 +40,13 @@ func TestHelperFunctions(t *testing.T) {
 	})
 }
 
+func TestCounter(t *testing.T) {
+	Convey("A counter should create", t, func() {
+		c := Counter("counter", nil, 10)
+		So(c.Value.String(), ShouldEqual, "10")
+	})
+}
+
 func TestHTTPDatapointSink(t *testing.T) {
 	Convey("A default sink", t, func() {
 		s := NewHTTPDatapointSink()
