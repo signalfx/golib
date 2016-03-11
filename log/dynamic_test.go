@@ -1,6 +1,7 @@
 package log
 
 import (
+	"github.com/signalfx/golib/timekeeper/timekeepertest"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
@@ -42,6 +43,30 @@ func benchmarkValueBindingCaller(b *testing.B, logger Logger) {
 
 func between(start, mid, end time.Time) bool {
 	return !mid.Before(start) && !end.Before(mid)
+}
+
+func TestTimeSince(t *testing.T) {
+	Convey("Normal time since", t, func() {
+		td := &TimeSince{}
+		c := NewChannelLogger(1, nil)
+		l := NewContext(c)
+		Convey("Empty should work", func() {
+			l.Log("td", td)
+			msg := <-c.Out
+			_, ok := msg[1].(time.Duration)
+			So(ok, ShouldBeTrue)
+		})
+		Convey("Should allow overrides", func() {
+			start := time.Now()
+			tk := timekeepertest.NewStubClock(start)
+			td.TimeKeeper = tk
+			td.Start = start
+			tk.Incr(time.Second)
+			l.Log("td", td)
+			msg := <-c.Out
+			So(msg[1].(time.Duration), ShouldEqual, time.Second)
+		})
+	})
 }
 
 func TestTimeDynamic(t *testing.T) {
