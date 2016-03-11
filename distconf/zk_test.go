@@ -75,7 +75,7 @@ func TestZkConf(t *testing.T) {
 	assert.NoError(t, z.Write("TestZkConf", nil))
 	select {
 	case res = <-signalChan:
-	case <- time.After(time.Second * 3):
+	case <-time.After(time.Second * 3):
 	}
 	assert.Equal(t, "TestZkConf", res)
 }
