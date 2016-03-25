@@ -137,6 +137,25 @@ func TestHTTPDatapointSink(t *testing.T) {
 				So(len(seenBodyPoints.Datapoints), ShouldEqual, 1)
 				So(*seenBodyPoints.Datapoints[0].Value.DoubleValue, ShouldEqual, 1.0)
 			})
+			Convey("Should send properties", func() {
+				dps[0].SetProperty("name", "jack")
+				dps = dps[0:1]
+				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
+				So(len(seenBodyPoints.Datapoints), ShouldEqual, 1)
+				So(*seenBodyPoints.Datapoints[0].Properties[0].Key, ShouldEqual, "name")
+			})
+			Convey("All property types should send", func() {
+				dps[0].SetProperty("name", "jack")
+				dps[0].SetProperty("age", 33)
+				dps[0].SetProperty("awesome", true)
+				dps[0].SetProperty("extra", int64(123))
+				dps[0].SetProperty("ratio", 1.0)
+				dps[0].SetProperty("unused", func() {})
+				dps = dps[0:1]
+				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
+				So(len(seenBodyPoints.Datapoints), ShouldEqual, 1)
+				So(len(seenBodyPoints.Datapoints[0].Properties), ShouldEqual, 5)
+			})
 			Convey("Strings should work", func() {
 				dps[0].Value = datapoint.NewStringValue("hi")
 				dps = dps[0:1]

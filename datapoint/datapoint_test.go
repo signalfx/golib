@@ -77,7 +77,7 @@ func TestDatapointProperties(t *testing.T) {
 		Convey("When you add a key value", func() {
 			dp.SetProperty("foo", "bar")
 			Convey("GetProperties should return map with key value", func() {
-				So(dp.GetProperties(), ShouldResemble, map[string]string{"foo": "bar"})
+				So(dp.GetProperties(), ShouldResemble, map[string]interface{}{"foo": "bar"})
 			})
 			Convey("and then remove it", func() {
 				dp.RemoveProperty("foo")
