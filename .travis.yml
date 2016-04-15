@@ -7,7 +7,7 @@ go:
 
 before_install:
   - go get github.com/mattn/goveralls
-  - go get -u github.com/cep21/gobuild
+  - go get -u github.com/signalfx/gobuild
 
 install:
   - echo -e "Host heroku.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
