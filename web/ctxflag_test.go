@@ -4,7 +4,6 @@ import (
 	"github.com/signalfx/golib/log"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,7 +44,6 @@ func TestCtxWithFlag(t *testing.T) {
 		d := log.CtxDimensions{}
 		c := CtxWithFlag{
 			CtxFlagger: &d,
-			RandSrc:    rand.New(rand.NewSource(0)),
 			HeaderName: "X-Test",
 		}
 		ctx := context.Background()
