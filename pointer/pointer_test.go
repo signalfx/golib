@@ -30,8 +30,10 @@ type Person struct {
 	Uint   *uint
 	Uint16 *uint16
 
-	Int   *int
-	Int64 *int64
+	Int     *int
+	Int64   *int64
+	Bool    *bool
+	Float64 *float64
 }
 
 type NotAPerson struct {
@@ -62,6 +64,8 @@ func TestFillDefaultFrom(t *testing.T) {
 			Uint16:      Uint16(3),
 			Int:         Int(5),
 			Int64:       Int64(6),
+			Bool:        Bool(true),
+			Float64:     Float64(4.0),
 			Coworkers: []Person{
 				{
 					Name: String("jack"),
@@ -82,6 +86,8 @@ func TestFillDefaultFrom(t *testing.T) {
 			So(*p.Int64, ShouldEqual, 6)
 			So(p.Job.Pay(), ShouldEqual, 100)
 			So(len(p.Coworkers), ShouldEqual, 1)
+			So(*p.Bool, ShouldBeTrue)
+			So(*p.Float64, ShouldEqual, 4.0)
 			So(*p.Coworkers[0].Name, ShouldEqual, "jack")
 			So(p.Tk, ShouldHaveSameTypeAs, timekeeper.RealTime{})
 		})
