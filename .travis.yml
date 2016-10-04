@@ -3,11 +3,20 @@ language: go
 sudo: false
 
 go:
-  - 1.5
+  - 1.6
 
 before_install:
   - go get github.com/mattn/goveralls
   - go get -u github.com/signalfx/gobuild
+  - go get -u github.com/golang/lint/golint
+  - go get -u github.com/opennota/check/cmd/aligncheck
+  - go get -u github.com/opennota/check/cmd/structcheck
+  - go get -u github.com/opennota/check/cmd/varcheck
+  - go get -u github.com/fzipp/gocyclo
+  - go get -u github.com/tsenart/deadcode
+  - go get -u github.com/mdempsky/unconvert
+  - go get -u github.com/gordonklaus/ineffassign
+
 
 install:
   - echo -e "Host heroku.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config

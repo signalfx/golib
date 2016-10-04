@@ -156,6 +156,7 @@ func testBasics(t *testing.T, z ZkConnSupported) {
 	assert.True(t, ex)
 
 	data, _, err := z.Get(prefix + "/test")
+	assert.NoError(t, err)
 
 	assert.Equal(t, "hi", string(data))
 
@@ -296,7 +297,7 @@ out1:
 		}
 	}
 
-	_, _, ch, err := z.GetW(prefix)
+	_, _, _, err := z.GetW(prefix)
 	assert.Error(t, err)
 	p, err := z.Create(prefix, []byte(""), 0, zk.WorldACL(zk.PermAll))
 	assert.NoError(t, err)
