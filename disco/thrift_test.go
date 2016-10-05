@@ -253,6 +253,7 @@ func TestThriftConnect(t *testing.T) {
 	atomic.StoreInt64(&h2.forcedSleep, int64(time.Second))
 
 	num, err = thriftClient.Add(3, 2)
+	assert.Equal(t, int32(0), num)
 	assert.Error(t, err)
 
 	atomic.StoreInt64(&h1.forcedSleep, int64(0))

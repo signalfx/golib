@@ -85,15 +85,21 @@ func TestHandler(t *testing.T) {
 	assert.Equal(t, "test", rw.Body.String())
 }
 
+type writeType string
+
+const (
+	toWrite writeType = "towrite"
+)
+
 func addTowrite(ctx context.Context, rw http.ResponseWriter, r *http.Request, next ContextHandler) {
-	next.ServeHTTPC(context.WithValue(ctx, "towrite", []byte(r.Header.Get("towrite"))), rw, r)
+	next.ServeHTTPC(context.WithValue(ctx, toWrite, []byte(r.Header.Get("towrite"))), rw, r)
 }
 
 func TestMany(t *testing.T) {
 	incrHandler := IncrHandler{}
 
 	destination := HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-		errors.PanicIfErrWrite(rw.Write(ctx.Value("towrite").([]byte)))
+		errors.PanicIfErrWrite(rw.Write(ctx.Value(toWrite).([]byte)))
 	})
 
 	ctx := context.Background()
