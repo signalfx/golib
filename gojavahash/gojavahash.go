@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	mc "github.com/bradfitz/gomemcache/memcache"
+	mc "github.com/signalfx/gomemcache/memcache"
 )
 
 const (
