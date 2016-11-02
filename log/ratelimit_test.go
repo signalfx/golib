@@ -17,6 +17,13 @@ func TestRateLimitedLogger(t *testing.T) {
 				r.Log("hi", "bob")
 			}, ShouldNotPanic)
 		})
+		Convey("NewOnePerSecond should limit to one per second", func() {
+			counter := &Counter{}
+			rptr := NewOnePerSecond(counter)
+			rptr.Log()
+			rptr.Log()
+			So(counter.Count, ShouldEqual, 1)
+		})
 		Convey("setup to count", func() {
 			tk := timekeepertest.NewStubClock(time.Now())
 			counter := &Counter{}
