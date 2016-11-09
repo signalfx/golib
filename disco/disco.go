@@ -100,6 +100,7 @@ type Disco struct {
 	GUIDbytes            [16]byte
 	publishAddress       string
 	myAdvertisedServices map[string]ServiceInstance
+	myEphemeralNodes     map[string][]byte
 	shouldQuit           chan struct{}
 	eventLoopDone        chan struct{}
 	ninjaMode            bool
@@ -144,6 +145,7 @@ func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (*D
 	d := &Disco{
 		zkConnCreator:        zkConnCreator,
 		myAdvertisedServices: make(map[string]ServiceInstance),
+		myEphemeralNodes:     make(map[string][]byte),
 		GUIDbytes:            GUID,
 		jsonMarshal:          json.Marshal,
 		publishAddress:       publishAddress,
@@ -277,19 +279,19 @@ func (d *Disco) refreshAll() error {
 		l.Log("refresh for service")
 		log.IfErr(l, d.advertiseInZK(false, serviceName, serviceInstance))
 	}
+	for path, payload := range d.myEphemeralNodes {
+		l := log.NewContext(d.stateLog).With(logkey.DiscoService, path)
+		l.Log("refresh for node")
+		log.IfErr(l, d.createInZk(false, path, payload))
+	}
 	for _, service := range d.watchedServices {
 		log.IfErr(d.stateLog, service.refresh(d.zkConn))
 	}
 	return nil
 }
 
-func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceData ServiceInstance) error {
-	// Need to create service root node
-	_, err := d.zkConn.Create(fmt.Sprintf("/%s", serviceName), []byte{}, 0, zk.WorldACL(zk.PermAll))
-	if err != nil && errors.Tail(err) != zk.ErrNodeExists {
-		return errors.Annotatef(err, "unhandled ZK error on Create of %s", serviceName)
-	}
-	servicePath := d.servicePath(serviceName)
+func (d *Disco) createInZk(deleteIfExists bool, pathDirectory string, instanceBytes []byte) error {
+	servicePath := d.servicePath(pathDirectory)
 	exists, stat, _, err := d.zkConn.ExistsW(servicePath)
 	if err != nil {
 		return errors.Annotatef(err, "cannot ExistsW %s", servicePath)
@@ -305,38 +307,56 @@ func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceD
 			return errors.Annotatef(err, "unhandled ZK Delete of %s", servicePath)
 		}
 	}
+	_, err = d.zkConn.Create(servicePath, instanceBytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
+	return err
+}
 
+func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceData ServiceInstance) error {
+	// Need to create service root node
+	_, err := d.zkConn.Create(fmt.Sprintf("/%s", serviceName), []byte{}, 0, zk.WorldACL(zk.PermAll))
+	if err != nil && errors.Tail(err) != zk.ErrNodeExists {
+		return errors.Annotatef(err, "unhandled ZK error on Create of %s", serviceName)
+	}
 	instanceBytes, err := d.jsonMarshal(instanceData)
 	if err != nil {
-		return errors.Annotatef(err, "cannot JSON unmarshal data %v", instanceData)
+		return errors.Annotatef(err, "cannot JSON marshal data %v", instanceData)
 	}
-
-	_, err = d.zkConn.Create(servicePath, instanceBytes, zk.FlagEphemeral, zk.WorldACL(zk.PermAll))
-	return errors.Annotatef(err, "cannot create node to advertise myself in disco")
+	if err = d.createInZk(deleteIfExists, serviceName, instanceBytes); err != nil {
+		return errors.Annotatef(err, "cannot create node to advertise myself in disco")
+	}
+	return nil
 }
 
 // ErrDuplicateAdvertise is returned by Advertise if users try to Advertise the same service name
 // twice
 var ErrDuplicateAdvertise = errors.New("service name already advertised")
 
+func (d *Disco) innerPreable(path string, err *error) func() {
+	if d.ninjaMode {
+		d.stateLog.Log(logkey.DiscoService, path, "Not advertising because disco is in ninja mode")
+		return nil
+	}
+	return func() {
+		d.stateLog.Log(log.Err, *err, "advertised result")
+		if *err == nil {
+			d.manualEvents <- zk.Event{
+				Type:  zk.EventNodeChildrenChanged,
+				State: zk.StateConnected,
+				Path:  path,
+			}
+		}
+	}
+}
+
 // Advertise yourself as hosting a service
 func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) (err error) {
-	if d.ninjaMode {
-		d.stateLog.Log(logkey.DiscoService, serviceName, "Not advertising because disco is in ninja mode")
+	f := d.innerPreable(serviceName, &err)
+	if f == nil {
 		return nil
 	}
 	// Note: Important to defer after we release the mutex since the chan send could be a blocking
 	//       operation
-	defer func() {
-		d.stateLog.Log(log.Err, err, "advertised result")
-		if err == nil {
-			d.manualEvents <- zk.Event{
-				Type:  zk.EventNodeChildrenChanged,
-				State: zk.StateConnected,
-				Path:  serviceName,
-			}
-		}
-	}()
+	defer f()
 	d.watchedMutex.Lock()
 	defer d.watchedMutex.Unlock()
 	d.stateLog.Log(logkey.DiscoService, serviceName, "Advertising myself on a service")
@@ -345,11 +365,32 @@ func (d *Disco) Advertise(serviceName string, payload interface{}, port uint16) 
 		return ErrDuplicateAdvertise
 	}
 	service := d.myServiceData(serviceName, payload, port)
-	d.myAdvertisedServices[serviceName] = service
 	if err := d.advertiseInZK(true, serviceName, service); err != nil {
 		return errors.Annotatef(err, "cannot advertise %s in disco", serviceName)
 	}
+	d.myAdvertisedServices[serviceName] = service
+	return nil
+}
 
+// CreatePersistentEphemeralNode creates a persistent ephemeral node
+func (d *Disco) CreatePersistentEphemeralNode(path string, payload []byte) (err error) {
+	f := d.innerPreable(path, &err)
+	if f == nil {
+		return nil
+	}
+	// Note: Important to defer after we release the mutex since the chan send could be a blocking
+	//       operation
+	defer f()
+	d.watchedMutex.Lock()
+	defer d.watchedMutex.Unlock()
+	_, err = d.zkConn.Create(fmt.Sprintf("/%s", path), []byte{}, 0, zk.WorldACL(zk.PermAll))
+	if err != nil && errors.Tail(err) != zk.ErrNodeExists {
+		return errors.Annotatef(err, "unhandled ZK error on Create of %s", path)
+	}
+	if err = d.createInZk(true, path, payload); err != nil {
+		return errors.Annotatef(err, "cannot create persistent ephameral node")
+	}
+	d.myEphemeralNodes[path] = payload
 	return nil
 }
 
