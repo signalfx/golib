@@ -69,6 +69,6 @@ func (s *boolConf) GenericGetDefault() interface{} {
 	return s.defaultVal
 }
 
-func (s *boolConf) Type() string {
-	return "Bool"
+func (s *boolConf) Type() DistType {
+	return BoolType
 }

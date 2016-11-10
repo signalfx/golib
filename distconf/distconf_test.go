@@ -43,8 +43,8 @@ func (a *allErrorconfigVariable) GenericGet() interface{} {
 func (a *allErrorconfigVariable) GenericGetDefault() interface{} {
 	return errNope
 }
-func (a *allErrorconfigVariable) Type() string {
-	return "errs"
+func (a *allErrorconfigVariable) Type() DistType {
+	return IntType
 }
 
 func makeConf() (ReaderWriter, *Distconf) {
@@ -241,22 +241,13 @@ func TestDistconfErrorBackings(t *testing.T) {
 
 }
 
-func testInfo(t *testing.T, dat map[string]map[string]interface{}, key string, val interface{}, dtype string) {
+func testInfo(t *testing.T, dat map[string]DistInfo, key string, val interface{}, dtype DistType) {
 	v, ok := dat[key]
 	assert.True(t, ok)
-	assert.Equal(t, len(v), 4)
-	line, ok := v["line"]
-	assert.True(t, ok)
-	assert.NotEqual(t, line, 0)
-	file, ok := v["file"]
-	assert.True(t, ok)
-	assert.NotEqual(t, file, "")
-	disttype, ok := v["dist_type"]
-	assert.True(t, ok)
-	assert.Equal(t, disttype, dtype)
-	dval, ok := v["default_value"]
-	assert.True(t, ok)
-	assert.Equal(t, dval, val)
+	assert.NotEqual(t, v.Line, 0)
+	assert.NotEqual(t, v.File, "")
+	assert.Equal(t, v.DistType, dtype)
+	assert.Equal(t, v.DefaultValue, val)
 }
 
 func TestDistconf_Info(t *testing.T) {
@@ -272,15 +263,15 @@ func TestDistconf_Info(t *testing.T) {
 	x := conf.Info()
 	assert.NotNil(t, x)
 	assert.NotNil(t, x.String())
-	var dat map[string]map[string]interface{}
+	var dat map[string]DistInfo
 	err := json.Unmarshal([]byte(x.String()), &dat)
 	assert.NoError(t, err)
 	assert.Equal(t, len(dat), 5)
-	testInfo(t, dat, "testbool", float64(1), "Bool")
-	testInfo(t, dat, "teststr", "123", "Str")
-	testInfo(t, dat, "testint", float64(12), "Int")
-	testInfo(t, dat, "testdur", time.Millisecond.String(), "Duration")
-	testInfo(t, dat, "testfloat", float64(1.2), "Float")
+	testInfo(t, dat, "testbool", float64(1), BoolType)
+	testInfo(t, dat, "teststr", "123", StrType)
+	testInfo(t, dat, "testint", float64(12), IntType)
+	testInfo(t, dat, "testdur", time.Millisecond.String(), DurationType)
+	testInfo(t, dat, "testfloat", float64(1.2), FloatType)
 
 	_, conf = makeConf()
 	c := new(log.Counter)

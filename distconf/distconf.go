@@ -48,7 +48,7 @@ type configVariable interface {
 	// Get but on an interface return.  Oh how I miss you templates.
 	GenericGet() interface{}
 	GenericGetDefault() interface{}
-	Type() string
+	Type() DistType
 }
 
 type noopCloser struct {
@@ -57,12 +57,28 @@ type noopCloser struct {
 func (n *noopCloser) Close() {
 }
 
+// DistType is used to type each of the DistInfos
+type DistType int
+
+const (
+	// StrType is type Str
+	StrType DistType = iota
+	// BoolType is type Bool
+	BoolType
+	// FloatType is type Float
+	FloatType
+	// DurationType is type Duration
+	DurationType
+	// IntType is type Int
+	IntType
+)
+
 // DistInfo is useful to unmarshal/marshal the Info expvar
 type DistInfo struct {
 	File         string      `json:"file"`
 	Line         int         `json:"line"`
 	DefaultValue interface{} `json:"default_value"`
-	DistType     string      `json:"dist_type"`
+	DistType     DistType    `json:"dist_type"`
 }
 
 func (c *Distconf) grabInfo(key string) {

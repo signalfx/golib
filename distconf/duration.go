@@ -71,6 +71,6 @@ func (s *durationConf) GenericGetDefault() interface{} {
 	return s.defaultVal.String()
 }
 
-func (s *durationConf) Type() string {
-	return "Duration"
+func (s *durationConf) Type() DistType {
+	return DurationType
 }

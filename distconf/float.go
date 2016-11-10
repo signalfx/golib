@@ -69,6 +69,6 @@ func (c *floatConf) GenericGetDefault() interface{} {
 	return c.defaultVal
 }
 
-func (c *floatConf) Type() string {
-	return "Float"
+func (c *floatConf) Type() DistType {
+	return FloatType
 }

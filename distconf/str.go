@@ -60,6 +60,6 @@ func (s *strConf) GenericGetDefault() interface{} {
 	return s.defaultVal
 }
 
-func (s *strConf) Type() string {
-	return "Str"
+func (s *strConf) Type() DistType {
+	return StrType
 }

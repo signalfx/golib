@@ -67,6 +67,6 @@ func (c *intConf) GenericGetDefault() interface{} {
 	return c.defaultVal
 }
 
-func (c *intConf) Type() string {
-	return "Int"
+func (c *intConf) Type() DistType {
+	return IntType
 }
