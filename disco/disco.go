@@ -388,7 +388,7 @@ func (d *Disco) CreatePersistentEphemeralNode(path string, payload []byte) (err 
 		return errors.Annotatef(err, "unhandled ZK error on Create of %s", path)
 	}
 	if err = d.createInZk(true, path, payload); err != nil {
-		return errors.Annotatef(err, "cannot create persistent ephameral node")
+		return errors.Annotatef(err, "cannot create persistent ephemeral node")
 	}
 	d.myEphemeralNodes[path] = payload
 	return nil

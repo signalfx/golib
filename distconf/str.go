@@ -55,3 +55,11 @@ func (s *Str) Watch(watch StrWatch) {
 	defer s.mutex.Unlock()
 	s.watches = append(s.watches, watch)
 }
+
+func (s *strConf) GenericGetDefault() interface{} {
+	return s.defaultVal
+}
+
+func (s *strConf) Type() string {
+	return "Str"
+}

@@ -62,3 +62,11 @@ func (c *Int) Watch(watch IntWatch) {
 	defer c.mutex.Unlock()
 	c.watches = append(c.watches, watch)
 }
+
+func (c *intConf) GenericGetDefault() interface{} {
+	return c.defaultVal
+}
+
+func (c *intConf) Type() string {
+	return "Int"
+}

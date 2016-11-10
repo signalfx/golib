@@ -379,7 +379,6 @@ func TestDisco_CreatePersistentEphemeralNode(t *testing.T) {
 		})
 		d1, err := New(zkConnFunc, "TestCreatePersistentEphemeralNode", nil)
 		So(err, ShouldBeNil)
-		So(d1, ShouldNotBeNil)
 		defer d1.Close()
 
 		So(d1.CreatePersistentEphemeralNode("config/_meta/sbingest", []byte("payload")), ShouldNotBeNil)

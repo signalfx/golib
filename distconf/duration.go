@@ -66,3 +66,11 @@ func (s *Duration) Watch(watch DurationWatch) {
 func (s *durationConf) GenericGet() interface{} {
 	return s.Get()
 }
+
+func (s *durationConf) GenericGetDefault() interface{} {
+	return s.defaultVal.String()
+}
+
+func (s *durationConf) Type() string {
+	return "Duration"
+}

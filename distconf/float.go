@@ -64,3 +64,11 @@ func (c *Float) Watch(watch FloatWatch) {
 	defer c.mutex.Unlock()
 	c.watches = append(c.watches, watch)
 }
+
+func (c *floatConf) GenericGetDefault() interface{} {
+	return c.defaultVal
+}
+
+func (c *floatConf) Type() string {
+	return "Float"
+}

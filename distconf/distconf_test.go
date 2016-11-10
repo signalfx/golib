@@ -5,6 +5,7 @@ import (
 
 	"time"
 
+	"encoding/json"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,12 @@ func (a *allErrorconfigVariable) Update(newValue []byte) error {
 }
 func (a *allErrorconfigVariable) GenericGet() interface{} {
 	return errNope
+}
+func (a *allErrorconfigVariable) GenericGetDefault() interface{} {
+	return errNope
+}
+func (a *allErrorconfigVariable) Type() string {
+	return "errs"
 }
 
 func makeConf() (ReaderWriter, *Distconf) {
@@ -232,4 +239,56 @@ func TestDistconfErrorBackings(t *testing.T) {
 		conf.refresh("testval2", &allErrorconfigVariable{})
 	})
 
+}
+
+func testInfo(t *testing.T, dat map[string]map[string]interface{}, key string, val interface{}, dtype string) {
+	v, ok := dat[key]
+	assert.True(t, ok)
+	assert.Equal(t, len(v), 4)
+	line, ok := v["line"]
+	assert.True(t, ok)
+	assert.NotEqual(t, line, 0)
+	file, ok := v["file"]
+	assert.True(t, ok)
+	assert.NotEqual(t, file, "")
+	disttype, ok := v["dist_type"]
+	assert.True(t, ok)
+	assert.Equal(t, disttype, dtype)
+	dval, ok := v["default_value"]
+	assert.True(t, ok)
+	assert.Equal(t, dval, val)
+}
+
+func TestDistconf_Info(t *testing.T) {
+	_, conf := makeConf()
+	defer conf.Close()
+
+	conf.Bool("testbool", true)
+	conf.Str("teststr", "123")
+	conf.Int("testint", int64(12))
+	conf.Duration("testdur", time.Millisecond)
+	conf.Float("testfloat", float64(1.2))
+
+	x := conf.Info()
+	assert.NotNil(t, x)
+	assert.NotNil(t, x.String())
+	var dat map[string]map[string]interface{}
+	err := json.Unmarshal([]byte(x.String()), &dat)
+	assert.NoError(t, err)
+	assert.Equal(t, len(dat), 5)
+	testInfo(t, dat, "testbool", float64(1), "Bool")
+	testInfo(t, dat, "teststr", "123", "Str")
+	testInfo(t, dat, "testint", float64(12), "Int")
+	testInfo(t, dat, "testdur", time.Millisecond.String(), "Duration")
+	testInfo(t, dat, "testfloat", float64(1.2), "Float")
+
+	_, conf = makeConf()
+	c := new(log.Counter)
+	conf.Logger = c
+	conf.callerFunc = func(n int) (uintptr, string, int, bool) {
+		return 0, "", 0, false
+	}
+	assert.Equal(t, c.Count, int64(0))
+	conf.Bool("testbool", true)
+	assert.Equal(t, c.Count, int64(1))
 }
