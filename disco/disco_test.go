@@ -13,12 +13,15 @@ import (
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
+	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUnableToConn(t *testing.T) {
-	_, err := New(ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) { return nil, nil, errors.New("bad") }), "", nil)
+	_, err := New(ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		return nil, nil, errors.New("bad")
+	}), "", nil)
 	require.Error(t, err)
 }
 
@@ -364,4 +367,46 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	require.Nil(t, s.refresh(nil))
 	<-doneForce
 
+}
+
+func TestDisco_CreatePersistentEphemeralNode(t *testing.T) {
+	Convey("test creation of emphemeral nodes", t, func() {
+		s2 := zktest.New()
+		z, ch, _ := s2.Connect()
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), err
+		})
+		d1, err := New(zkConnFunc, "TestCreatePersistentEphemeralNode", nil)
+		So(err, ShouldBeNil)
+		defer d1.Close()
+
+		So(d1.CreatePersistentEphemeralNode("config/_meta/sbingest", []byte("payload")), ShouldNotBeNil)
+		So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		So(d1.CreatePersistentEphemeralNode("_meta", []byte("payload")), ShouldBeNil)
+		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+
+		d1.NinjaMode(true)
+		So(d1.CreatePersistentEphemeralNode("ninja", []byte("payload")), ShouldBeNil)
+		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+	})
+}
+
+func TestDisco_CreatePersistentEphemeralNodeInZKErr(t *testing.T) {
+	s := zktest.New()
+	z, ch, _ := s.Connect()
+	b := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch})
+	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	log.IfErr(log.Panic, err)
+	d1, _ := New(BuilderConnector(b), "TestDupAdvertise", nil)
+	require.Nil(t, d1.CreatePersistentEphemeralNode("service1", []byte("blarg")))
+	e1 := errors.New("set error check during delete")
+
+	z.SetErrorCheck(func(s string) error {
+		if s == "delete" {
+			return e1
+		}
+		return nil
+	})
+	require.NotNil(t, d1.CreatePersistentEphemeralNode("service1", []byte("blarg")))
 }

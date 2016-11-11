@@ -64,3 +64,11 @@ func (s *Bool) Watch(watch BoolWatch) {
 	defer s.mutex.Unlock()
 	s.watches = append(s.watches, watch)
 }
+
+func (s *boolConf) GenericGetDefault() interface{} {
+	return s.defaultVal
+}
+
+func (s *boolConf) Type() DistType {
+	return BoolType
+}

@@ -5,6 +5,7 @@ import (
 
 	"time"
 
+	"encoding/json"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,12 @@ func (a *allErrorconfigVariable) Update(newValue []byte) error {
 }
 func (a *allErrorconfigVariable) GenericGet() interface{} {
 	return errNope
+}
+func (a *allErrorconfigVariable) GenericGetDefault() interface{} {
+	return errNope
+}
+func (a *allErrorconfigVariable) Type() DistType {
+	return IntType
 }
 
 func makeConf() (ReaderWriter, *Distconf) {
@@ -232,4 +239,47 @@ func TestDistconfErrorBackings(t *testing.T) {
 		conf.refresh("testval2", &allErrorconfigVariable{})
 	})
 
+}
+
+func testInfo(t *testing.T, dat map[string]DistInfo, key string, val interface{}, dtype DistType) {
+	v, ok := dat[key]
+	assert.True(t, ok)
+	assert.NotEqual(t, v.Line, 0)
+	assert.NotEqual(t, v.File, "")
+	assert.Equal(t, v.DistType, dtype)
+	assert.Equal(t, v.DefaultValue, val)
+}
+
+func TestDistconf_Info(t *testing.T) {
+	_, conf := makeConf()
+	defer conf.Close()
+
+	conf.Bool("testbool", true)
+	conf.Str("teststr", "123")
+	conf.Int("testint", int64(12))
+	conf.Duration("testdur", time.Millisecond)
+	conf.Float("testfloat", float64(1.2))
+
+	x := conf.Info()
+	assert.NotNil(t, x)
+	assert.NotNil(t, x.String())
+	var dat map[string]DistInfo
+	err := json.Unmarshal([]byte(x.String()), &dat)
+	assert.NoError(t, err)
+	assert.Equal(t, len(dat), 5)
+	testInfo(t, dat, "testbool", float64(1), BoolType)
+	testInfo(t, dat, "teststr", "123", StrType)
+	testInfo(t, dat, "testint", float64(12), IntType)
+	testInfo(t, dat, "testdur", time.Millisecond.String(), DurationType)
+	testInfo(t, dat, "testfloat", float64(1.2), FloatType)
+
+	_, conf = makeConf()
+	c := new(log.Counter)
+	conf.Logger = c
+	conf.callerFunc = func(n int) (uintptr, string, int, bool) {
+		return 0, "", 0, false
+	}
+	assert.Equal(t, c.Count, int64(0))
+	conf.Bool("testbool", true)
+	assert.Equal(t, c.Count, int64(1))
 }
