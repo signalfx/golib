@@ -17,7 +17,7 @@ func timeoutString() string {
 func TestCoverageForNoForwardTransport(t *testing.T) {
 	req, _ := http.NewRequest("", "", nil)
 	ctx := context.Background()
-	h := HTTPDatapointSink{}
+	h := HTTPSink{}
 	h.Client.Transport = nil
 	if h.withCancel(ctx, req) == nil {
 		t.Error("Expected an error")

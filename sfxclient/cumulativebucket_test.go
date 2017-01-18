@@ -125,7 +125,7 @@ func ExampleCumulativeBucket() {
 	}
 	cb.Add(1)
 	cb.Add(3)
-	client := NewHTTPDatapointSink()
+	client := NewHTTPSink()
 	ctx := context.Background()
 	// Will expect it to send count=2, sum=4, sumofsquare=10
 	log.IfErr(log.Panic, client.AddDatapoints(ctx, cb.Datapoints()))

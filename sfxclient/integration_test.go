@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/signalfx/golib/datapoint"
-	. "github.com/smartystreets/goconvey/convey"
-	"golang.org/x/net/context"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/signalfx/golib/datapoint"
+	. "github.com/smartystreets/goconvey/convey"
+	"golang.org/x/net/context"
 )
 
 type tokenInfo struct {
@@ -19,7 +20,7 @@ type tokenInfo struct {
 	Endpoint  string
 }
 
-func createClient() (*HTTPDatapointSink, error) {
+func createClient() (*HTTPSink, error) {
 	f, err := os.Open("authinfo.json")
 	if err != nil {
 		return nil, err
@@ -29,7 +30,7 @@ func createClient() (*HTTPDatapointSink, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := NewHTTPDatapointSink()
+	h := NewHTTPSink()
 	h.AuthToken = t.AuthToken
 	if t.Endpoint != "" {
 		h.Endpoint = t.Endpoint

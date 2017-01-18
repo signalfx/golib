@@ -1,11 +1,12 @@
 package sfxclient
 
 import (
+	"sync/atomic"
+	"testing"
+
 	"github.com/signalfx/golib/datapoint"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
-	"sync/atomic"
-	"testing"
 )
 
 func TestNewMultiCollector(t *testing.T) {
@@ -46,7 +47,7 @@ func ExampleNewMultiCollector() {
 }
 
 func ExampleCumulativeP() {
-	client := NewHTTPDatapointSink()
+	client := NewHTTPSink()
 	ctx := context.Background()
 	var countThing int64
 	go func() {

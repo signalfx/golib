@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"fmt"
+
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/timekeeper/timekeepertest"
@@ -185,7 +186,7 @@ func TestNewScheduler(t *testing.T) {
 
 func ExampleScheduler() {
 	s := NewScheduler()
-	s.Sink.(*HTTPDatapointSink).AuthToken = "ABCD-XYZ"
+	s.Sink.(*HTTPSink).AuthToken = "ABCD-XYZ"
 	s.AddCallback(GoMetricsSource)
 	bucket := NewRollingBucket("req.time", map[string]string{"env": "test"})
 	s.AddCallback(bucket)

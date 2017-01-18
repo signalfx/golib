@@ -1,9 +1,10 @@
 package log
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"sync"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestCounter(t *testing.T) {

@@ -1,16 +1,17 @@
 package dpsink
 
 import (
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/event"
-	"github.com/signalfx/golib/log"
-	. "github.com/smartystreets/goconvey/convey"
-	"golang.org/x/net/context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/event"
+	"github.com/signalfx/golib/log"
+	. "github.com/smartystreets/goconvey/convey"
+	"golang.org/x/net/context"
 )
 
 type boolFlagCheck bool
@@ -30,9 +31,8 @@ func TestFilter(t *testing.T) {
 		}
 		dp1 := datapoint.New("mname", map[string]string{"org": "mine", "type": "prod"}, nil, datapoint.Gauge, time.Time{})
 		dp2 := datapoint.New("mname2", map[string]string{"org": "another", "type": "prod"}, nil, datapoint.Gauge, time.Time{})
-
-		ev1 := event.New("mname", "", map[string]string{"org": "mine", "type": "prod"}, time.Time{})
-		ev2 := event.New("mname2", "", map[string]string{"org": "another", "type": "prod"}, time.Time{})
+		ev1 := event.New("mname", event.USERDEFINED, map[string]string{"org": "mine", "type": "prod"}, time.Time{})
+		ev2 := event.New("mname2", event.USERDEFINED, map[string]string{"org": "another", "type": "prod"}, time.Time{})
 		chain := FromChain(Discard, NextWrap(i))
 		ctx := context.Background()
 		So(len(i.Datapoints()), ShouldEqual, 4)
