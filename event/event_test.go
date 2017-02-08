@@ -38,5 +38,7 @@ func TestToProtoEC(t *testing.T) {
 		So(resp, ShouldEqual, SERVICEDISCOVERY)
 		resp = ToProtoEC(com_signalfx_metrics_protobuf.EventCategory_EXCEPTION)
 		So(resp, ShouldEqual, EXCEPTION)
+		resp = ToProtoEC(com_signalfx_metrics_protobuf.EventCategory_AGENT)
+		So(resp, ShouldEqual, AGENT)
 	})
 }
