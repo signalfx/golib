@@ -3,7 +3,7 @@ set -ex
 
 CIRCLEUTIL_TAG="v1.39"
 DEFAULT_GOLANG_VERSION="1.6"
-GO_TESTED_VERSIONS="1.4.3 1.5.1 1.6"
+GO_TESTED_VERSIONS="1.5.1 1.6 1.7 1.8 1.9"
 IMPORT_PATH="github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
 
 export GOROOT="$HOME/go_circle"
@@ -30,10 +30,9 @@ function do_cache() {
   install_go_version "$GO_COMPILER_PATH" "$DEFAULT_GOLANG_VERSION"
   mkdir -p "$GOPATH_INTO"
   install_circletasker "$GOPATH_INTO"
-  versioned_goget "github.com/signalfx/gobuild:v1.6"
+  versioned_goget "github.com/signalfx/gobuild:v1.7"
   copy_local_to_path "$SRC_PATH"
 }
-
 
 export IDX=0
 function gobuildit() {
@@ -64,17 +63,24 @@ function do_test() {
       mkdir -p "$CIRCLE_ARTIFACTS/$GO_VERSION"
       go clean -x ./...
       go get -d -v -t ./...
+      cd "$GOPATH/src/git.apache.org/thrift.git/"
+      git checkout 53dd39833a08ce33582e5ff31fa18bb4735d6731
+      cd "$SRC_PATH"
       # Test all versions of Go, lint checks only work in go1.6
       if [ "$CIRCLE_NODE_INDEX" == "0" ]; then
-        go test -timeout 15s -race ./...
+        go test -timeout 60s -race ./...
       fi
     )
   done
   (
       install_go_version "$GO_COMPILER_PATH" "$DEFAULT_GOLANG_VERSION"
+      gometalinter --install --update
       cd "$SRC_PATH"
       go clean -x ./...
       go get -d -v -t ./...
+      cd "$GOPATH/src/git.apache.org/thrift.git/"
+      git checkout 53dd39833a08ce33582e5ff31fa18bb4735d6731
+      cd "$SRC_PATH"
       # gobuild lint checks only work in go 1.6
       if [ "$CIRCLE_NODE_INDEX" == "0" ]; then
         gobuild list | circletasker serve &
