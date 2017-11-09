@@ -438,8 +438,8 @@ type AsyncMultiTokenSink struct {
 
 // Datapoints returns a set of datapoints about the sink
 func (a *AsyncMultiTokenSink) Datapoints() (dps []*datapoint.Datapoint) {
-	dps = append(dps, Cumulative("total_datapoints_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalDatapointsBuffered)))
-	dps = append(dps, Cumulative("total_events_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalEventsBuffered)))
+	dps = append(dps, Gauge("total_datapoints_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalDatapointsBuffered)))
+	dps = append(dps, Gauge("total_events_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalEventsBuffered)))
 	dps = append(dps, a.stats.TotalDatapointsByToken.Datapoints()...)
 	dps = append(dps, a.stats.TotalEventsByToken.Datapoints()...)
 	return
