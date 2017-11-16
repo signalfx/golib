@@ -1,22 +1,25 @@
 package pdbcycle
 
 import (
-	"io/ioutil"
-	"os"
-	"runtime"
-	"testing"
-	"time"
-	"github.com/signalfx/golib/errors"
 	"bytes"
 	"github.com/boltdb/bolt"
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"testing"
+	"time"
 )
 
 type testSetup struct {
+	dataDir              string
 	filenames            *[]string
 	cpdb                 *CyclePDB
 	cycleLen             int
@@ -49,13 +52,15 @@ func (t *testSetup) Close() error {
 }
 
 func setupCpdb(t *testing.T, cycleLen int) testSetup {
-	f1, err := ioutil.TempFile("", "PDB_"+strconv.FormatInt(time.Now().UTC().UnixNano(), 10) + ".bolt")
+	f1, err := ioutil.TempFile("", "PDB_"+strconv.FormatInt(time.Now().UTC().UnixNano(), 10)+".bolt")
 	f := make([]string, 0)
 	f = append(f, f1.Name())
+	dataDir := filepath.Dir(f1.Name())
 	require.NoError(t, err)
 	require.NoError(t, f1.Close())
 	require.NoError(t, os.Remove(f1.Name()))
 	ret := testSetup{
+		dataDir:              dataDir,
 		filenames:            &f,
 		cycleLen:             cycleLen,
 		t:                    t,
@@ -89,7 +94,7 @@ func (t *testSetup) canOpen() {
 			return nil
 		})
 	}
-	t.cpdb, err = New(&dbqueue, t.filenames, time.Second, args...)
+	t.cpdb, err = New(&dbqueue, t.dataDir, t.filenames, time.Second, args...)
 	require.NoError(t, err)
 	require.NoError(t, t.cpdb.VerifyCompressed())
 }
@@ -134,6 +139,35 @@ func (t *testSetup) isCompressed() {
 	require.NoError(t, t.cpdb.VerifyCompressed())
 }
 
+func TestCycleNodes(t *testing.T) {
+	testRun := setupCpdb(t, 2)
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
+
+	testRun.canWrite("hello", "world")
+	testRun.canCycle()
+	testRun.canWrite("hello2", "world")
+	testRun.canCycle()
+	testRun.canWrite("hello3", "world")
+
+	f := (*testRun.cpdb.filenames)[0]
+	(*testRun.cpdb.filenames)[0] = (*testRun.cpdb.filenames)[0] + "t"
+	assert.Error(t, testRun.cpdb.CycleNodes())
+	(*testRun.cpdb.filenames)[0] = f
+
+	d := testRun.cpdb.dataDir
+	testRun.cpdb.dataDir = "/does/not/exist"
+	assert.Error(t, testRun.cpdb.CycleNodes())
+	testRun.cpdb.dataDir = d
+
+	testRun.canCycle()
+	testRun.canWrite("hello", "world")
+	testRun.cpdb.bucketTimesIn = []byte("")
+	assert.Error(t, testRun.cpdb.CycleNodes())
+	testRun.cpdb.bucketTimesIn = []byte("cyc")
+}
+
 func TestKVHeap(t *testing.T) {
 	kv := kvHeap([]string{})
 	kv.Push("a")
@@ -151,7 +185,7 @@ func TestVerifyCompressed(t *testing.T) {
 	testRun.canCycle()
 	testRun.canWrite("hello", "world")
 
-	require.Equal(t, errOrderingWrong, testRun.cpdb.VerifyCompressed())
+	require.Equal(t, errorOrderingWrong, testRun.cpdb.VerifyCompressed())
 
 	e1 := errors.New("nope")
 	createHeapFunc = func(*bolt.Bucket, *kvHeap) error {
@@ -174,6 +208,17 @@ func TestMoveRecentReads(t *testing.T) {
 	testRun.readOnly = true
 	testRun.canOpen()
 	testRun.equals("hello", "world")
+	testRun.canClose()
+	testRun.readOnly = false
+	testRun.canOpen()
+	testRun.canCycle()
+
+	readlocs := make([]readToLocation, 0)
+
+	readlocs = append(readlocs, readToLocation{dbndx: 0, key: []byte("")})
+
+	err := testRun.cpdb.moveRecentReads(readlocs)
+	require.Equal(t, bolt.ErrKeyRequired, errors.Tail(err))
 }
 
 func TestAsyncWriteEventuallyHappens(t *testing.T) {
@@ -182,7 +227,7 @@ func TestAsyncWriteEventuallyHappens(t *testing.T) {
 		log.IfErr(log.Panic, testRun.Close())
 	}()
 	testRun.cpdb.AsyncWrite(context.Background(), []KvPair{{Key: []byte("hello"), Value: []byte("world")}})
-	for testRun.cpdb.Stats().TotalItemsAsyncPut == 0 {
+	for testRun.cpdb.Stats().TotalItemsAsyncPut == 0 && len(*testRun.cpdb.filenames) > 1 {
 		runtime.Gosched()
 	}
 	// No assert needed.  Testing that write eventually happens
@@ -245,15 +290,6 @@ func TestAsyncWrite(t *testing.T) {
 	})
 }
 
-func TestAsyncWriteBadValue(t *testing.T) {
-	testRun := setupCpdb(t, 5)
-	defer func() {
-		log.IfErr(log.Panic, testRun.Close())
-	}()
-	testRun.cpdb.AsyncWrite(context.Background(), []KvPair{{Key: []byte(""), Value: []byte("world")}})
-	require.Equal(t, bolt.ErrKeyRequired, errors.Tail(<-testRun.asyncErrors))
-}
-
 func TestErrOnWrite(t *testing.T) {
 	testRun := setupCpdb(t, 5)
 	defer func() {
@@ -262,24 +298,39 @@ func TestErrOnWrite(t *testing.T) {
 	require.Error(t, testRun.cpdb.Write([]KvPair{{}}))
 }
 
+func TestErrOnDelete(t *testing.T) {
+	testRun := setupCpdb(t, 5)
+	defer func() {
+		log.IfErr(log.Panic, testRun.Close())
+	}()
+	testRun.canWrite("hello", "world")
+	testRun.canCycle()
+
+	err := (*testRun.cpdb.db)[0].View(func(tx *bolt.Tx) error {
+		cur := tx.Bucket(testRun.cpdb.bucketTimesIn).Cursor()
+		return deleteKeys([][]byte{[]byte("hello")}, cur, []bool{false})
+	})
+	require.Equal(t, bolt.ErrTxNotWritable, errors.Tail(err))
+}
+
 func TestErrUnableToFindRootBucket(t *testing.T) {
 	testRun := setupCpdb(t, 5)
 	defer func() {
 		log.IfErr(log.Panic, testRun.Close())
 	}()
 	testRun.cpdb.bucketTimesIn = []byte("not_here")
-	require.Equal(t, errUnableToFindRootBucket, testRun.cpdb.VerifyBuckets())
-	require.Equal(t, errUnableToFindRootBucket, testRun.cpdb.VerifyCompressed())
-	require.Equal(t, errUnableToFindRootBucket, testRun.cpdb.moveRecentReads(nil))
+	require.Equal(t, errorUnableToFindRootBucket, testRun.cpdb.VerifyBuckets())
+	require.Equal(t, errorUnableToFindRootBucket, testRun.cpdb.VerifyCompressed())
+	require.Equal(t, errorUnableToFindRootBucket, testRun.cpdb.moveRecentReads(nil))
 
 	_, err := testRun.cpdb.Read([][]byte{[]byte("hello")})
-	require.Equal(t, errUnableToFindRootBucket, errors.Tail(err))
+	require.Equal(t, errorUnableToFindRootBucket, errors.Tail(err))
 
 	err = testRun.cpdb.Write([]KvPair{{[]byte("hello"), []byte("world")}})
-	require.Equal(t, errUnableToFindRootBucket, errors.Tail(err))
+	require.Equal(t, errorUnableToFindRootBucket, errors.Tail(err))
 
 	_, err = testRun.cpdb.Delete([][]byte{[]byte("hello")})
-	require.Equal(t, errUnableToFindRootBucket, errors.Tail(err))
+	require.Equal(t, errorUnableToFindRootBucket, errors.Tail(err))
 }
 
 func TestDatabaseInit(t *testing.T) {
@@ -289,10 +340,9 @@ func TestDatabaseInit(t *testing.T) {
 	}()
 	testRun.canClose()
 	testRun.canOpen()
-	_, err := New(testRun.cpdb.db, testRun.cpdb.filenames, time.Second, BucketTimesIn([]byte{}))
+	_, err := New(testRun.cpdb.db, testRun.cpdb.dataDir, testRun.cpdb.filenames, time.Second, BucketTimesIn([]byte{}))
 	require.Error(t, err)
 }
-
 
 func TestDatabaseCycle(t *testing.T) {
 	testRun := setupCpdb(t, 5)
@@ -364,7 +414,7 @@ func TestReadDelete(t *testing.T) {
 
 func TestBadInit(t *testing.T) {
 	expected := errors.New("nope")
-	_, err := New(nil, nil, time.Second, func(*CyclePDB) error { return expected })
+	_, err := New(nil, "", nil, time.Second, func(*CyclePDB) error { return expected })
 	require.Equal(t, expected, errors.Tail(err))
 }
 

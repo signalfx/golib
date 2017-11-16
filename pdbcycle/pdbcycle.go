@@ -3,20 +3,23 @@ package pdbcycle
 import (
 	"bytes"
 	"container/heap"
+	"github.com/boltdb/bolt"
+	"github.com/signalfx/golib/errors"
+	"golang.org/x/net/context"
 	"os"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"sync/atomic"
-	"github.com/signalfx/golib/errors"
-	"github.com/boltdb/bolt"
-	"golang.org/x/net/context"
-	"strconv"
 	"time"
 )
 
-// CycleDB allows you to use a bolt.DB as a pseudo-LRU using a cycle of buckets
+// CyclePDB allows you to use a bolt.DB as a pseudo-LRU using a cycle of buckets
 type CyclePDB struct {
 	// db is the bolt database values are stored into
 	db *[]*bolt.DB
+
+	dataDir string
 
 	filenames *[]string
 
@@ -79,8 +82,8 @@ func (s *Stats) atomicClone() Stats {
 	}
 }
 
-var errUnableToFindRootBucket = errors.New("unable to find root bucket")
-var errOrderingWrong = errors.New("ordering wrong")
+var errorUnableToFindRootBucket = errors.New("unable to find root bucket")
+var errorOrderingWrong = errors.New("ordering wrong")
 
 // KvPair is a pair of key/value that you want to write during a write call
 type KvPair struct {
@@ -128,10 +131,11 @@ func BucketTimesIn(bucketName []byte) DBConfiguration {
 }
 
 // New creates a CyclePDB to use a bolt database that cycles minNumOldBuckets buckets
-func New(db *[]*bolt.DB, filenames *[]string, diskTimeOut time.Duration,
+func New(db *[]*bolt.DB, dataDir string, filenames *[]string, diskTimeOut time.Duration,
 	optionalParameters ...DBConfiguration) (*CyclePDB, error) {
 	ret := &CyclePDB{
 		db:                  db,
+		dataDir:             dataDir,
 		filenames:           filenames,
 		diskTimeOut:         diskTimeOut,
 		bucketTimesIn:       defaultBucketName,
@@ -151,16 +155,7 @@ func New(db *[]*bolt.DB, filenames *[]string, diskTimeOut time.Duration,
 		return ret, errors.Annotate(err, "Cannot initialize database")
 	}
 
-	isReadOnly := false
-
-	for i := range *db {
-		if (*db)[i].IsReadOnly() {
-			isReadOnly = true
-			break
-		}
-	}
-
-	if !isReadOnly {
+	if !isReadOnly(ret) {
 		ret.wg.Add(1)
 		ret.readMovements = make(chan readToLocation, ret.readMovementBacklog)
 		go ret.readMovementLoop()
@@ -178,16 +173,7 @@ func (c *CyclePDB) Stats() Stats {
 
 // Close ends the goroutine that moves read items to the latest bucket
 func (c *CyclePDB) Close() error {
-	isReadOnly := false
-
-	for i := range *c.db {
-		if (*c.db)[i].IsReadOnly() {
-			isReadOnly = true
-			break
-		}
-	}
-
-	if !isReadOnly {
+	if !isReadOnly(c) {
 		close(c.readMovements)
 	}
 	c.wg.Wait()
@@ -227,7 +213,7 @@ func (c *CyclePDB) init() error {
 		if (*c.db)[i].IsReadOnly() {
 			return nil
 		}
-		err:= (*c.db)[i].Update(func(tx *bolt.Tx) error {
+		err := (*c.db)[i].Update(func(tx *bolt.Tx) error {
 			_, err := tx.CreateBucketIfNotExists(c.bucketTimesIn)
 			if err != nil {
 				return errors.Annotatef(err, "Cannot find bucket %s", c.bucketTimesIn)
@@ -235,7 +221,7 @@ func (c *CyclePDB) init() error {
 			return err
 		})
 
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
@@ -250,7 +236,7 @@ func (c *CyclePDB) VerifyBuckets() error {
 		err = (*c.db)[i].View(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(c.bucketTimesIn)
 			if bucket == nil {
-				return errUnableToFindRootBucket
+				return errorUnableToFindRootBucket
 			}
 			return nil
 		})
@@ -279,7 +265,7 @@ func verifyHeap(kv kvHeap) error {
 	for len(kv) > 0 {
 		nextTop := kv[0]
 		if top != "" && nextTop <= top {
-			return errOrderingWrong
+			return errorOrderingWrong
 		}
 		top = nextTop
 		heap.Pop(&kv)
@@ -297,7 +283,7 @@ func (c *CyclePDB) VerifyCompressed() error {
 		err = (*c.db)[i].View(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(c.bucketTimesIn)
 			if bucket == nil {
-				return errUnableToFindRootBucket
+				return errorUnableToFindRootBucket
 			}
 
 			err := createHeapFunc(bucket, &kv)
@@ -317,26 +303,28 @@ func (c *CyclePDB) VerifyCompressed() error {
 // and creates a new, empty last node
 func (c *CyclePDB) CycleNodes() error {
 	atomic.AddInt64(&c.stats.TotalCycleCount, int64(1))
-	var d *bolt.DB
 	var err error
-	fname := ""
-
 	if len(*c.db) > c.minNumOldBuckets {
-		d := (*c.db)[0]
-		fname = (*c.filenames)[0]
+		fname := (*c.filenames)[0]
 		*c.db = (*c.db)[1:]
 		*c.filenames = (*c.filenames)[1:]
-		d.Close()
-		os.Remove(fname)
+		err = os.Remove(fname)
+		if err != nil {
+			return err
+		}
 	}
 
-	fname = "PDB_"+strconv.FormatInt(time.Now().UTC().UnixNano(), 10) + ".bolt"
+	newFile := filepath.Join(c.dataDir, "PDB_"+strconv.FormatInt(time.Now().UTC().UnixNano(), 10)+".bolt")
 
-	d, err = bolt.Open(fname, os.FileMode(0666), &bolt.Options{
+	newdb, err := bolt.Open(newFile, os.FileMode(0666), &bolt.Options{
 		Timeout: c.diskTimeOut,
 	})
 
-	err = d.Update(func(tx *bolt.Tx) error {
+	if err != nil {
+		return err
+	}
+
+	err = newdb.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists(c.bucketTimesIn)
 		if err != nil {
 			return err
@@ -346,8 +334,8 @@ func (c *CyclePDB) CycleNodes() error {
 	})
 
 	if err == nil {
-		*c.db = append(*c.db, d)
-		*c.filenames = append(*c.filenames, fname)
+		*c.db = append(*c.db, newdb)
+		*c.filenames = append(*c.filenames, newFile)
 	}
 
 	return err
@@ -417,7 +405,7 @@ func (c *CyclePDB) indexToLocation(toread [][]byte) ([]readToLocation, error) {
 		err = (*c.db)[len(*c.db)-1-i].View(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(c.bucketTimesIn)
 			if bucket == nil {
-				return errUnableToFindRootBucket
+				return errorUnableToFindRootBucket
 			}
 
 			// We read values from the end to the start.  The last bucket is where we expect a read
@@ -458,11 +446,12 @@ func (c *CyclePDB) moveRecentReads(readLocations []readToLocation) error {
 	for _, r := range readLocations {
 		dbndxToReadLocations[r.dbndx] = append(dbndxToReadLocations[r.dbndx], r)
 	}
+
 	return (*c.db)[len(*c.db)-1].Update(func(tx *bolt.Tx) error {
 		atomic.AddInt64(&c.stats.RecopyTransactionCount, int64(1))
 		bucket := tx.Bucket(c.bucketTimesIn)
 		if bucket == nil {
-			return errUnableToFindRootBucket
+			return errorUnableToFindRootBucket
 		}
 
 		recopyCount := int64(0)
@@ -471,17 +460,7 @@ func (c *CyclePDB) moveRecentReads(readLocations []readToLocation) error {
 
 		for dbndx, readLocs := range dbndxToReadLocations {
 			if dbndx == len(*c.db)-1 {
-				bucketCursor := bucket.Cursor()
-				for _, rs := range readLocs {
-					k, _ := bucketCursor.Seek(rs.key)
-					recopyCount++
-					if k != nil && bytes.Equal(k, rs.key) {
-						if err := c.cursorDelete(bucketCursor); err != nil {
-							return errors.Annotatef(err, "cannot delete key %v", rs.key)
-						}
-						deletedCount++
-					}
-				}
+				continue
 			} else {
 				if err := deleteFromOldBucket((*c.db)[dbndx], c.bucketTimesIn, readLocs, c.cursorDelete, &recopyCount, &deletedCount); err != nil {
 					return errors.Annotate(err, "cannot remove keys from the old bucket")
@@ -523,6 +502,15 @@ func deleteFromOldBucket(db *bolt.DB, bucketName []byte, readLocs []readToLocati
 	})
 }
 
+func isReadOnly(c *CyclePDB) bool {
+	for i := range *c.db {
+		if (*c.db)[i].IsReadOnly() {
+			return true
+		}
+	}
+	return false
+}
+
 //// Read bytes from the first available bucket.  Do not modify the returned bytes because
 //// they are recopied to later cycle databases if needed.
 func (c *CyclePDB) Read(toread [][]byte) ([][]byte, error) {
@@ -532,16 +520,7 @@ func (c *CyclePDB) Read(toread [][]byte) ([][]byte, error) {
 		return nil, errors.Annotatef(err, "fail to convert indexes to read location")
 	}
 
-	isReadOnly := false
-
-	for i := range *c.db {
-		if (*c.db)[i].IsReadOnly() {
-			isReadOnly = true
-			break
-		}
-	}
-
-	if !isReadOnly {
+	if !isReadOnly(c) {
 		skips := int64(0)
 		adds := int64(0)
 		for _, readLocation := range readLocations {
@@ -593,7 +572,7 @@ func (c *CyclePDB) Write(towrite []KvPair) error {
 	return (*c.db)[len(*c.db)-1].Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(c.bucketTimesIn)
 		if bucket == nil {
-			return errUnableToFindRootBucket
+			return errorUnableToFindRootBucket
 		}
 
 		for _, p := range towrite {
@@ -616,7 +595,7 @@ func (c *CyclePDB) Delete(keys [][]byte) ([]bool, error) {
 		err = (*c.db)[i].Update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(c.bucketTimesIn)
 			if bucket == nil {
-				return errUnableToFindRootBucket
+				return errorUnableToFindRootBucket
 			}
 			cursor := bucket.Cursor()
 			return deleteKeys(keys, cursor, ret)
