@@ -376,7 +376,7 @@ func TestAsyncMultiTokenSinkDatapoints(t *testing.T) {
 			So(evEmitted, ShouldEqual, datapoint.NewIntValue(0))
 			err := s.Close() // close to ensure that all of the datapoints and events are processed
 			data = s.Datapoints()
-			So(len(data), ShouldEqual, 2) // only the data buffered should be reported
+			So(len(data), ShouldEqual, 8) // only the data buffered and the batch sizes should be reported
 			So(err, ShouldBeNil)
 		})
 	})

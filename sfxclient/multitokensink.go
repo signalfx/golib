@@ -173,6 +173,7 @@ type datapointWorker struct {
 func (w *datapointWorker) emit(token string) {
 	// set the token on the HTTPSink
 	w.sink.AuthToken = token
+	w.stats.DPBatchSizes.Add(float64(len(w.buffer)))
 	// emit datapoints and handle any errors
 	err := w.sink.AddDatapoints(context.Background(), w.buffer)
 	w.handleError(err, token, w.buffer)
@@ -282,7 +283,7 @@ type eventWorker struct {
 func (w *eventWorker) emit(token string) {
 	// set the token on the HTTPSink
 	w.sink.AuthToken = token
-
+	w.stats.EVBatchSizes.Add(float64(len(w.buffer)))
 	// emit datapoints and handle any errors
 	err := w.sink.AddEvents(context.Background(), w.buffer)
 	w.handleError(err, token, w.buffer)
@@ -390,6 +391,8 @@ type asyncMultiTokenSinkStats struct {
 	TotalEventsBuffered      int64
 	NumberOfDatapointWorkers int64
 	NumberOfEventWorkers     int64
+	DPBatchSizes             *RollingBucket
+	EVBatchSizes             *RollingBucket
 }
 
 func (a *asyncMultiTokenSinkStats) Close() {
@@ -411,6 +414,8 @@ func newAsyncMultiTokenSinkStats(buffer int, workerCount int64, batchSize int) *
 		TotalEventsBuffered:      0,
 		NumberOfDatapointWorkers: 0,
 		NumberOfEventWorkers:     0,
+		DPBatchSizes:             NewRollingBucket("batch_sizes", map[string]string{"path": "pops_to_ingest", "datum_type": "datapoint"}),
+		EVBatchSizes:             NewRollingBucket("batch_sizes", map[string]string{"path": "pops_to_ingest", "datum_type": "event"}),
 	}
 }
 
@@ -442,6 +447,8 @@ func (a *AsyncMultiTokenSink) Datapoints() (dps []*datapoint.Datapoint) {
 	dps = append(dps, Gauge("total_events_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalEventsBuffered)))
 	dps = append(dps, a.stats.TotalDatapointsByToken.Datapoints()...)
 	dps = append(dps, a.stats.TotalEventsByToken.Datapoints()...)
+	dps = append(dps, a.stats.DPBatchSizes.Datapoints()...)
+	dps = append(dps, a.stats.EVBatchSizes.Datapoints()...)
 	return
 }
 
