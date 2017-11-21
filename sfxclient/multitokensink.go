@@ -451,8 +451,8 @@ func (a *AsyncMultiTokenSink) Datapoints() (dps []*datapoint.Datapoint) {
 	return
 }
 
-// getWorker hashes the string to one of the workers and returns the integer position of the worker
-func (a *AsyncMultiTokenSink) getWorker(input string, size int) (workerID int64, err error) {
+// getChannel hashes the string to one of the channels and returns the integer position of the channel
+func (a *AsyncMultiTokenSink) getChannel(input string, size int) (workerID int64, err error) {
 	a.lock.Lock()
 	if a.Hasher != nil {
 		a.Hasher.Reset()
@@ -471,9 +471,9 @@ func (a *AsyncMultiTokenSink) getWorker(input string, size int) (workerID int64,
 
 // AddDatapointsWithToken emits a list of datapoints using a supplied token
 func (a *AsyncMultiTokenSink) AddDatapointsWithToken(token string, datapoints []*datapoint.Datapoint) (err error) {
-	var workerID int64
-	if workerID, err = a.getWorker(token, len(a.dpChannels)); err == nil {
-		var worker = a.dpChannels[workerID]
+	var channelID int64
+	if channelID, err = a.getChannel(token, len(a.dpChannels)); err == nil {
+		var worker = a.dpChannels[channelID]
 		_ = atomic.AddInt64(&a.dpBuffered, int64(len(datapoints)))
 		var m = &dpMsg{
 			token: token,
@@ -511,9 +511,9 @@ func (a *AsyncMultiTokenSink) AddDatapoints(ctx context.Context, datapoints []*d
 
 // AddEventsWithToken emits a list of events using a supplied token
 func (a *AsyncMultiTokenSink) AddEventsWithToken(token string, events []*event.Event) (err error) {
-	var workerID int64
-	if workerID, err = a.getWorker(token, len(a.evChannels)); err == nil {
-		var worker = a.evChannels[workerID]
+	var channelID int64
+	if channelID, err = a.getChannel(token, len(a.evChannels)); err == nil {
+		var worker = a.evChannels[channelID]
 		_ = atomic.AddInt64(&a.evBuffered, int64(len(events)))
 		var m = &evMsg{
 			token: token,
