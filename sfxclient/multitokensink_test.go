@@ -1,7 +1,6 @@
 package sfxclient
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
 	. "github.com/smartystreets/goconvey/convey"
+	"golang.org/x/net/context"
 )
 
 func TestAsyncMultiTokenSinkStartup(t *testing.T) {
