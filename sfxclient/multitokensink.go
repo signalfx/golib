@@ -241,32 +241,30 @@ outer:
 
 // newBuffer buffers datapoints and events in the pipeline for the duration specified during Startup
 func (w *datapointWorker) newBuffer() {
-	go func() {
-		for {
-			select {
-			// check if the sink is closing and return if so
-			// reading from a.closing will only return a value if the a.closing channel is closed
-			// nothing should ever write into it
-			case <-w.closing: // check if the worker is in a closing state
-				w.done <- true
-				return
-			case msg := <-w.input:
-				// process the Datapoint Message
-				w.bufferFunc(msg)
-			}
+	for {
+		select {
+		// check if the sink is closing and return if so
+		// reading from a.closing will only return a value if the a.closing channel is closed
+		// nothing should ever write into it
+		case <-w.closing: // check if the worker is in a closing state
+			w.done <- true
+			return
+		case msg := <-w.input:
+			// process the Datapoint Message
+			w.bufferFunc(msg)
 		}
-	}()
+	}
 }
 
-func newDatapointWorker(maxBuffer int, batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool) *datapointWorker {
+func newDatapointWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *dpMsg) *datapointWorker {
 	w := &datapointWorker{
 		worker:    newWorker(errorHandler, closing, done),
-		input:     make(chan *dpMsg, maxBuffer),
+		input:     input,
 		buffer:    make([]*datapoint.Datapoint, 0, batchSize),
 		batchSize: batchSize,
 		stats:     stats,
 	}
-	w.newBuffer()
+	go w.newBuffer()
 	return w
 }
 
@@ -352,33 +350,31 @@ outer:
 
 // newBuffer buffers datapoints and events in the pipeline for the duration specified during Startup
 func (w *eventWorker) newBuffer() {
-	go func() {
-		for {
-			select {
-			// check if the sink is closing and return if so
-			// reading from a.closing will only return a value if the a.closing channel is closed
-			// nothing should ever write into it
-			case <-w.closing:
-				// signal that the worker is done
-				w.done <- true
-				return
-			case msg := <-w.input:
-				// process the Datapoint Message
-				w.bufferFunc(msg)
-			}
+	for {
+		select {
+		// check if the sink is closing and return if so
+		// reading from a.closing will only return a value if the a.closing channel is closed
+		// nothing should ever write into it
+		case <-w.closing:
+			// signal that the worker is done
+			w.done <- true
+			return
+		case msg := <-w.input:
+			// process the Datapoint Message
+			w.bufferFunc(msg)
 		}
-	}()
+	}
 }
 
-func newEventWorker(maxBuffer int, batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool) *eventWorker {
+func newEventWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *evMsg) *eventWorker {
 	w := &eventWorker{
 		worker:    newWorker(errorHandler, closing, done),
-		input:     make(chan *evMsg, maxBuffer),
+		input:     input,
 		buffer:    make([]*event.Event, 0, batchSize),
 		batchSize: batchSize,
 		stats:     stats,
 	}
-	w.newBuffer()
+	go w.newBuffer()
 	return w
 }
 
@@ -400,11 +396,14 @@ func (a *asyncMultiTokenSinkStats) Close() {
 	close(a.TotalEventsByToken.stop)
 }
 
-func newAsyncMultiTokenSinkStats(buffer int, workerCount int64, batchSize int) *asyncMultiTokenSinkStats {
+func newAsyncMultiTokenSinkStats(buffer int, numChannels int64, numDrainingThreads int64, batchSize int) *asyncMultiTokenSinkStats {
+	workerCount := numChannels * numDrainingThreads
 	defaultDims := map[string]string{
-		"buffer_size":  strconv.Itoa(buffer),
-		"worker_count": strconv.FormatInt(workerCount, 10),
-		"batch_size":   strconv.Itoa(batchSize),
+		"buffer_size":        strconv.Itoa(buffer),
+		"numChannels":        strconv.FormatInt(numChannels, 10),
+		"numDrainingThreads": strconv.FormatInt(numDrainingThreads, 10),
+		"worker_count":       strconv.FormatInt(workerCount, 10),
+		"batch_size":         strconv.Itoa(batchSize),
 	}
 	return &asyncMultiTokenSinkStats{
 		DefaultDimensions:        defaultDims,
@@ -433,8 +432,8 @@ type AsyncMultiTokenSink struct {
 	closing       chan bool
 	dpDone        chan bool
 	evDone        chan bool
-	dpWorkers     []*datapointWorker        // dpWorkers is an array of workers used to emit datapoints asynchronously
-	evWorkers     []*eventWorker            // evWorkers is an array of workers dedicated to sending events
+	dpChannels    []*dpChannel              // dpChannels is an array of dpChannels used to emit datapoints asynchronously
+	evChannels    []*evChannel              // evChannels is an array of evChannels used to emit events asynchronously
 	dpBuffered    int64                     // number of datapoints in the sink that haven't been emitted
 	evBuffered    int64                     // number of events in the sink that haven't been emitted
 	NewHTTPClient func() http.Client        // function used to create an http client for the underlying sinks
@@ -473,8 +472,8 @@ func (a *AsyncMultiTokenSink) getWorker(input string, size int) (workerID int64,
 // AddDatapointsWithToken emits a list of datapoints using a supplied token
 func (a *AsyncMultiTokenSink) AddDatapointsWithToken(token string, datapoints []*datapoint.Datapoint) (err error) {
 	var workerID int64
-	if workerID, err = a.getWorker(token, len(a.dpWorkers)); err == nil {
-		var worker = a.dpWorkers[workerID]
+	if workerID, err = a.getWorker(token, len(a.dpChannels)); err == nil {
+		var worker = a.dpChannels[workerID]
 		_ = atomic.AddInt64(&a.dpBuffered, int64(len(datapoints)))
 		var m = &dpMsg{
 			token: token,
@@ -513,8 +512,8 @@ func (a *AsyncMultiTokenSink) AddDatapoints(ctx context.Context, datapoints []*d
 // AddEventsWithToken emits a list of events using a supplied token
 func (a *AsyncMultiTokenSink) AddEventsWithToken(token string, events []*event.Event) (err error) {
 	var workerID int64
-	if workerID, err = a.getWorker(token, len(a.evWorkers)); err == nil {
-		var worker = a.evWorkers[workerID]
+	if workerID, err = a.getWorker(token, len(a.evChannels)); err == nil {
+		var worker = a.evChannels[workerID]
 		_ = atomic.AddInt64(&a.evBuffered, int64(len(events)))
 		var m = &evMsg{
 			token: token,
@@ -606,13 +605,67 @@ func newDefaultHTTPClient() http.Client {
 	}
 }
 
+// dpChannel is a container with a datapoint input channel and a series of workers to drain the channel
+type dpChannel struct {
+	input   chan *dpMsg
+	workers []*datapointWorker
+}
+
+// evChannel is a container with an event input channel and a series of workers to drain the channel
+type evChannel struct {
+	input   chan *evMsg
+	workers []*eventWorker
+}
+
+func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool) (dpc *dpChannel) {
+	dpc = &dpChannel{
+		input:   make(chan *dpMsg, int64(buffer)),
+		workers: make([]*datapointWorker, numDrainingThreads),
+	}
+	for i := int64(0); i < numDrainingThreads; i++ {
+		dpWorker := newDatapointWorker(batchSize, errorHandler, stats, closing, done, dpc.input)
+		if DatapointEndpoint != "" {
+			dpWorker.sink.DatapointEndpoint = DatapointEndpoint
+		}
+		if userAgent != "" {
+			dpWorker.sink.UserAgent = userAgent
+		}
+		if httpClient != nil {
+			dpWorker.sink.Client = httpClient()
+		}
+		dpc.workers[i] = dpWorker
+	}
+	return
+}
+
+func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool) (evc *evChannel) {
+	evc = &evChannel{
+		input:   make(chan *evMsg, int64(buffer)),
+		workers: make([]*eventWorker, numDrainingThreads),
+	}
+	for i := int64(0); i < numDrainingThreads; i++ {
+		evWorker := newEventWorker(batchSize, errorHandler, stats, closing, done, evc.input)
+		if EventEndpoint != "" {
+			evWorker.sink.EventEndpoint = EventEndpoint
+		}
+		if userAgent != "" {
+			evWorker.sink.UserAgent = userAgent
+		}
+		if httpClient != nil {
+			evWorker.sink.Client = httpClient()
+		}
+		evc.workers[i] = evWorker
+	}
+	return
+}
+
 // NewAsyncMultiTokenSink returns a sink that asynchronously emits datapoints with different tokens
-func NewAsyncMultiTokenSink(numWorkers int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error) *AsyncMultiTokenSink {
+func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error) *AsyncMultiTokenSink {
 	a := &AsyncMultiTokenSink{
 		ShutdownTimeout: time.Second * 5,
 		errorHandler:    DefaultErrorHandler,
-		dpWorkers:       make([]*datapointWorker, numWorkers),
-		evWorkers:       make([]*eventWorker, numWorkers),
+		dpChannels:      make([]*dpChannel, numChannels),
+		evChannels:      make([]*evChannel, numChannels),
 		Hasher:          fnv.New32(),
 		// closing is channel to signal the workers that the sink is closing
 		// nothing is ever passed to the channel it is just open and
@@ -621,41 +674,24 @@ func NewAsyncMultiTokenSink(numWorkers int64, buffer int, batchSize int, Datapoi
 		// this is a broadcast mechanism to signal at once to everything that the sink is closing.
 		closing: make(chan bool),
 		// make buffered channels to receive done messages from the workers
-		dpDone:        make(chan bool, numWorkers),
-		evDone:        make(chan bool, numWorkers),
+		dpDone:        make(chan bool, numChannels*numDrainingThreads),
+		evDone:        make(chan bool, numChannels*numDrainingThreads),
 		lock:          sync.RWMutex{},
 		NewHTTPClient: newDefaultHTTPClient,
-		stats:         newAsyncMultiTokenSinkStats(buffer, numWorkers, batchSize),
+		stats:         newAsyncMultiTokenSinkStats(buffer, numChannels, numDrainingThreads, batchSize),
 	}
-
-	for i := int64(0); i < numWorkers; i++ {
-		dpWorker := newDatapointWorker(buffer, batchSize, a.errorHandler, a.stats, a.closing, a.dpDone)
-		if DatapointEndpoint != "" {
-			dpWorker.sink.DatapointEndpoint = DatapointEndpoint
-		}
-		evWorker := newEventWorker(buffer, batchSize, a.errorHandler, a.stats, a.closing, a.evDone)
-		if EventEndpoint != "" {
-			evWorker.sink.EventEndpoint = EventEndpoint
-		}
-		if userAgent != "" {
-			dpWorker.sink.UserAgent = userAgent
-			evWorker.sink.UserAgent = userAgent
-		}
-		if httpClient != nil {
-			a.NewHTTPClient = httpClient
-		}
-		dpWorker.sink.Client = a.NewHTTPClient()
-		evWorker.sink.Client = a.NewHTTPClient()
-		if errorHandler != nil {
-			a.errorHandler = errorHandler
-		}
-		dpWorker.errorHandler = a.errorHandler
-		evWorker.errorHandler = a.errorHandler
-		a.dpWorkers[i] = dpWorker
-		a.evWorkers[i] = evWorker
+	if errorHandler != nil {
+		a.errorHandler = errorHandler
 	}
-	_ = atomic.SwapInt64(&a.stats.NumberOfDatapointWorkers, numWorkers)
-	_ = atomic.SwapInt64(&a.stats.NumberOfEventWorkers, numWorkers)
+	if httpClient != nil {
+		a.NewHTTPClient = httpClient
+	}
+	for i := int64(0); i < numChannels; i++ {
+		a.dpChannels[i] = newDPChannel(numDrainingThreads, buffer, batchSize, DatapointEndpoint, EventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.dpDone)
+		a.evChannels[i] = newEVChannel(numDrainingThreads, buffer, batchSize, DatapointEndpoint, EventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.evDone)
+	}
+	_ = atomic.SwapInt64(&a.stats.NumberOfDatapointWorkers, numChannels*numDrainingThreads)
+	_ = atomic.SwapInt64(&a.stats.NumberOfEventWorkers, numChannels*numDrainingThreads)
 
 	return a
 }
