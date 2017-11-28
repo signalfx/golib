@@ -41,6 +41,18 @@ type tokenStatus struct {
 	val    int64
 }
 
+// grabs the http status code from an error if it is an SFXAPIError and assigns to the tokenStatus
+func getHTTPStatusCode(status *tokenStatus, err error) *tokenStatus {
+	if err == nil {
+		status.status = http.StatusOK
+	} else {
+		if obj, ok := err.(SFXAPIError); ok {
+			status.status = obj.StatusCode
+		}
+	}
+	return status
+}
+
 // AsyncTokenStatusCounter is a counter and collector for http statuses by token
 type AsyncTokenStatusCounter struct {
 	name              string
@@ -167,6 +179,7 @@ type datapointWorker struct {
 	buffer    []*datapoint.Datapoint
 	batchSize int
 	stats     *asyncMultiTokenSinkStats // stats about
+	maxRetry  int                       // maximum number of times that to retry emitting datapoints
 }
 
 // emits a series of datapoints
@@ -176,28 +189,33 @@ func (w *datapointWorker) emit(token string) {
 	w.stats.DPBatchSizes.Add(float64(len(w.buffer)))
 	// emit datapoints and handle any errors
 	err := w.sink.AddDatapoints(context.Background(), w.buffer)
-	w.handleError(err, token, w.buffer)
+	w.handleError(err, token, w.buffer, w.sink.AddDatapoints)
 	// account for the emitted datapoints
 	atomic.AddInt64(&w.stats.TotalDatapointsBuffered, int64(len(w.buffer)*-1))
 	w.buffer = w.buffer[:0]
 }
 
-func (w *datapointWorker) handleError(err error, token string, datapoints []*datapoint.Datapoint) {
+func (w *datapointWorker) handleError(err error, token string, datapoints []*datapoint.Datapoint, AddDatapoints func(context.Context, []*datapoint.Datapoint) error) {
+	errr := err
 	status := &tokenStatus{
 		status: -1,
 		token:  token,
 		val:    int64(len(datapoints)),
 	}
-	if err == nil {
-		status.status = http.StatusOK
-	} else {
-		if obj, ok := err.(SFXAPIError); ok {
-			status.status = obj.StatusCode
+	status = getHTTPStatusCode(status, errr)
+	for i := 0; i < w.maxRetry; i++ {
+		// retry in the cases where http status codes are not found or an http timeout status is encountered
+		if status.status == -1 || status.status == http.StatusRequestTimeout || status.status == http.StatusGatewayTimeout || status.status == 598 {
+			atomic.AddInt64(&w.stats.NumberOfRetries, 1)
+			errr = AddDatapoints(context.Background(), w.buffer)
+			status = getHTTPStatusCode(status, errr)
+		} else {
+			break
 		}
 	}
 	w.stats.TotalDatapointsByToken.Increment(status)
-	if err != nil {
-		_ = w.errorHandler(err)
+	if errr != nil {
+		_ = w.errorHandler(errr)
 	}
 }
 
@@ -256,13 +274,14 @@ func (w *datapointWorker) newBuffer() {
 	}
 }
 
-func newDatapointWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *dpMsg) *datapointWorker {
+func newDatapointWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *dpMsg, maxRetry int) *datapointWorker {
 	w := &datapointWorker{
 		worker:    newWorker(errorHandler, closing, done),
 		input:     input,
 		buffer:    make([]*datapoint.Datapoint, 0, batchSize),
 		batchSize: batchSize,
 		stats:     stats,
+		maxRetry:  maxRetry,
 	}
 	go w.newBuffer()
 	return w
@@ -275,6 +294,7 @@ type eventWorker struct {
 	buffer    []*event.Event
 	batchSize int
 	stats     *asyncMultiTokenSinkStats // stats about
+	maxRetry  int                       // maximum number of times to retry emitting events
 }
 
 // emits a series of datapoints
@@ -284,29 +304,33 @@ func (w *eventWorker) emit(token string) {
 	w.stats.EVBatchSizes.Add(float64(len(w.buffer)))
 	// emit datapoints and handle any errors
 	err := w.sink.AddEvents(context.Background(), w.buffer)
-	w.handleError(err, token, w.buffer)
+	w.handleError(err, token, w.buffer, w.sink.AddEvents)
 	// account for the emitted datapoints
 	atomic.AddInt64(&w.stats.TotalEventsBuffered, int64(len(w.buffer)*-1))
 	w.buffer = w.buffer[:0]
 }
 
-func (w *eventWorker) handleError(err error, token string, events []*event.Event) {
+func (w *eventWorker) handleError(err error, token string, events []*event.Event, AddEvents func(context.Context, []*event.Event) error) {
+	errr := err
 	status := &tokenStatus{
 		status: -1,
 		token:  token,
 		val:    int64(len(events)),
 	}
-	if err == nil {
-		status.status = http.StatusOK
-	} else {
-		// parse the http status code from the error returned by the httpsink
-		if obj, ok := err.(SFXAPIError); ok {
-			status.status = obj.StatusCode
+	status = getHTTPStatusCode(status, errr)
+	for i := 0; i < w.maxRetry; i++ {
+		// retry in the cases where http status codes are not found or an http timeout status is encountered
+		if status.status == -1 || status.status == http.StatusRequestTimeout || status.status == http.StatusGatewayTimeout || status.status == 598 {
+			atomic.AddInt64(&w.stats.NumberOfRetries, 1)
+			errr = AddEvents(context.Background(), w.buffer)
+			status = getHTTPStatusCode(status, errr)
+		} else {
+			break
 		}
 	}
 	w.stats.TotalEventsByToken.Increment(status)
-	if err != nil {
-		_ = w.errorHandler(err)
+	if errr != nil {
+		_ = w.errorHandler(errr)
 	}
 }
 
@@ -366,13 +390,14 @@ func (w *eventWorker) newBuffer() {
 	}
 }
 
-func newEventWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *evMsg) *eventWorker {
+func newEventWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *evMsg, maxRetry int) *eventWorker {
 	w := &eventWorker{
 		worker:    newWorker(errorHandler, closing, done),
 		input:     input,
 		buffer:    make([]*event.Event, 0, batchSize),
 		batchSize: batchSize,
 		stats:     stats,
+		maxRetry:  maxRetry,
 	}
 	go w.newBuffer()
 	return w
@@ -389,6 +414,7 @@ type asyncMultiTokenSinkStats struct {
 	NumberOfEventWorkers     int64
 	DPBatchSizes             *RollingBucket
 	EVBatchSizes             *RollingBucket
+	NumberOfRetries          int64
 }
 
 func (a *asyncMultiTokenSinkStats) Close() {
@@ -415,6 +441,7 @@ func newAsyncMultiTokenSinkStats(buffer int, numChannels int64, numDrainingThrea
 		NumberOfEventWorkers:     0,
 		DPBatchSizes:             NewRollingBucket("batch_sizes", map[string]string{"path": "pops_to_ingest", "datum_type": "datapoint"}),
 		EVBatchSizes:             NewRollingBucket("batch_sizes", map[string]string{"path": "pops_to_ingest", "datum_type": "event"}),
+		NumberOfRetries:          0,
 	}
 }
 
@@ -438,6 +465,7 @@ type AsyncMultiTokenSink struct {
 	evBuffered    int64                     // number of events in the sink that haven't been emitted
 	NewHTTPClient func() http.Client        // function used to create an http client for the underlying sinks
 	stats         *asyncMultiTokenSinkStats //stats are stats about that sink that can be collected from the Datapoitns() method
+	maxRetry      int                       // maximum number of times to retry sending a set of datapoints or events
 }
 
 // Datapoints returns a set of datapoints about the sink
@@ -448,6 +476,7 @@ func (a *AsyncMultiTokenSink) Datapoints() (dps []*datapoint.Datapoint) {
 	dps = append(dps, a.stats.TotalEventsByToken.Datapoints()...)
 	dps = append(dps, a.stats.DPBatchSizes.Datapoints()...)
 	dps = append(dps, a.stats.EVBatchSizes.Datapoints()...)
+	dps = append(dps, Cumulative("total_retries", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.NumberOfRetries)))
 	return
 }
 
@@ -617,13 +646,13 @@ type evChannel struct {
 	workers []*eventWorker
 }
 
-func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool) (dpc *dpChannel) {
+func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (dpc *dpChannel) {
 	dpc = &dpChannel{
 		input:   make(chan *dpMsg, int64(buffer)),
 		workers: make([]*datapointWorker, numDrainingThreads),
 	}
 	for i := int64(0); i < numDrainingThreads; i++ {
-		dpWorker := newDatapointWorker(batchSize, errorHandler, stats, closing, done, dpc.input)
+		dpWorker := newDatapointWorker(batchSize, errorHandler, stats, closing, done, dpc.input, maxRetry)
 		if DatapointEndpoint != "" {
 			dpWorker.sink.DatapointEndpoint = DatapointEndpoint
 		}
@@ -638,13 +667,13 @@ func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, Datapoint
 	return
 }
 
-func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool) (evc *evChannel) {
+func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (evc *evChannel) {
 	evc = &evChannel{
 		input:   make(chan *evMsg, int64(buffer)),
 		workers: make([]*eventWorker, numDrainingThreads),
 	}
 	for i := int64(0); i < numDrainingThreads; i++ {
-		evWorker := newEventWorker(batchSize, errorHandler, stats, closing, done, evc.input)
+		evWorker := newEventWorker(batchSize, errorHandler, stats, closing, done, evc.input, maxRetry)
 		if EventEndpoint != "" {
 			evWorker.sink.EventEndpoint = EventEndpoint
 		}
@@ -660,7 +689,7 @@ func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, Datapoint
 }
 
 // NewAsyncMultiTokenSink returns a sink that asynchronously emits datapoints with different tokens
-func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error) *AsyncMultiTokenSink {
+func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, EventEndpoint string, userAgent string, httpClient func() http.Client, errorHandler func(error) error, maxRetry int) *AsyncMultiTokenSink {
 	a := &AsyncMultiTokenSink{
 		ShutdownTimeout: time.Second * 5,
 		errorHandler:    DefaultErrorHandler,
@@ -679,6 +708,7 @@ func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer 
 		lock:          sync.RWMutex{},
 		NewHTTPClient: newDefaultHTTPClient,
 		stats:         newAsyncMultiTokenSinkStats(buffer, numChannels, numDrainingThreads, batchSize),
+		maxRetry:      maxRetry,
 	}
 	if errorHandler != nil {
 		a.errorHandler = errorHandler
@@ -687,8 +717,8 @@ func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer 
 		a.NewHTTPClient = httpClient
 	}
 	for i := int64(0); i < numChannels; i++ {
-		a.dpChannels[i] = newDPChannel(numDrainingThreads, buffer, batchSize, DatapointEndpoint, EventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.dpDone)
-		a.evChannels[i] = newEVChannel(numDrainingThreads, buffer, batchSize, DatapointEndpoint, EventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.evDone)
+		a.dpChannels[i] = newDPChannel(numDrainingThreads, buffer, batchSize, DatapointEndpoint, EventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.dpDone, a.maxRetry)
+		a.evChannels[i] = newEVChannel(numDrainingThreads, buffer, batchSize, DatapointEndpoint, EventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.evDone, a.maxRetry)
 	}
 	_ = atomic.SwapInt64(&a.stats.NumberOfDatapointWorkers, numChannels*numDrainingThreads)
 	_ = atomic.SwapInt64(&a.stats.NumberOfEventWorkers, numChannels*numDrainingThreads)
