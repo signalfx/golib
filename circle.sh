@@ -2,8 +2,8 @@
 set -ex
 
 CIRCLEUTIL_TAG="v1.39"
-DEFAULT_GOLANG_VERSION="1.6"
-GO_TESTED_VERSIONS="1.5.1 1.6 1.7 1.8 1.9"
+DEFAULT_GOLANG_VERSION="1.8"
+GO_TESTED_VERSIONS="1.7 1.8 1.9"
 IMPORT_PATH="github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
 
 export GOROOT="$HOME/go_circle"
@@ -66,7 +66,6 @@ function do_test() {
       cd "$GOPATH/src/git.apache.org/thrift.git/"
       git checkout 53dd39833a08ce33582e5ff31fa18bb4735d6731
       cd "$SRC_PATH"
-      # Test all versions of Go, lint checks only work in go1.6
       if [ "$CIRCLE_NODE_INDEX" == "0" ]; then
         go test -timeout 60s -race ./...
       fi
@@ -81,7 +80,6 @@ function do_test() {
       cd "$GOPATH/src/git.apache.org/thrift.git/"
       git checkout 53dd39833a08ce33582e5ff31fa18bb4735d6731
       cd "$SRC_PATH"
-      # gobuild lint checks only work in go 1.6
       if [ "$CIRCLE_NODE_INDEX" == "0" ]; then
         gobuild list | circletasker serve &
       fi
