@@ -30,7 +30,7 @@ func TestClient(t *testing.T) {
 		})
 		Convey("default dimensions", func() {
 			Convey("should use sourceName", func() {
-				mem.Write("sourceName", []byte("h1"))
+				mem.Write("signalfuse.sourceName", []byte("h1"))
 				dims, err := DefaultDimensions(conf)
 				So(err, ShouldBeNil)
 				So(dims, ShouldResemble, map[string]string{"sf_source": "h1"})
@@ -59,22 +59,22 @@ func TestClient(t *testing.T) {
 			hsink.DatapointEndpoint = ""
 			So(sink.AddDatapoints(ctx, nil), ShouldBeNil)
 			Convey("Only hostname should append v2/datapoint", func() {
-				mem.Write("statsendpoint", []byte("https://ingest-2.signalfx.com"))
+				mem.Write("sf.metrics.statsendpoint", []byte("https://ingest-2.signalfx.com"))
 				So(hsink.DatapointEndpoint, ShouldEqual, "https://ingest-2.signalfx.com/v2/datapoint")
 				Convey("Failing URL parses should be OK", func() {
 					sink.(*ClientConfigChangerSink).urlParse = func(string) (*url.URL, error) {
 						return nil, errors.New("nope")
 					}
-					mem.Write("statsendpoint", []byte("_will_not_parse"))
+					mem.Write("sf.metrics.statsendpoint", []byte("_will_not_parse"))
 					So(hsink.DatapointEndpoint, ShouldEqual, "https://ingest-2.signalfx.com/v2/datapoint")
 				})
 			})
 			Convey("http should add by default", func() {
-				mem.Write("statsendpoint", []byte("ingest-3.signalfx.com:28080"))
+				mem.Write("sf.metrics.statsendpoint", []byte("ingest-3.signalfx.com:28080"))
 				So(hsink.DatapointEndpoint, ShouldEqual, "http://ingest-3.signalfx.com:28080/v2/datapoint")
 			})
 			Convey("direct URL should be used", func() {
-				mem.Write("statsendpoint", []byte("https://ingest-4.signalfx.com/v2"))
+				mem.Write("sf.metrics.statsendpoint", []byte("https://ingest-4.signalfx.com/v2"))
 				So(hsink.DatapointEndpoint, ShouldEqual, "https://ingest-4.signalfx.com/v2")
 			})
 		})
