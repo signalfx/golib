@@ -29,10 +29,10 @@ type ClientConfig struct {
 
 // Load the client config values from distconf
 func (c *ClientConfig) Load(d *distconf.Distconf) {
-	c.SourceName = d.Str("sourceName", "")
-	c.AuthToken = d.Str("auth_token", "")
-	c.Endpoint = d.Str("statsendpoint", "")
-	c.ReportingInterval = d.Duration("report_interval", time.Second)
+	c.SourceName = d.Str("signalfuse.sourceName", "")
+	c.AuthToken = d.Str("sf.metrics.auth_token", "")
+	c.Endpoint = d.Str("sf.metrics.statsendpoint", "")
+	c.ReportingInterval = d.Duration("sf.metrics.report_interval", time.Second)
 	c.TimeKeeper = timekeeper.RealTime{}
 	c.OsHostname = os.Hostname
 }
