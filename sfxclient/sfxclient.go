@@ -59,6 +59,7 @@ import (
 	"expvar"
 
 	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/event"
 
 	"sync"
 	"sync/atomic"
@@ -83,6 +84,7 @@ var DefaultErrorHandler = func(err error) error {
 // stubbing out your collector to test the points that will be sent to SignalFx.
 type Sink interface {
 	AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) (err error)
+	AddEvents(ctx context.Context, events []*event.Event) (err error)
 }
 
 // Collector is anything Scheduler can track that emits points
