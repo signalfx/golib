@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"context"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
-	"golang.org/x/net/context"
 )
 
 // ContextKey is a custom key type for context values

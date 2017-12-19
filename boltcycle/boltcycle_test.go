@@ -12,11 +12,11 @@ import (
 
 	"bytes"
 
+	"context"
 	"github.com/boltdb/bolt"
 	"github.com/signalfx/golib/log"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 type testSetup struct {
@@ -279,8 +279,9 @@ func TestAsyncWrite(t *testing.T) {
 		Convey("and channel is full", func() {
 			c.readMovements = make(chan readToLocation)
 			Convey("Async write should timeout", func() {
-				ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+				ctx, cancelfunc := context.WithTimeout(context.Background(), time.Millisecond)
 				c.AsyncWrite(ctx, []KvPair{{}})
+				cancelfunc()
 			})
 		})
 	})

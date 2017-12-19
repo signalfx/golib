@@ -12,12 +12,12 @@ import (
 	"time"
 	"unicode"
 
+	"context"
 	"github.com/golang/protobuf/proto"
 	"github.com/signalfx/com_signalfx_metrics_protobuf"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/event"
-	"golang.org/x/net/context"
 )
 
 // ClientVersion is the version of this library and is embedded into the user agent
