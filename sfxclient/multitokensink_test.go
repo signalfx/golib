@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"context"
 	"github.com/juju/errors"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
 	. "github.com/smartystreets/goconvey/convey"
-	"golang.org/x/net/context"
 )
 
 func TestAsyncMultiTokenSinkStartup(t *testing.T) {

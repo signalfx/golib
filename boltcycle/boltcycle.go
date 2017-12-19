@@ -9,8 +9,8 @@ import (
 
 	"github.com/signalfx/golib/errors"
 
+	"context"
 	"github.com/boltdb/bolt"
-	"golang.org/x/net/context"
 )
 
 // CycleDB allows you to use a bolt.DB as a pseudo-LRU using a cycle of buckets

@@ -5,12 +5,12 @@ import (
 	"net/url"
 	"testing"
 
+	"context"
 	"github.com/signalfx/golib/datapoint/dptest"
 	"github.com/signalfx/golib/distconf"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/sfxclient"
 	. "github.com/smartystreets/goconvey/convey"
-	"golang.org/x/net/context"
 )
 
 func TestClient(t *testing.T) {

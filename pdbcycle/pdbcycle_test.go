@@ -1,12 +1,12 @@
 package pdbcycle
 
 import (
+	"context"
 	"errors"
 	"github.com/boltdb/bolt"
 	"github.com/signalfx/golib/boltcycle"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -158,11 +158,15 @@ func Test(t *testing.T) {
 							So(err, ShouldBeNil)
 							So(len(infos), ShouldEqual, 3)
 							Convey("can only get data that was accessed, not the non accessed data", func() {
-								data, err := pdb.Read([][]byte{[]byte("first"), []byte("firsttwo")})
-								So(err, ShouldBeNil)
-								So(len(data), ShouldEqual, 2)
-								So(string(data[0]), ShouldEqual, "")
-								So(string(data[1]), ShouldEqual, "firsttwodata")
+								for {
+									data, err := pdb.Read([][]byte{[]byte("first"), []byte("firsttwo")})
+									So(err, ShouldBeNil)
+									So(len(data), ShouldEqual, 2)
+									if string(data[0]) == "" && string(data[1]) == "firsttwodata" {
+										break
+									}
+									runtime.Gosched()
+								}
 								Convey("close and reopen", func() {
 									So(pdb.Close(), ShouldBeNil)
 									pdb, err = New(dir,

@@ -2,10 +2,10 @@ package pdbcycle
 
 import (
 	"bytes"
+	"context"
 	"github.com/boltdb/bolt"
 	"github.com/signalfx/golib/boltcycle"
 	"github.com/signalfx/golib/errors"
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"os"
 	"path/filepath"

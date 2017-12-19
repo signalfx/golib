@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"context"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/distconf"
 	"github.com/signalfx/golib/errors"
@@ -14,7 +15,6 @@ import (
 	"github.com/signalfx/golib/logkey"
 	"github.com/signalfx/golib/sfxclient"
 	"github.com/signalfx/golib/timekeeper"
-	"golang.org/x/net/context"
 )
 
 // ClientConfig configures a SfxClient
