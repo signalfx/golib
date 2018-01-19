@@ -12,12 +12,15 @@ import (
 	"strings"
 
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/signalfx/com_signalfx_metrics_protobuf"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/trace"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -490,6 +493,47 @@ func TestHTTPEventSink(t *testing.T) {
 				So(l.Close(), ShouldBeNil)
 				<-serverDone
 			})
+		})
+	})
+}
+
+func TestHTTPTraceSink(t *testing.T) {
+	Convey("A default trace sink", t, func() {
+		s := NewHTTPSink()
+		ctx := context.Background()
+		var traces trace.Trace
+		err := json.Unmarshal([]byte(trace.ValidJSON), &traces)
+		So(err, ShouldBeNil)
+		Convey("should timeout", func() {
+			s.Client.Timeout = time.Millisecond
+			So(s.AddSpans(ctx, traces), ShouldNotBeNil)
+		})
+		Convey("should not try dead contexts", func() {
+			var ctx = context.Background()
+			ctx, can := context.WithCancel(ctx)
+			can()
+			So(errors.Details(s.AddSpans(ctx, traces)), ShouldContainSubstring, "context already closed")
+			Convey("but empty traces should always work", func() {
+				So(s.AddSpans(ctx, []*trace.Span{}), ShouldBeNil)
+			})
+		})
+		Convey("should check failure to encode", func() {
+			s.jsonMarshal = func(v interface{}) ([]byte, error) {
+				return nil, errors.New("failure to encode")
+			}
+			So(errors.Details(s.AddSpans(ctx, traces)), ShouldContainSubstring, "failure to encode")
+		})
+		Convey("should check invalid endpoints", func() {
+			s.TraceEndpoint = "%gh&%ij"
+			err := s.AddSpans(ctx, traces)
+			fmt.Println(err)
+			So(errors.Details(err), ShouldContainSubstring, "cannot parse new HTTP request to")
+		})
+		Convey("reading the full body should be checked", func() {
+			resp := &http.Response{
+				Body: ioutil.NopCloser(&errReader{}),
+			}
+			So(errors.Tail(s.handleResponse(resp, nil)), ShouldEqual, errReadErr)
 		})
 	})
 }
