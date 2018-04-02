@@ -175,7 +175,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 						cancelCallback()
 					}
 					select {
-					case <-req.Cancel:
+					case <-req.Context().Done():
 					case <-blockResponse:
 					}
 				}
@@ -277,7 +277,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			Convey("timeouts should work", func() {
 				blockResponse = make(chan struct{})
 				s.Client.Timeout = time.Millisecond * 10
-				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "Timeout exceeded")
+				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "Client.Timeout")
 			})
 			Reset(func() {
 				if blockResponse != nil {
@@ -397,7 +397,7 @@ func TestHTTPEventSink(t *testing.T) {
 						cancelCallback()
 					}
 					select {
-					case <-req.Cancel:
+					case <-req.Context().Done():
 					case <-blockResponse:
 					}
 				}
@@ -485,7 +485,7 @@ func TestHTTPEventSink(t *testing.T) {
 			Convey("timeouts should work", func() {
 				blockResponse = make(chan struct{})
 				s.Client.Timeout = time.Millisecond * 10
-				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "Timeout exceeded")
+				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "Client.Timeout")
 			})
 			Reset(func() {
 				if blockResponse != nil {

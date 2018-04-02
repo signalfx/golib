@@ -117,6 +117,7 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 	if err != nil {
 		return errors.Annotatef(err, "cannot parse new HTTP request to %s", endpoint)
 	}
+	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set(TokenHeaderName, h.AuthToken)
 	req.Header.Set("User-Agent", h.UserAgent)
@@ -124,7 +125,6 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 	if compressed {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
-	req.Cancel = ctx.Done()
 	resp, err := h.Client.Do(req)
 	if err != nil {
 		// According to docs, resp can be ignored since err is non-nil, so we
