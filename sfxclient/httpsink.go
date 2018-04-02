@@ -55,7 +55,7 @@ type HTTPSink struct {
 	EventEndpoint      string
 	DatapointEndpoint  string
 	TraceEndpoint      string
-	Client             http.Client
+	Client             *http.Client
 	protoMarshaler     func(pb proto.Message) ([]byte, error)
 	jsonMarshal        func(v []*trace.Span) ([]byte, error)
 	DisableCompression bool
@@ -427,7 +427,7 @@ func NewHTTPSink() *HTTPSink {
 		DatapointEndpoint: IngestEndpointV2,
 		TraceEndpoint:     TraceIngestEndpointV1,
 		UserAgent:         DefaultUserAgent,
-		Client: http.Client{
+		Client: &http.Client{
 			Timeout: DefaultTimeout,
 		},
 		protoMarshaler: proto.Marshal,
