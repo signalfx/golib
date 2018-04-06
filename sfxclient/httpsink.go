@@ -114,7 +114,7 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set(TokenHeaderName, h.AuthToken)
 	req.Header.Set("User-Agent", h.UserAgent)
-	req.Header.Set("Connection", "Keep-Alive")
+	req.Header.Set("Connection", "keep-alive")
 	if compressed {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
