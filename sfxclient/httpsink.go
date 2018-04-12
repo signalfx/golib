@@ -62,6 +62,7 @@ type HTTPSink struct {
 	jsonMarshal        func(v []*trace.Span) ([]byte, error)
 	DisableCompression bool
 	zippers            sync.Pool
+	protoDimCache      *protoDimCache
 
 	stats struct {
 		readingBody int64
@@ -238,20 +239,84 @@ func datumForPoint(pv datapoint.Value) *com_signalfx_metrics_protobuf.Datum {
 	}
 }
 
-func mapToDimensions(dimensions map[string]string) []*com_signalfx_metrics_protobuf.Dimension {
+type protoDimCache struct {
+	dims map[string]*com_signalfx_metrics_protobuf.Dimension
+	lock sync.RWMutex
+}
+
+func (c *protoDimCache) get(k, v *string) *com_signalfx_metrics_protobuf.Dimension {
+	c.lock.RLock()
+	d := c.dims[protoDimCacheKey(k, v)]
+	c.lock.RUnlock()
+	return d
+}
+
+func (c *protoDimCache) put(k, v *string, dim *com_signalfx_metrics_protobuf.Dimension) {
+	c.lock.Lock()
+	c.dims[protoDimCacheKey(k, v)] = dim
+	c.lock.Unlock()
+}
+
+func (c *protoDimCache) clear() {
+	c.lock.Lock()
+	c.dims = make(map[string]*com_signalfx_metrics_protobuf.Dimension)
+	c.lock.Unlock()
+}
+
+func protoDimCacheKey(k, v *string) string {
+	return *k + "|" + *v
+}
+
+// InitDimensionCache enables and initializes a cache of protobuf Dimension
+// objects to reduce memory allocations where the same dimensions are reused on
+// a large number of datapoints.  This must be called before using any other
+// methods of the sink.
+func (h *HTTPSink) InitDimensionCache() {
+	if h.protoDimCache != nil {
+		panic("Don't init the dimension cache twice")
+	}
+	h.protoDimCache = &protoDimCache{
+		dims: make(map[string]*com_signalfx_metrics_protobuf.Dimension),
+	}
+}
+
+// ClearDimensionCache can be called to clear out the cache and start fresh to
+// relieve memory usage. How often it should be called depends on the cardinality
+// of the dimensions on the datapoints processed through the sink.
+func (h *HTTPSink) ClearDimensionCache() {
+	if h.protoDimCache == nil {
+		panic("Dimension cache was never initialized")
+	}
+	h.protoDimCache.clear()
+}
+
+func (h *HTTPSink) mapToDimensions(dimensions map[string]string) []*com_signalfx_metrics_protobuf.Dimension {
 	ret := make([]*com_signalfx_metrics_protobuf.Dimension, 0, len(dimensions))
 	for k, v := range dimensions {
 		if k == "" || v == "" {
 			continue
 		}
+
+		if h.protoDimCache != nil {
+			if dim := h.protoDimCache.get(&k, &v); dim != nil {
+				ret = append(ret, dim)
+				continue
+			}
+		}
+
 		// If someone knows a better way to do this, let me know.  I can't just take the &
 		// of k and v because their content changes as the range iterates
 		copyOfK := filterSignalfxKey(string([]byte(k)))
 		copyOfV := string([]byte(v))
-		ret = append(ret, &com_signalfx_metrics_protobuf.Dimension{
+		dim := com_signalfx_metrics_protobuf.Dimension{
 			Key:   &copyOfK,
 			Value: &copyOfV,
-		})
+		}
+		ret = append(ret, &dim)
+
+		if h.protoDimCache != nil {
+			h.protoDimCache.put(&k, &v, &dim)
+		}
 	}
 	return ret
 }
@@ -307,7 +372,7 @@ func (h *HTTPSink) coreDatapointToProtobuf(point *datapoint.Datapoint) *com_sign
 		Timestamp:  &ts,
 		Value:      datumForPoint(point.Value),
 		MetricType: &mt,
-		Dimensions: mapToDimensions(point.Dimensions),
+		Dimensions: h.mapToDimensions(point.Dimensions),
 	}
 	return dp
 }
@@ -383,7 +448,7 @@ func (h *HTTPSink) coreEventToProtobuf(event *event.Event) *com_signalfx_metrics
 	ev := &com_signalfx_metrics_protobuf.Event{
 		EventType:  &etype,
 		Category:   &ecat,
-		Dimensions: mapToDimensions(event.Dimensions),
+		Dimensions: h.mapToDimensions(event.Dimensions),
 		Properties: mapToProperties(event.Properties),
 		Timestamp:  &ts,
 	}
