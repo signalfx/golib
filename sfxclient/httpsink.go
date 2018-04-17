@@ -193,7 +193,7 @@ func filterSignalfxKey(str string) string {
 }
 
 func runeFilterMap(r rune) rune {
-	if unicode.IsDigit(r) || unicode.IsLetter(r) || r == '_' {
+	if unicode.IsDigit(r) || unicode.IsLetter(r) || r == '_' || r == '-' {
 		return r
 	}
 	return '_'
