@@ -118,11 +118,6 @@ func TestHTTPDatapointSink(t *testing.T) {
 		So(s.InitDimensionCache, ShouldPanic)
 	})
 
-	Convey("non-init dim cache panics on clear", t, func() {
-		s := NewHTTPSink()
-		So(s.ClearDimensionCache, ShouldPanic)
-	})
-
 	for _, caching := range []bool{true, false} {
 		var suffix string
 		if caching {
@@ -303,13 +298,6 @@ func TestHTTPDatapointSink(t *testing.T) {
 					<-serverDone
 				})
 			})
-			Reset(func(caching bool) func() {
-				return func() {
-					if caching {
-						s.ClearDimensionCache()
-					}
-				}
-			}(caching))
 		})
 	}
 }

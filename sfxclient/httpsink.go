@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/signalfx/com_signalfx_metrics_protobuf"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/errors"
@@ -49,7 +50,7 @@ type HTTPSink struct {
 	protoMarshaler     func(pb proto.Message) ([]byte, error)
 	DisableCompression bool
 	zippers            sync.Pool
-	protoDimCache      *protoDimCache
+	protoDimCache      *lru.Cache
 
 	stats struct {
 		readingBody int64
@@ -172,30 +173,6 @@ func datumForPoint(pv datapoint.Value) *com_signalfx_metrics_protobuf.Datum {
 	}
 }
 
-type protoDimCache struct {
-	dims map[string]*com_signalfx_metrics_protobuf.Dimension
-	lock sync.RWMutex
-}
-
-func (c *protoDimCache) get(k, v *string) *com_signalfx_metrics_protobuf.Dimension {
-	c.lock.RLock()
-	d := c.dims[protoDimCacheKey(k, v)]
-	c.lock.RUnlock()
-	return d
-}
-
-func (c *protoDimCache) put(k, v *string, dim *com_signalfx_metrics_protobuf.Dimension) {
-	c.lock.Lock()
-	c.dims[protoDimCacheKey(k, v)] = dim
-	c.lock.Unlock()
-}
-
-func (c *protoDimCache) clear() {
-	c.lock.Lock()
-	c.dims = make(map[string]*com_signalfx_metrics_protobuf.Dimension)
-	c.lock.Unlock()
-}
-
 func protoDimCacheKey(k, v *string) string {
 	return *k + "|" + *v
 }
@@ -208,19 +185,11 @@ func (h *HTTPSink) InitDimensionCache() {
 	if h.protoDimCache != nil {
 		panic("Don't init the dimension cache twice")
 	}
-	h.protoDimCache = &protoDimCache{
-		dims: make(map[string]*com_signalfx_metrics_protobuf.Dimension),
+	var err error
+	h.protoDimCache, err = lru.New(10000)
+	if err != nil {
+		panic(err)
 	}
-}
-
-// ClearDimensionCache can be called to clear out the cache and start fresh to
-// relieve memory usage. How often it should be called depends on the cardinality
-// of the dimensions on the datapoints processed through the sink.
-func (h *HTTPSink) ClearDimensionCache() {
-	if h.protoDimCache == nil {
-		panic("Dimension cache was never initialized")
-	}
-	h.protoDimCache.clear()
 }
 
 func (h *HTTPSink) mapToDimensions(dimensions map[string]string) []*com_signalfx_metrics_protobuf.Dimension {
@@ -231,8 +200,8 @@ func (h *HTTPSink) mapToDimensions(dimensions map[string]string) []*com_signalfx
 		}
 
 		if h.protoDimCache != nil {
-			if dim := h.protoDimCache.get(&k, &v); dim != nil {
-				ret = append(ret, dim)
+			if dim, ok := h.protoDimCache.Get(protoDimCacheKey(&k, &v)); ok {
+				ret = append(ret, dim.(*com_signalfx_metrics_protobuf.Dimension))
 				continue
 			}
 		}
@@ -248,7 +217,7 @@ func (h *HTTPSink) mapToDimensions(dimensions map[string]string) []*com_signalfx
 		ret = append(ret, &dim)
 
 		if h.protoDimCache != nil {
-			h.protoDimCache.put(&k, &v, &dim)
+			h.protoDimCache.Add(protoDimCacheKey(&k, &v), &dim)
 		}
 	}
 	return ret
