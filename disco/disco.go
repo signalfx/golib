@@ -239,9 +239,27 @@ func (d *Disco) processZkEvent(e *zk.Event) error {
 	return nil
 }
 
+// DeleteAdvertisedServices deletes all advertised services
+func (d *Disco) DeleteAdvertisedServices() {
+	for serviceName := range d.myAdvertisedServices {
+		d.DeleteAdvertisedService(serviceName)
+	}
+}
+
+// DeleteAdvertisedService deletes a specific advertised service name
+func (d *Disco) DeleteAdvertisedService(serviceName string) {
+	l := log.NewContext(d.stateLog).With(logkey.DiscoService, serviceName)
+	servicePath := d.servicePath(serviceName)
+	exists, stat, _, err := d.zkConn.ExistsW(servicePath)
+	if err == nil && exists {
+		l.Log(logkey.Name, serviceName, "deleting advertised service")
+		log.IfErr(l, d.zkConn.Delete(servicePath, stat.Version))
+	}
+}
+
 // Close any open disco connections making this disco unreliable for future updates
-// TODO(jack): Close should also delete advertised services
 func (d *Disco) Close() {
+	d.DeleteAdvertisedServices()
 	close(d.shouldQuit)
 	<-d.eventLoopDone
 	d.zkConn.Close()
@@ -429,9 +447,25 @@ func (d *Disco) Services(serviceName string) (*Service, error) {
 	return nil, errors.Annotatef(refreshRes, "cannot refresh service %s", serviceName)
 }
 
+type serviceInstanceList []ServiceInstance
+
+func (x serviceInstanceList) Len() int {
+	return len(x)
+}
+
+func (x serviceInstanceList) Less(i, j int) bool {
+	return x[i].RegistrationTimeUTC < x[j].RegistrationTimeUTC
+}
+
+func (x serviceInstanceList) Swap(i, j int) {
+	x[i], x[j] = x[j], x[i]
+}
+
 // ServiceInstances that represent instances of this service in your system
 func (s *Service) ServiceInstances() []ServiceInstance {
-	return s.services.Load().([]ServiceInstance)
+	svcs := s.services.Load().([]ServiceInstance)
+	sort.Sort(serviceInstanceList(svcs))
+	return svcs
 }
 
 // ForceInstances overrides a disco service to have exactly the passed instances forever.  Useful
