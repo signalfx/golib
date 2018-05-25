@@ -105,7 +105,7 @@ type Disco struct {
 	eventLoopDone        chan struct{}
 	ninjaMode            bool
 
-	watchedMutex    sync.Mutex
+	watchedMutex    sync.RWMutex
 	watchedServices map[string]*Service
 
 	manualEvents chan zk.Event
@@ -241,7 +241,13 @@ func (d *Disco) processZkEvent(e *zk.Event) error {
 
 // DeleteAdvertisedServices deletes all advertised services
 func (d *Disco) DeleteAdvertisedServices() {
-	for serviceName := range d.myAdvertisedServices {
+	d.watchedMutex.RLock()
+	services := make([]string, 0, len(d.myAdvertisedServices))
+	for s := range d.myAdvertisedServices {
+		services = append(services, s)
+	}
+	d.watchedMutex.RUnlock()
+	for _, serviceName := range services {
 		d.DeleteAdvertisedService(serviceName)
 	}
 }
@@ -252,8 +258,11 @@ func (d *Disco) DeleteAdvertisedService(serviceName string) {
 	servicePath := d.servicePath(serviceName)
 	exists, stat, _, err := d.zkConn.ExistsW(servicePath)
 	if err == nil && exists {
+		d.watchedMutex.Lock()
+		defer d.watchedMutex.Unlock()
 		l.Log(logkey.Name, serviceName, "deleting advertised service")
 		log.IfErr(l, d.zkConn.Delete(servicePath, stat.Version))
+		delete(d.myAdvertisedServices, serviceName)
 	}
 }
 
