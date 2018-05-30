@@ -473,8 +473,10 @@ func (x serviceInstanceList) Swap(i, j int) {
 // ServiceInstances that represent instances of this service in your system
 func (s *Service) ServiceInstances() []ServiceInstance {
 	svcs := s.services.Load().([]ServiceInstance)
-	sort.Sort(serviceInstanceList(svcs))
-	return svcs
+	ret := make([]ServiceInstance, len(svcs))
+	copy(ret, svcs)
+	sort.Sort(serviceInstanceList(ret))
+	return ret
 }
 
 // ForceInstances overrides a disco service to have exactly the passed instances forever.  Useful
