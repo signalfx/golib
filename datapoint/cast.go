@@ -48,7 +48,7 @@ func CastFloatValue(value interface{}) (metricValue Value, err error) {
 	case float64:
 		metricValue = floatWire(val)
 	case float32:
-		metricValue = floatWire(float64(value.(float32)))
+		metricValue = floatWire(float64(val))
 	default:
 		err = fmt.Errorf("unknown metric value type %T", val)
 	}
