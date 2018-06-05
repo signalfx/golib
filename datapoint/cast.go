@@ -9,15 +9,15 @@ import (
 func CastIntegerValue(value interface{}) (metricValue Value, err error) {
 	switch value.(type) {
 	case int64:
-		metricValue = NewIntValue(value.(int64))
+		metricValue = intWire(value.(int64))
 	case int32:
-		metricValue = NewIntValue(int64(value.(int32)))
+		metricValue = intWire(int64(value.(int32)))
 	case int16:
-		metricValue = NewIntValue(int64(value.(int16)))
+		metricValue = intWire(int64(value.(int16)))
 	case int8:
-		metricValue = NewIntValue(int64(value.(int8)))
+		metricValue = intWire(int64(value.(int8)))
 	case int:
-		metricValue = NewIntValue(int64(value.(int)))
+		metricValue = intWire(int64(value.(int)))
 	default:
 		err = fmt.Errorf("unknown metric value type %s", reflect.TypeOf(value))
 	}
@@ -28,15 +28,15 @@ func CastIntegerValue(value interface{}) (metricValue Value, err error) {
 func CastUnsignedIntegerValue(value interface{}) (metricValue Value, err error) {
 	switch value.(type) {
 	case uint64:
-		metricValue = NewIntValue(int64(value.(uint64)))
+		metricValue = intWire(int64(value.(uint64)))
 	case uint32:
-		metricValue = NewIntValue(int64(value.(uint32)))
+		metricValue = intWire(int64(value.(uint32)))
 	case uint16:
-		metricValue = NewIntValue(int64(value.(uint16)))
+		metricValue = intWire(int64(value.(uint16)))
 	case uint8:
-		metricValue = NewIntValue(int64(value.(uint8)))
+		metricValue = intWire(int64(value.(uint8)))
 	case uint:
-		metricValue = NewIntValue(int64(value.(uint)))
+		metricValue = intWire(int64(value.(uint)))
 	default:
 		err = fmt.Errorf("unknown metric value type %s", reflect.TypeOf(value))
 	}
@@ -47,9 +47,9 @@ func CastUnsignedIntegerValue(value interface{}) (metricValue Value, err error) 
 func CastFloatValue(value interface{}) (metricValue Value, err error) {
 	switch value.(type) {
 	case float64:
-		metricValue = NewFloatValue(value.(float64))
+		metricValue = floatWire(value.(float64))
 	case float32:
-		metricValue = NewFloatValue(float64(value.(float32)))
+		metricValue = floatWire(float64(value.(float32)))
 	default:
 		err = fmt.Errorf("unknown metric value type %s", reflect.TypeOf(value))
 	}
