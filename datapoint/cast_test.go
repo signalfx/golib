@@ -153,7 +153,7 @@ func TestCastFloatValue(t *testing.T) {
 	}
 }
 
-func TestCastUnsignedIntegerValue(t *testing.T) {
+func TestCastUIntegerValue(t *testing.T) {
 	type args struct {
 		value interface{}
 	}
@@ -173,7 +173,7 @@ func TestCastUnsignedIntegerValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotMetricValue, err := CastUnsignedIntegerValue(tt.args.value)
+			gotMetricValue, err := CastUIntegerValue(tt.args.value)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CastUnsignedIntegerValue() error = %v, wantErr %v", err, tt.wantErr)
 				return
