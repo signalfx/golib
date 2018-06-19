@@ -14,14 +14,15 @@ import (
 
 	"compress/gzip"
 	"context"
+	"io"
+	"sync"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/signalfx/com_signalfx_metrics_protobuf"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/trace"
-	"io"
-	"sync"
 )
 
 const (
@@ -69,10 +70,12 @@ type SFXAPIError struct {
 }
 
 func (se SFXAPIError) Error() string {
-	return fmt.Sprintf("invalid status code %d", se.StatusCode)
+	return fmt.Sprintf("invalid status code %d: %s", se.StatusCode, se.ResponseBody)
 }
 
-func (h *HTTPSink) handleResponse(resp *http.Response, respErr error) (err error) {
+type responseValidator func(respBody []byte) error
+
+func (h *HTTPSink) handleResponse(resp *http.Response, respErr error, respValidator responseValidator) (err error) {
 	if respErr != nil {
 		return errors.Annotatef(respErr, "failed to send/recieve http request")
 	}
@@ -91,15 +94,7 @@ func (h *HTTPSink) handleResponse(resp *http.Response, respErr error) (err error
 			ResponseBody: string(respBody),
 		}
 	}
-	var bodyStr string
-	err = json.Unmarshal(respBody, &bodyStr)
-	if err != nil {
-		return errors.Annotatef(err, "cannot unmarshal response body %s", respBody)
-	}
-	if bodyStr != "OK" {
-		return errors.Errorf("invalid response body %s", bodyStr)
-	}
-	return nil
+	return respValidator(respBody)
 }
 
 var _ Sink = &HTTPSink{}
@@ -107,7 +102,8 @@ var _ Sink = &HTTPSink{}
 // TokenHeaderName is the header key for the auth token in the HTTP request
 const TokenHeaderName = "X-Sf-Token"
 
-func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, error), contentType, endpoint string) error {
+func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, error), contentType, endpoint string,
+	respValidator responseValidator) error {
 	if ctx.Err() != nil {
 		return errors.Annotate(ctx.Err(), "context already closed")
 	}
@@ -127,7 +123,7 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 		req.Header.Set("Content-Encoding", "gzip")
 	}
 
-	return h.withCancel(ctx, req)
+	return h.withCancel(ctx, req, respValidator)
 }
 
 // AddDatapoints forwards the datapoints to SignalFx.
@@ -135,7 +131,21 @@ func (h *HTTPSink) AddDatapoints(ctx context.Context, points []*datapoint.Datapo
 	if len(points) == 0 {
 		return nil
 	}
-	return h.doBottom(ctx, func() (io.Reader, bool, error) { return h.encodePostBodyProtobufV2(points) }, "application/x-protobuf", h.DatapointEndpoint)
+	return h.doBottom(ctx, func() (io.Reader, bool, error) {
+		return h.encodePostBodyProtobufV2(points)
+	}, "application/x-protobuf", h.DatapointEndpoint, datapointAndEventResponseValidator)
+}
+
+func datapointAndEventResponseValidator(respBody []byte) error {
+	var bodyStr string
+	err := json.Unmarshal(respBody, &bodyStr)
+	if err != nil {
+		return errors.Annotatef(err, "cannot unmarshal response body %s", respBody)
+	}
+	if bodyStr != "OK" {
+		return errors.Errorf("invalid response body %s", bodyStr)
+	}
+	return nil
 }
 
 var toMTMap = map[datapoint.MetricType]com_signalfx_metrics_protobuf.MetricType{
@@ -301,7 +311,9 @@ func (h *HTTPSink) AddEvents(ctx context.Context, events []*event.Event) (err er
 	if len(events) == 0 {
 		return nil
 	}
-	return h.doBottom(ctx, func() (io.Reader, bool, error) { return h.encodePostBodyProtobufV2Events(events) }, "application/x-protobuf", h.EventEndpoint)
+	return h.doBottom(ctx, func() (io.Reader, bool, error) {
+		return h.encodePostBodyProtobufV2Events(events)
+	}, "application/x-protobuf", h.EventEndpoint, datapointAndEventResponseValidator)
 }
 
 func (h *HTTPSink) encodePostBodyProtobufV2Events(events []*event.Event) (io.Reader, bool, error) {
@@ -354,6 +366,27 @@ func mapToProperties(properties map[string]interface{}) []*com_signalfx_metrics_
 	return response
 }
 
+type spanResponse struct {
+	Valid   uint64 `json:"valid"`
+	Invalid struct {
+		InvalidSpanID []string `json:"invalidSpanID"`
+	} `json:"invalid"`
+}
+
+func spanResponseValidator(respBody []byte) error {
+	var respObj spanResponse
+
+	if err := json.Unmarshal(respBody, &respObj); err != nil {
+		return errors.Annotatef(err, "cannot unmarshal response body %s", respBody)
+	}
+
+	if len(respObj.Invalid.InvalidSpanID) > 0 {
+		return errors.Errorf("some spans were invalid: %v", respObj.Invalid.InvalidSpanID)
+	}
+
+	return nil
+}
+
 // AddSpans forwards the traces to SignalFx.
 func (h *HTTPSink) AddSpans(ctx context.Context, traces []*trace.Span) (err error) {
 	if len(traces) == 0 {
@@ -365,7 +398,7 @@ func (h *HTTPSink) AddSpans(ctx context.Context, traces []*trace.Span) (err erro
 			return nil, false, errors.Annotate(err, "cannot encode traces into json")
 		}
 		return h.getReader(b)
-	}, "application/json", h.TraceEndpoint)
+	}, "application/json", h.TraceEndpoint, spanResponseValidator)
 }
 
 // NewHTTPSink creates a default NewHTTPSink using package level constants as

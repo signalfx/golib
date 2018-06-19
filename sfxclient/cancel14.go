@@ -12,14 +12,18 @@ type canceler interface {
 	CancelRequest(*http.Request)
 }
 
-func (h *HTTPSink) withCancel(ctx context.Context, req *http.Request) (err error) {
+func (h *HTTPSink) withCancel(ctx context.Context, req *http.Request, respValidator responseValidator) (err error) {
 	canCancel, ok := h.Client.Transport.(canceler)
 	if !ok {
-		return h.handleResponse(h.Client.Do(req))
+		resp, err := h.Client.Do(req)
+		return h.handleResponse(resp, err, respValidator)
 	}
 
 	c := make(chan error, 1)
-	go func() { c <- h.handleResponse(h.Client.Do(req)) }()
+	go func() {
+		resp, err := h.Client.Do(req)
+		c <- h.handleResponse(resp, err, respValidator)
+	}()
 	select {
 	case <-ctx.Done():
 		canCancel.CancelRequest(req)

@@ -8,7 +8,8 @@ import (
 	"context"
 )
 
-func (h *HTTPSink) withCancel(ctx context.Context, req *http.Request) (err error) {
+func (h *HTTPSink) withCancel(ctx context.Context, req *http.Request, respValidator responseValidator) (err error) {
 	req.Cancel = ctx.Done()
-	return h.handleResponse(h.Client.Do(req))
+	resp, err := h.Client.Do(req)
+	return h.handleResponse(resp, err, respValidator)
 }
