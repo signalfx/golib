@@ -75,10 +75,7 @@ func (se SFXAPIError) Error() string {
 
 type responseValidator func(respBody []byte) error
 
-func (h *HTTPSink) handleResponse(resp *http.Response, respErr error, respValidator responseValidator) (err error) {
-	if respErr != nil {
-		return errors.Annotatef(respErr, "failed to send/recieve http request")
-	}
+func (h *HTTPSink) handleResponse(resp *http.Response, respValidator responseValidator) (err error) {
 	defer func() {
 		closeErr := errors.Annotate(resp.Body.Close(), "failed to close response body")
 		err = errors.NewMultiErr([]error{err, closeErr})
@@ -88,12 +85,14 @@ func (h *HTTPSink) handleResponse(resp *http.Response, respErr error, respValida
 	if err != nil {
 		return errors.Annotate(err, "cannot fully read response body")
 	}
+
 	if resp.StatusCode != http.StatusOK {
 		return SFXAPIError{
 			StatusCode:   resp.StatusCode,
 			ResponseBody: string(respBody),
 		}
 	}
+
 	return respValidator(respBody)
 }
 
@@ -122,8 +121,15 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 	if compressed {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
+	req.Cancel = ctx.Done()
+	resp, err := h.Client.Do(req)
+	if err != nil {
+		// According to docs, resp can be ignored since err is non-nil, so we
+		// don't have to close body.
+		return errors.Annotatef(err, "failed to send/recieve http request")
+	}
 
-	return h.withCancel(ctx, req, respValidator)
+	return h.handleResponse(resp, respValidator)
 }
 
 // AddDatapoints forwards the datapoints to SignalFx.
@@ -367,10 +373,8 @@ func mapToProperties(properties map[string]interface{}) []*com_signalfx_metrics_
 }
 
 type spanResponse struct {
-	Valid   uint64 `json:"valid"`
-	Invalid struct {
-		InvalidSpanID []string `json:"invalidSpanID"`
-	} `json:"invalid"`
+	Valid   uint64              `json:"valid"`
+	Invalid map[string][]string `json:"invalid"`
 }
 
 func spanResponseValidator(respBody []byte) error {
@@ -380,8 +384,10 @@ func spanResponseValidator(respBody []byte) error {
 		return errors.Annotatef(err, "cannot unmarshal response body %s", respBody)
 	}
 
-	if len(respObj.Invalid.InvalidSpanID) > 0 {
-		return errors.Errorf("some spans were invalid: %v", respObj.Invalid.InvalidSpanID)
+	for _, v := range respObj.Invalid {
+		if len(v) > 0 {
+			return errors.Errorf("some spans were invalid: %v", respObj.Invalid)
+		}
 	}
 
 	return nil
