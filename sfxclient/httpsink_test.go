@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/signalfx/com_signalfx_metrics_protobuf"
 	"github.com/signalfx/golib/datapoint"
@@ -153,7 +154,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			resp := &http.Response{
 				Body: ioutil.NopCloser(&errReader{}),
 			}
-			So(errors.Tail(s.handleResponse(resp, nil)), ShouldEqual, errReadErr)
+			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)), ShouldEqual, errReadErr)
 		})
 		Convey("with a test endpoint", func() {
 			retString := `"OK"`
@@ -174,7 +175,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 						cancelCallback()
 					}
 					select {
-					case <-cancelChanFromReq(req):
+					case <-req.Cancel:
 					case <-blockResponse:
 					}
 				}
@@ -276,7 +277,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			Convey("timeouts should work", func() {
 				blockResponse = make(chan struct{})
 				s.Client.Timeout = time.Millisecond * 10
-				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, timeoutString())
+				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "Timeout exceeded")
 			})
 			Reset(func() {
 				if blockResponse != nil {
@@ -375,7 +376,7 @@ func TestHTTPEventSink(t *testing.T) {
 			resp := &http.Response{
 				Body: ioutil.NopCloser(&errReader{}),
 			}
-			So(errors.Tail(s.handleResponse(resp, nil)), ShouldEqual, errReadErr)
+			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)), ShouldEqual, errReadErr)
 		})
 		Convey("with a test endpoint", func() {
 			retString := `"OK"`
@@ -396,7 +397,7 @@ func TestHTTPEventSink(t *testing.T) {
 						cancelCallback()
 					}
 					select {
-					case <-cancelChanFromReq(req):
+					case <-req.Cancel:
 					case <-blockResponse:
 					}
 				}
@@ -484,7 +485,7 @@ func TestHTTPEventSink(t *testing.T) {
 			Convey("timeouts should work", func() {
 				blockResponse = make(chan struct{})
 				s.Client.Timeout = time.Millisecond * 10
-				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, timeoutString())
+				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "Timeout exceeded")
 			})
 			Reset(func() {
 				if blockResponse != nil {
@@ -533,7 +534,68 @@ func TestHTTPTraceSink(t *testing.T) {
 			resp := &http.Response{
 				Body: ioutil.NopCloser(&errReader{}),
 			}
-			So(errors.Tail(s.handleResponse(resp, nil)), ShouldEqual, errReadErr)
+			So(errors.Tail(s.handleResponse(resp, spanResponseValidator)), ShouldEqual, errReadErr)
+		})
+
+		Convey("with a test endpoint", func() {
+			retString := `{"invalid":{"invalidSpanID":[]}, "valid":1}`
+			var blockResponse chan struct{}
+			var cancelCallback func()
+			seenSpans := []*trace.Span{}
+			handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				bodyBytes := bytes.Buffer{}
+				_, err := io.Copy(&bodyBytes, req.Body)
+				log.IfErr(log.Panic, err)
+				log.IfErr(log.Panic, req.Body.Close())
+				log.IfErr(log.Panic, json.Unmarshal(bodyBytes.Bytes(), &seenSpans))
+				rw.WriteHeader(http.StatusOK)
+				errors.PanicIfErrWrite(io.WriteString(rw, retString))
+				if blockResponse != nil {
+					if cancelCallback != nil {
+						cancelCallback()
+					}
+					select {
+					case <-req.Cancel:
+					case <-blockResponse:
+					}
+				}
+			})
+
+			// Note: Using httptest created some strange race conditions around their use of wait group, so
+			//       I'm creating my own listener here that I close in Reset()
+			l, err := net.Listen("tcp", "127.0.0.1:0")
+			So(err, ShouldBeNil)
+			server := http.Server{
+				Handler: handler,
+			}
+			serverDone := make(chan struct{})
+			go func() {
+				if err := server.Serve(l); err == nil {
+					panic("I expect serve to eventually error")
+				}
+				close(serverDone)
+			}()
+			s.TraceEndpoint = "http://" + l.Addr().String()
+			Convey("Send should normally work", func() {
+				So(s.AddSpans(ctx, traces), ShouldBeNil)
+			})
+			Convey("should error on invalid spans", func() {
+				retString = `{"invalid":{"invalidSpanID":["abcdef1234567890"]}, "valid":0}`
+				err := s.AddSpans(ctx, traces)
+				So(errors.Details(err), ShouldContainSubstring, "some spans were invalid")
+			})
+			Convey("should error on invalid json response", func() {
+				retString = `OK`
+				err := s.AddSpans(ctx, traces)
+				So(errors.Details(err), ShouldContainSubstring, "cannot unmarshal response body")
+			})
+			Reset(func() {
+				if blockResponse != nil {
+					close(blockResponse)
+				}
+				So(l.Close(), ShouldBeNil)
+				<-serverDone
+			})
 		})
 	})
 }
