@@ -27,11 +27,11 @@ func TestGetCPUInfo(t *testing.T) {
 			fixtures: testfixture{
 				cpuInfo: func() ([]cpu.InfoStat, error) {
 					return []cpu.InfoStat{
-						cpu.InfoStat{
+						{
 							ModelName: "testmodelname",
 							Cores:     4,
 						},
-						cpu.InfoStat{
+						{
 							ModelName: "testmodelname2",
 							Cores:     4,
 						},
@@ -62,11 +62,11 @@ func TestGetCPUInfo(t *testing.T) {
 			fixtures: testfixture{
 				cpuInfo: func() ([]cpu.InfoStat, error) {
 					return []cpu.InfoStat{
-						cpu.InfoStat{
+						{
 							ModelName: "testmodelname",
 							Cores:     4,
 						},
-						cpu.InfoStat{
+						{
 							ModelName: "testmodelname2",
 							Cores:     4,
 						},
