@@ -13,6 +13,7 @@ func TestNew(t *testing.T) {
 			if remain <= 0 {
 				t.Error("remaining time is unrealistic and may not have been advanced")
 			}
+			return
 		}
 	})
 }
