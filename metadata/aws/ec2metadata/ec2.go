@@ -4,97 +4,89 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"time"
 )
 
-const identityURL = "http://169.254.169.254/latest/dynamic/instance-identity/document"
+// will need to update this version from time to time
+var identityURL = "http://169.254.169.254/2016-09-02/dynamic/instance-identity/document"
 
-// want mapping of desired aws metadata in aws identity document
-var want = map[string]string{
-	"availability_zone": "availabilityZone",
-	"instance_type":     "instanceType",
-	"instance_id":       "instanceId",
-	"image_id":          "imageId",
-	"account_id":        "accountId",
-	"region":            "region",
-	"architecture":      "architecture",
-}
-
-// New - returns a new EC2Metadata context
-func New() *EC2Metadata {
-	return &EC2Metadata{false, "", identityURL}
-}
-
-// EC2Metadata - checks and retrieves information about an aws EC2 instance
+// EC2Metadata contains metadata about an ec2 instance
 type EC2Metadata struct {
-	isAWS       bool
-	awsUniqueID string
-	IdentityURL string
+	AvailabilityZone string `json:"availabilityZone"`
+	InstanceType     string `json:"instanceType"`
+	InstanceID       string `json:"instanceId"`
+	ImageID          string `json:"imageId"`
+	AccountID        string `json:"accountId"`
+	Region           string `json:"region"`
+	Architecture     string `json:"architecture"`
+	// In SFX the dimension/property key is "AWSUniqueId" this struct field is
+	// named AWSUniqueID to satisfy golint
+	AWSUniqueID string
+}
+
+// GetAWSUniqueID returns the AWSUniqueId from the collected EC2Metadata
+// Please note that the dimension/property used in SFX is named "AWSUniqueId"
+// and not AWSUniqueID.  This function is named in order to satisfy golint demands
+func (e *EC2Metadata) GetAWSUniqueID() (string, error) {
+	if e.InstanceID == "" {
+		return "", errors.New("unable to build AWSUniqueId (missing InstanceId)")
+	}
+	if e.AccountID == "" {
+		return "", errors.New("unable to build AWSUniqueId (missing AccountId)")
+	}
+	if e.Region == "" {
+		return "", errors.New("unable to build AWSUniqueId (missing Region)")
+	}
+
+	return fmt.Sprintf("%s_%s_%s", e.InstanceID, e.Region, e.AccountID), nil
+}
+
+// ToMapString returns the ec2 metadata as a string map
+func (e *EC2Metadata) ToMapString() map[string]string {
+	metadata := map[string]string{
+		"aws_availability_zone": e.AvailabilityZone,
+		"aws_instance_type":     e.InstanceType,
+		"aws_instance_id":       e.InstanceID,
+		"aws_image_id":          e.ImageID,
+		"aws_account_id":        e.AccountID,
+		"aws_region":            e.Region,
+		"aws_architecture":      e.Architecture,
+		"AWSUniqueId":           e.AWSUniqueID,
+	}
+
+	return metadata
 }
 
 // Get - returns a map with aws metadata including the AWSUniqueID
-func (s *EC2Metadata) Get() (map[string]string, error) {
-	if identity, err := requestAWSInfo(s.IdentityURL); err == nil {
-		s.isAWS = true
-		info := s.processAWSInfo(identity)
-		return info, nil
-	}
-	return nil, errors.New("not an aws box")
+func Get() (*EC2Metadata, error) {
+	return GetWithIdentityURL(identityURL)
 }
 
-// buildAWSUniqueID takes a map of aws metadata and manufactures an awsUniqueId
-func buildAWSUniqueID(info map[string]string) (awsUniqueID string) {
-	if id, ok := info["aws_instance_id"]; ok {
-		if region, ok := info["aws_region"]; ok {
-			if account, ok := info["aws_account_id"]; ok {
-				awsUniqueID = fmt.Sprintf("%s_%s_%s", id, region, account)
-			}
-		}
-	}
-	return awsUniqueID
-}
-
-// processAWSInfo maps the aws identity document to metadata keys and values
-func (s *EC2Metadata) processAWSInfo(identity map[string]interface{}) (info map[string]string) {
-	info = make(map[string]string, len(want)+1) // +1 to make room for AWSUniqueId
-
-	// extract desired metadata
-	for k, v := range want {
-		// if a value exists add it to the host info
-		if val, ok := identity[v]; ok {
-			info[fmt.Sprintf("aws_%s", k)] = val.(string)
-		}
+func GetWithIdentityURL(url string) (*EC2Metadata, error) {
+	metadata, err := requestAWSInfo(url)
+	if err != nil {
+		return metadata, errors.New("not an aws box")
 	}
 
-	// build aws unique id if it hasn't been set
-	if s.awsUniqueID == "" {
-		s.awsUniqueID = buildAWSUniqueID(info)
+	if id, err := metadata.GetAWSUniqueID(); err == nil {
+		metadata.AWSUniqueID = id
 	}
-
-	// set uniqueId
-	info["AWSUniqueId"] = s.awsUniqueID
-
-	return info
+	return metadata, nil
 }
 
 // requestAWSInfo makes a request to the desired aws metadata url and marshalls
 // the response to a map[string]interface{}
-func requestAWSInfo(url string) (identity map[string]interface{}, err error) {
-	identity = map[string]interface{}{}
+func requestAWSInfo(url string) (metadata *EC2Metadata, err error) {
+	metadata = &EC2Metadata{}
 	httpClient := &http.Client{Timeout: 200 * time.Millisecond}
 
 	// make the request
 	var res *http.Response
 	if res, err = httpClient.Get(url); err == nil {
-		// read the response
-		var raw []byte
-		if raw, err = ioutil.ReadAll(res.Body); err == nil {
-			// parse the json response
-			err = json.Unmarshal(raw, &identity)
-		}
+		err = json.NewDecoder(res.Body).Decode(metadata)
+		res.Body.Close()
 	}
 
-	return identity, err
+	return metadata, err
 }
