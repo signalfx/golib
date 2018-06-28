@@ -133,7 +133,7 @@ func GetLinuxVersion() (string, error) {
 
 // Memory stores memory collected from the host
 type Memory struct {
-	Total dataunit.USize
+	Total dataunit.Size
 }
 
 // ToStringMap returns a map of key/value metadata about the host memory
@@ -149,7 +149,7 @@ func GetMemory() (*Memory, error) {
 	m := &Memory{}
 	memoryStat, err := memVirtualMemory()
 	if err == nil {
-		m.Total = dataunit.USize(memoryStat.Total)
+		m.Total = dataunit.Size(int64(memoryStat.Total))
 	}
 	return m, err
 }

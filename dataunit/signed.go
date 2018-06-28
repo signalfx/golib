@@ -4,10 +4,6 @@ package dataunit
 // in different units (B, KB, MB, GB, TB, PB, EB)
 type Size int64
 
-func (s Size) convert(scale Size) float64 {
-	return float64(s/scale) + float64(s%scale)/float64(scale)
-}
-
 // Bytes returns the size as a uint64 of bytes
 func (s Size) Bytes() int64 {
 	return int64(s)
@@ -15,32 +11,32 @@ func (s Size) Bytes() int64 {
 
 // Kilobytes returns the size as a float64 of kilobytes
 func (s Size) Kilobytes() float64 {
-	return s.convert(Kilobyte)
+	return float64(s) / float64(Kilobyte)
 }
 
 // Megabytes returns the size as a float64 of kilobytes
 func (s Size) Megabytes() float64 {
-	return s.convert(Megabyte)
+	return float64(s) / float64(Megabyte)
 }
 
 // Gigabytes returns the size as a float64 of gigabytes
 func (s Size) Gigabytes() float64 {
-	return s.convert(Gigabyte)
+	return float64(s) / float64(Gigabyte)
 }
 
 // Terabytes returns the size as a float64 of terabytes
 func (s Size) Terabytes() float64 {
-	return s.convert(Terabyte)
+	return float64(s) / float64(Terabyte)
 }
 
 // Petabytes returns the size as a float64 of petabytes
 func (s Size) Petabytes() float64 {
-	return s.convert(Petabyte)
+	return float64(s) / float64(Petabyte)
 }
 
 // Exabytes returns the size as a float64 of exabytes
 func (s Size) Exabytes() float64 {
-	return s.convert(Exabyte)
+	return float64(s) / float64(Exabyte)
 }
 
 // Common size units
