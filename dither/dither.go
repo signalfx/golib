@@ -51,6 +51,6 @@ func New() *Dither {
 func NewWithInterval(interval []int64) *Dither {
 	return &Dither{
 		nextTime: time.Now().Add(time.Duration(interval[0]) * time.Second).Unix(),
-		interval: interval,
+		interval: interval[1:],
 	}
 }
