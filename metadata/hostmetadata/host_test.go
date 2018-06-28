@@ -3,6 +3,7 @@ package hostmetadata
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/shirou/gopsutil/mem"
@@ -11,7 +12,7 @@ import (
 	"github.com/shirou/gopsutil/host"
 )
 
-func TestGetCPUInfo(t *testing.T) {
+func TestGetCPU(t *testing.T) {
 	type testfixture struct {
 		cpuInfo   func() ([]cpu.InfoStat, error)
 		cpuCounts func(bool) (int, error)
@@ -55,6 +56,12 @@ func TestGetCPUInfo(t *testing.T) {
 					return nil, errors.New("bad cpu info")
 				},
 			},
+			wantInfo: map[string]string{
+				"host_physical_cpus": "0",
+				"host_cpu_cores":     "0",
+				"host_cpu_model":     "",
+				"host_logical_cpus":  "0",
+			},
 			wantErr: true,
 		},
 		{
@@ -76,6 +83,12 @@ func TestGetCPUInfo(t *testing.T) {
 					return 0, errors.New("bad cpu counts")
 				},
 			},
+			wantInfo: map[string]string{
+				"host_physical_cpus": "2",
+				"host_cpu_cores":     "0",
+				"host_cpu_model":     "",
+				"host_logical_cpus":  "0",
+			},
 			wantErr: true,
 		},
 	}
@@ -83,19 +96,19 @@ func TestGetCPUInfo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cpuInfo = tt.fixtures.cpuInfo
 			cpuCounts = tt.fixtures.cpuCounts
-			gotInfo, err := GetCPUInfo()
+			gotInfo, err := GetCPU()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetCPUInfo() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetCPU() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotInfo, tt.wantInfo) {
-				t.Errorf("GetCPUInfo() = %v, want %v", gotInfo, tt.wantInfo)
+			if !reflect.DeepEqual(gotInfo.ToStringMap(), tt.wantInfo) {
+				t.Errorf("GetCPU() = %v, want %v", gotInfo.ToStringMap(), tt.wantInfo)
 			}
 		})
 	}
 }
 
-func TestGetKernelInfo(t *testing.T) {
+func TestGetOS(t *testing.T) {
 	type testfixture struct {
 		hostInfo func() (*host.InfoStat, error)
 		hostEtc  string
@@ -127,24 +140,41 @@ func TestGetKernelInfo(t *testing.T) {
 				"host_linux_version":  "Ubuntu 18.04 LTS",
 			},
 		},
+		{
+			name: "get kernel info error",
+			testfixtures: testfixture{
+				hostInfo: func() (*host.InfoStat, error) {
+					return nil, errors.New("No host info")
+				},
+				hostEtc: "./testdata/lsb-release",
+			},
+			wantInfo: map[string]string{
+				"host_kernel_name":    "",
+				"host_kernel_version": "",
+				"host_os_name":        "",
+				"host_os_version":     "",
+				"host_linux_version":  "",
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hostInfo = tt.testfixtures.hostInfo
 			HostETC = tt.testfixtures.hostEtc
-			gotInfo, err := GetKernelInfo()
+			gotInfo, err := GetOS()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetKernelInfo() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetOS() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotInfo, tt.wantInfo) {
-				t.Errorf("GetKernelInfo() = %v, want %v", gotInfo, tt.wantInfo)
+			if !reflect.DeepEqual(gotInfo.ToStringMap(), tt.wantInfo) {
+				t.Errorf("GetOS() = %v, want %v", gotInfo, tt.wantInfo)
 			}
 		})
 	}
 }
 
-func Test_getLinuxVersion(t *testing.T) {
+func Test_GetLinuxVersion(t *testing.T) {
 	tests := []struct {
 		name    string
 		etc     string
@@ -185,13 +215,13 @@ func Test_getLinuxVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			HostETC = tt.etc
-			got, err := getLinuxVersion()
+			got, err := GetLinuxVersion()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getLinuxVersion() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetLinuxVersion() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("getLinuxVersion() = %v, want %v", got, tt.want)
+				t.Errorf("GetLinuxVersion() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -211,17 +241,18 @@ func TestGetMemory(t *testing.T) {
 					Total: 1024,
 				}, nil
 			},
-			want: map[string]string{"host_mem_total": "1"},
+			want: map[string]string{"host_mem_total": strconv.FormatFloat(1, 'f', 6, 64)},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			memVirtualMemory = tt.memVirtualMemory
-			got, err := GetMemory()
+			mem, err := GetMemory()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetMemory() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			got := mem.ToStringMap()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetMemory() = %v, want %v", got, tt.want)
 			}
