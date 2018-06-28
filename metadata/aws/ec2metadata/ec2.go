@@ -58,11 +58,12 @@ func (e *EC2Metadata) ToStringMap() map[string]string {
 	return metadata
 }
 
-// Get - returns a map with aws metadata including the AWSUniqueID
+// Get returns a map with aws metadata including the AWSUniqueID
 func Get() (*EC2Metadata, error) {
 	return GetWithIdentityURL(identityURL)
 }
 
+// GetWithIdentityURL returns a map with aws metadata including AWSUniqueID
 func GetWithIdentityURL(url string) (*EC2Metadata, error) {
 	metadata, err := requestAWSInfo(url)
 	if err != nil {
@@ -85,7 +86,7 @@ func requestAWSInfo(url string) (metadata *EC2Metadata, err error) {
 	var res *http.Response
 	if res, err = httpClient.Get(url); err == nil {
 		err = json.NewDecoder(res.Body).Decode(metadata)
-		res.Body.Close()
+		_ = res.Body.Close()
 	}
 
 	return metadata, err

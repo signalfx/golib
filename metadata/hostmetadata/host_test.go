@@ -144,7 +144,7 @@ func TestGetOS(t *testing.T) {
 			name: "get kernel info error",
 			testfixtures: testfixture{
 				hostInfo: func() (*host.InfoStat, error) {
-					return nil, errors.New("No host info")
+					return nil, errors.New("no host info")
 				},
 				hostEtc: "./testdata/lsb-release",
 			},

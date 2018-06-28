@@ -9,7 +9,7 @@ func TestUSize_Bytes(t *testing.T) {
 		want uint64
 	}{
 		{
-			name: "test bytes",
+			name: "test ubytes",
 			s:    1 * UByte,
 			want: uint64(1),
 		},
@@ -30,7 +30,7 @@ func TestUSize_Kilobytes(t *testing.T) {
 		want float64
 	}{
 		{
-			name: "test kilobytes",
+			name: "test ukilobytes",
 			s:    1536 * UByte,
 			want: float64(1.5),
 		},
@@ -51,7 +51,7 @@ func TestUSize_Megabytes(t *testing.T) {
 		want float64
 	}{
 		{
-			name: "test megabytes",
+			name: "test umegabytes",
 			s:    1536 * UKilobyte,
 			want: float64(1.5),
 		},
@@ -72,7 +72,7 @@ func TestUSize_Gigabytes(t *testing.T) {
 		want float64
 	}{
 		{
-			name: "test gigabytes",
+			name: "test ugigabytes",
 			s:    1536 * UMegabyte,
 			want: float64(1.5),
 		},
@@ -93,7 +93,7 @@ func TestUSize_Terabytes(t *testing.T) {
 		want float64
 	}{
 		{
-			name: "test terabytes",
+			name: "test uterabytes",
 			s:    1536 * UGigabyte,
 			want: float64(1.5),
 		},
@@ -114,7 +114,7 @@ func TestUSize_Petabytes(t *testing.T) {
 		want float64
 	}{
 		{
-			name: "test petabytes",
+			name: "test upetabytes",
 			s:    1536 * UTerabyte,
 			want: float64(1.5),
 		},
@@ -135,7 +135,7 @@ func TestUSize_Exabytes(t *testing.T) {
 		want float64
 	}{
 		{
-			name: "test exabytes",
+			name: "test uexabytes",
 			s:    1536 * UPetabyte,
 			want: float64(1.5),
 		},
