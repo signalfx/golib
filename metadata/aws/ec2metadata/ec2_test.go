@@ -154,7 +154,7 @@ func TestAWSMetadata_Get(t *testing.T) {
 				t.Errorf("EC2Metadata.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			got := awsMeta.ToMapString()
+			got := awsMeta.ToStringMap()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("EC2Metadata.Get() = %v, want %v", got, tt.want)
 			}

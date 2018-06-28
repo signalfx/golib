@@ -42,8 +42,8 @@ func (e *EC2Metadata) GetAWSUniqueID() (string, error) {
 	return fmt.Sprintf("%s_%s_%s", e.InstanceID, e.Region, e.AccountID), nil
 }
 
-// ToMapString returns the ec2 metadata as a string map
-func (e *EC2Metadata) ToMapString() map[string]string {
+// ToStringMap returns the ec2 metadata as a string map
+func (e *EC2Metadata) ToStringMap() map[string]string {
 	metadata := map[string]string{
 		"aws_availability_zone": e.AvailabilityZone,
 		"aws_instance_type":     e.InstanceType,
