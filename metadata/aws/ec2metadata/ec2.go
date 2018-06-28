@@ -76,8 +76,8 @@ func GetWithIdentityURL(url string) (*EC2Metadata, error) {
 	return metadata, nil
 }
 
-// requestAWSInfo makes a request to the desired aws metadata url and marshalls
-// the response to a map[string]interface{}
+// requestAWSInfo makes a request to the desired aws metadata url and decodes
+// the response into an EC2Metadata struct
 func requestAWSInfo(url string) (metadata *EC2Metadata, err error) {
 	metadata = &EC2Metadata{}
 	httpClient := &http.Client{Timeout: 200 * time.Millisecond}
