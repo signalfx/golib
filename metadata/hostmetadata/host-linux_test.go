@@ -3,6 +3,7 @@
 package hostmetadata
 
 import (
+	"errors"
 	"os"
 	"reflect"
 	"syscall"
@@ -15,9 +16,10 @@ func TestFillOSSpecificData(t *testing.T) {
 		etc          string
 	}
 	tests := []struct {
-		name string
-		args args
-		want *OS
+		name    string
+		args    args
+		want    *OS
+		wantErr bool
 	}{
 		{
 			name: "get uname os information",
@@ -37,6 +39,18 @@ func TestFillOSSpecificData(t *testing.T) {
 				HostLinuxVersion:  "Ubuntu 18.04 LTS",
 			},
 		},
+		{
+			name: "get uname os information uname call fails",
+			args: args{
+				etc: "./testdata/lsb-release",
+				syscallUname: func(in *syscall.Utsname) error {
+					in.Version = [65]int8{}
+					return errors.New("shouldn't work")
+				},
+			},
+			want:    &OS{},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		os.Unsetenv("HOST_ETC")
@@ -47,8 +61,9 @@ func TestFillOSSpecificData(t *testing.T) {
 				return
 			}
 			in := &OS{}
-			if err := fillPlatformSpecificOSData(in); err != nil {
+			if err := fillPlatformSpecificOSData(in); err != nil && tt.wantErr {
 				t.Errorf("fillPlatformSpecificOSData returned an error %v", err)
+				return
 			}
 			if !reflect.DeepEqual(in, tt.want) {
 				t.Errorf("fillPlatformSpecificOSData() = %v, want %v", in, tt.want)
@@ -62,9 +77,10 @@ func TestFillPlatformSpecificCPUData(t *testing.T) {
 		syscallUname func(*syscall.Utsname) error
 	}
 	tests := []struct {
-		name string
-		args args
-		want *CPU
+		name    string
+		args    args
+		want    *CPU
+		wantErr bool
 	}{
 		{
 			name: "get uname cpu information",
@@ -79,14 +95,26 @@ func TestFillPlatformSpecificCPUData(t *testing.T) {
 				HostProcessor: "x86_64",
 			},
 		},
+		{
+			name: "get uname cpu information and the call to uname fails",
+			args: args{
+				syscallUname: func(in *syscall.Utsname) error {
+					in.Machine = [65]int8{}
+					return errors.New("shouldn't work")
+				},
+			},
+			want:    &CPU{},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			syscallUname = tt.args.syscallUname
 			in := &CPU{}
-			if err := fillPlatformSpecificCPUData(in); err != nil {
+			if err := fillPlatformSpecificCPUData(in); err != nil && tt.wantErr {
 				t.Errorf("fillPlatformSpecificCPUData returned an error %v", err)
+				return
 			}
 			if !reflect.DeepEqual(in, tt.want) {
 				t.Errorf("fillPlatformSpecificCPUData() = %v, want %v", in, tt.want)
