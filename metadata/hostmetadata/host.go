@@ -1,8 +1,10 @@
 package hostmetadata
 
 import (
+	"bytes"
 	"errors"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -13,8 +15,14 @@ import (
 	"github.com/signalfx/golib/dataunit"
 )
 
-// HostETC is the path to host etc
-var HostETC = "/etc"
+// HostEtc is the path to host etc and can be set using the env var "HOST_ETC"
+// this is to maintain consistency with gopsutil
+var HostEtc = func() string {
+	if etcPath := os.Getenv("HOST_ETC"); etcPath != "" {
+		return etcPath
+	}
+	return "/etc"
+}
 
 // Map library functions to unexported package variables for testing purposes.
 // It would be great if we could patch this somehow
@@ -29,6 +37,8 @@ type CPU struct {
 	HostLogicalCPUs  int
 	HostCPUCores     int64
 	HostCPUModel     string
+	HostMachine      string
+	HostProcessor    string
 }
 
 // ToStringMap returns the CPU as a string map
@@ -38,6 +48,8 @@ func (c *CPU) ToStringMap() map[string]string {
 		"host_cpu_cores":     strconv.FormatInt(c.HostCPUCores, 10),
 		"host_cpu_model":     c.HostCPUModel,
 		"host_logical_cpus":  strconv.Itoa(c.HostLogicalCPUs),
+		"host_processor":     c.HostProcessor,
+		"host_machine":       c.HostMachine,
 	}
 }
 
@@ -67,14 +79,15 @@ func GetCPU() (info *CPU, err error) {
 		info.HostCPUModel = cpu.ModelName
 	}
 
+	err = fillPlatformSpecificCPUData(info)
 	return info, err
 }
 
 // OS is a struct containing information about the host os
 type OS struct {
 	HostOSName        string
-	HostOSVersion     string
 	HostKernelName    string
+	HostKernelRelease string
 	HostKernelVersion string
 	HostLinuxVersion  string
 }
@@ -83,11 +96,20 @@ type OS struct {
 func (o *OS) ToStringMap() map[string]string {
 	return map[string]string{
 		"host_kernel_name":    o.HostKernelName,
+		"host_kernel_release": o.HostKernelRelease,
 		"host_kernel_version": o.HostKernelVersion,
 		"host_os_name":        o.HostOSName,
-		"host_os_version":     o.HostOSVersion,
 		"host_linux_version":  o.HostLinuxVersion,
 	}
+}
+
+// int8ArrayToByteArray converts an []int8 to []byte
+func int8ArrayToByteArray(in []int8) []byte {
+	bts := make([]byte, len(in))
+	for i, c := range in {
+		bts[i] = byte(c)
+	}
+	return bytes.Trim(bts, "\x00")
 }
 
 // GetOS returns a struct with information about the host os
@@ -100,32 +122,29 @@ func GetOS() (info *OS, err error) {
 	}
 
 	info.HostOSName = hInfo.Platform
-	info.HostOSVersion = hInfo.PlatformVersion
 	info.HostKernelName = hInfo.OS
-	info.HostKernelVersion = hInfo.KernelVersion
-
-	if hInfo.OS == "linux" {
-		info.HostLinuxVersion, _ = GetLinuxVersion()
-	}
-
+	// in gopsutil KernelVersion returns what we would expect for Kernel Release
+	info.HostKernelRelease = hInfo.KernelVersion
+	err = fillPlatformSpecificOSData(info)
 	return info, err
 }
 
 // GetLinuxVersion - adds information about the host linux version to the supplied map
 func GetLinuxVersion() (string, error) {
-	if value, err := getStringFromFile(`DISTRIB_DESCRIPTION="(.*)"`, filepath.Join(HostETC, "lsb-release")); err == nil {
+	etc := HostEtc()
+	if value, err := getStringFromFile(`DISTRIB_DESCRIPTION="(.*)"`, filepath.Join(etc, "lsb-release")); err == nil {
 		return value, nil
 	}
-	if value, err := getStringFromFile(`PRETTY_NAME="(.*)"`, filepath.Join(HostETC, "os-release")); err == nil {
+	if value, err := getStringFromFile(`PRETTY_NAME="(.*)"`, filepath.Join(etc, "os-release")); err == nil {
 		return value, nil
 	}
-	if value, err := ioutil.ReadFile(filepath.Join(HostETC, "centos-release")); err == nil {
+	if value, err := ioutil.ReadFile(filepath.Join(etc, "centos-release")); err == nil {
 		return string(value), nil
 	}
-	if value, err := ioutil.ReadFile(filepath.Join(HostETC, "redhat-release")); err == nil {
+	if value, err := ioutil.ReadFile(filepath.Join(etc, "redhat-release")); err == nil {
 		return string(value), nil
 	}
-	if value, err := ioutil.ReadFile(filepath.Join(HostETC, "system-release")); err == nil {
+	if value, err := ioutil.ReadFile(filepath.Join(etc, "system-release")); err == nil {
 		return string(value), nil
 	}
 	return "", errors.New("unable to find linux version")
