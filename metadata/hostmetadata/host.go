@@ -1,6 +1,7 @@
 package hostmetadata
 
 import (
+	"bytes"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -104,11 +105,11 @@ func (o *OS) ToStringMap() map[string]string {
 
 // Int8ArrayToByteArray converts an []int8 to []byte
 func Int8ArrayToByteArray(in []int8) []byte {
-	bytes := make([]byte, len(in))
+	bts := make([]byte, len(in))
 	for i, c := range in {
-		bytes[i] = byte(c)
+		bts[i] = byte(c)
 	}
-	return bytes
+	return bytes.Trim(bts, "\x00")
 }
 
 // GetOS returns a struct with information about the host os

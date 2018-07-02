@@ -20,11 +20,10 @@ func TestFillOSSpecificData(t *testing.T) {
 		want *OS
 	}{
 		{
-			name: "get uname information",
+			name: "get uname os information",
 			args: args{
 				etc: "./testdata/lsb-release",
 				syscallUname: func(in *syscall.Utsname) error {
-
 					in.Version = [65]int8{35, 57, 45, 85, 98, 117, 110, 116,
 						117, 32, 83, 77, 80, 32, 87, 101, 100,
 						32, 77, 97, 121, 32, 49, 54, 32, 49,
@@ -40,6 +39,7 @@ func TestFillOSSpecificData(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			syscallUname = tt.args.syscallUname
 			if err := os.Setenv("HOST_ETC", tt.args.etc); err != nil {
@@ -47,8 +47,11 @@ func TestFillOSSpecificData(t *testing.T) {
 				return
 			}
 			in := &OS{}
-			if got := fillPlatformSpecificOSData(in); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("fillPlatformSpecificOSData() = %v, want %v", got, tt.want)
+			if err := fillPlatformSpecificOSData(in); err != nil {
+				t.Errorf("fillPlatformSpecificOSData returned an error %v", err)
+			}
+			if !reflect.DeepEqual(in, tt.want) {
+				t.Errorf("fillPlatformSpecificOSData() = %v, want %v", in, tt.want)
 			}
 		})
 	}
@@ -64,7 +67,7 @@ func TestFillPlatformSpecificCPUData(t *testing.T) {
 		want *CPU
 	}{
 		{
-			name: "get uname information",
+			name: "get uname cpu information",
 			args: args{
 				syscallUname: func(in *syscall.Utsname) error {
 					in.Machine = [65]int8{120, 56, 54, 95, 54, 52}
@@ -78,11 +81,15 @@ func TestFillPlatformSpecificCPUData(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			syscallUname = tt.args.syscallUname
 			in := &CPU{}
-			if got := fillPlatformSpecificCPUData(in); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("fillPlatformSpecificCPUData() = %v, want %v", got, tt.want)
+			if err := fillPlatformSpecificCPUData(in); err != nil {
+				t.Errorf("fillPlatformSpecificCPUData returned an error %v", err)
+			}
+			if !reflect.DeepEqual(in, tt.want) {
+				t.Errorf("fillPlatformSpecificCPUData() = %v, want %v", in, tt.want)
 			}
 		})
 	}
