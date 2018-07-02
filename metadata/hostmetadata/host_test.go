@@ -160,7 +160,6 @@ func TestGetOS(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			hostInfo = tt.testfixtures.hostInfo
 			if err := os.Setenv("HOST_ETC", tt.testfixtures.hostEtc); err != nil {
@@ -179,6 +178,7 @@ func TestGetOS(t *testing.T) {
 				}
 			}
 		})
+		os.Unsetenv("HOST_ETC")
 	}
 }
 
@@ -221,7 +221,6 @@ func Test_GetLinuxVersion(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			if err := os.Setenv("HOST_ETC", tt.etc); err != nil {
 				t.Errorf("GetLinuxVersion() error = %v failed to set HOST_ETC env var", err)
@@ -236,6 +235,7 @@ func Test_GetLinuxVersion(t *testing.T) {
 				t.Errorf("GetLinuxVersion() = %v, want %v", got, tt.want)
 			}
 		})
+		os.Unsetenv("HOST_ETC")
 	}
 }
 
@@ -286,7 +286,6 @@ func TestHostEtc(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.etc != "" {
 				if err := os.Setenv("HOST_ETC", tt.etc); err != nil {
@@ -298,6 +297,7 @@ func TestHostEtc(t *testing.T) {
 				t.Errorf("HostEtc = %v, want %v", got, tt.want)
 			}
 		})
+		os.Unsetenv("HOST_ETC")
 	}
 
 }

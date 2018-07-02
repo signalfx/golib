@@ -53,7 +53,6 @@ func TestFillOSSpecificData(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			syscallUname = tt.args.syscallUname
 			if err := os.Setenv("HOST_ETC", tt.args.etc); err != nil {
@@ -61,14 +60,18 @@ func TestFillOSSpecificData(t *testing.T) {
 				return
 			}
 			in := &OS{}
-			if err := fillPlatformSpecificOSData(in); err != nil && tt.wantErr {
-				t.Errorf("fillPlatformSpecificOSData returned an error %v", err)
+			if err := fillPlatformSpecificOSData(in); err != nil {
+				if !tt.wantErr {
+					t.Errorf("fillPlatformSpecificOSData returned an error %v", err)
+				}
 				return
 			}
 			if !reflect.DeepEqual(in, tt.want) {
 				t.Errorf("fillPlatformSpecificOSData() = %v, want %v", in, tt.want)
 			}
 		})
+		os.Unsetenv("HOST_ETC")
+		syscallUname = syscall.Uname
 	}
 }
 
@@ -108,17 +111,20 @@ func TestFillPlatformSpecificCPUData(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			syscallUname = tt.args.syscallUname
 			in := &CPU{}
-			if err := fillPlatformSpecificCPUData(in); err != nil && tt.wantErr {
-				t.Errorf("fillPlatformSpecificCPUData returned an error %v", err)
+			if err := fillPlatformSpecificCPUData(in); err != nil {
+				if !tt.wantErr {
+					t.Errorf("fillPlatformSpecificCPUData returned an error %v", err)
+				}
 				return
 			}
 			if !reflect.DeepEqual(in, tt.want) {
 				t.Errorf("fillPlatformSpecificCPUData() = %v, want %v", in, tt.want)
 			}
 		})
+		os.Unsetenv("HOST_ETC")
+		syscallUname = syscall.Uname
 	}
 }
