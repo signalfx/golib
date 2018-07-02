@@ -57,7 +57,6 @@ func TestFillOSSpecificData(t *testing.T) {
 func TestFillPlatformSpecificCPUData(t *testing.T) {
 	type args struct {
 		syscallUname func(*syscall.Utsname) error
-		etc          string
 	}
 	tests := []struct {
 		name string
