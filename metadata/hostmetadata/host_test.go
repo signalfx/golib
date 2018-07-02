@@ -2,14 +2,14 @@ package hostmetadata
 
 import (
 	"errors"
+	"os"
 	"reflect"
 	"strconv"
 	"testing"
 
-	"github.com/shirou/gopsutil/mem"
-
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/mem"
 )
 
 func TestGetCPU(t *testing.T) {
@@ -101,8 +101,12 @@ func TestGetCPU(t *testing.T) {
 				t.Errorf("GetCPU() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotInfo.ToStringMap(), tt.wantInfo) {
-				t.Errorf("GetCPU() = %v, want %v", gotInfo.ToStringMap(), tt.wantInfo)
+
+			gotMap := gotInfo.ToStringMap()
+			for k, v := range tt.wantInfo {
+				if gv, ok := gotMap[k]; !ok || v != gv {
+					t.Errorf("GetCPU() expected key '%s' was found %v.  Expected value '%s' and got '%s'.", k, ok, v, gv)
+				}
 			}
 		})
 	}
@@ -134,10 +138,8 @@ func TestGetOS(t *testing.T) {
 			},
 			wantInfo: map[string]string{
 				"host_kernel_name":    "linux",
-				"host_kernel_version": "4.4.0-112-generic",
+				"host_kernel_release": "4.4.0-112-generic",
 				"host_os_name":        "ubuntu",
-				"host_os_version":     "16.04",
-				"host_linux_version":  "Ubuntu 18.04 LTS",
 			},
 		},
 		{
@@ -152,23 +154,29 @@ func TestGetOS(t *testing.T) {
 				"host_kernel_name":    "",
 				"host_kernel_version": "",
 				"host_os_name":        "",
-				"host_os_version":     "",
 				"host_linux_version":  "",
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
+		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
 			hostInfo = tt.testfixtures.hostInfo
-			HostETC = tt.testfixtures.hostEtc
+			if err := os.Setenv("HOST_ETC", tt.testfixtures.hostEtc); err != nil {
+				t.Errorf("GetOS() error = %v failed to set HOST_ETC env var", err)
+				return
+			}
 			gotInfo, err := GetOS()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetOS() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotInfo.ToStringMap(), tt.wantInfo) {
-				t.Errorf("GetOS() = %v, want %v", gotInfo, tt.wantInfo)
+			gotMap := gotInfo.ToStringMap()
+			for k, v := range tt.wantInfo {
+				if gv, ok := gotMap[k]; !ok || v != gv {
+					t.Errorf("GetOS() expected key '%s' was found %v.  Expected value '%s' and got '%s'.", k, ok, v, gv)
+				}
 			}
 		})
 	}
@@ -213,8 +221,12 @@ func Test_GetLinuxVersion(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		os.Unsetenv("HOST_ETC")
 		t.Run(tt.name, func(t *testing.T) {
-			HostETC = tt.etc
+			if err := os.Setenv("HOST_ETC", tt.etc); err != nil {
+				t.Errorf("GetLinuxVersion() error = %v failed to set HOST_ETC env var", err)
+				return
+			}
 			got, err := GetLinuxVersion()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetLinuxVersion() error = %v, wantErr %v", err, tt.wantErr)
@@ -255,6 +267,62 @@ func TestGetMemory(t *testing.T) {
 			got := mem.ToStringMap()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetMemory() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHostEtc(t *testing.T) {
+	tests := []struct {
+		name string
+		etc  string
+		want string
+	}{
+		{
+			name: "test default host etc",
+			etc:  "",
+			want: "/etc",
+		},
+	}
+
+	for _, tt := range tests {
+		os.Unsetenv("HOST_ETC")
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.etc != "" {
+				if err := os.Setenv("HOST_ETC", tt.etc); err != nil {
+					t.Errorf("HostEtc error = %v failed to set HOST_ETC env var", err)
+					return
+				}
+			}
+			if got := HostEtc(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("HostEtc = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+}
+
+func TestInt8ArrayToByteArray(t *testing.T) {
+	type args struct {
+		in []int8
+	}
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		{
+			name: "convert int8 array to byte array",
+			args: args{
+				in: []int8{72, 69, 76, 76, 79, 32, 87, 79, 82, 76, 68},
+			},
+			want: []byte{72, 69, 76, 76, 79, 32, 87, 79, 82, 76, 68},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Int8ArrayToByteArray(tt.args.in); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Int8ArrayToByteArray() = %v, want %v", got, tt.want)
 			}
 		})
 	}
