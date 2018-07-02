@@ -321,8 +321,8 @@ func TestInt8ArrayToByteArray(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Int8ArrayToByteArray(tt.args.in); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Int8ArrayToByteArray() = %v, want %v", got, tt.want)
+			if got := int8ArrayToByteArray(tt.args.in); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("int8ArrayToByteArray() = %v, want %v", got, tt.want)
 			}
 		})
 	}
