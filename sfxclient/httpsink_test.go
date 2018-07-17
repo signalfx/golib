@@ -538,7 +538,7 @@ func TestHTTPTraceSink(t *testing.T) {
 		})
 
 		Convey("with a test endpoint", func() {
-			retString := `{"invalid":{"invalidSpanID":[]}, "valid":1}`
+			retString := `{"invalid":{}, "valid":1}`
 			var blockResponse chan struct{}
 			var cancelCallback func()
 			seenSpans := []*trace.Span{}
@@ -582,12 +582,12 @@ func TestHTTPTraceSink(t *testing.T) {
 			Convey("should error on invalid spans", func() {
 				retString = `{"invalid":{"invalidSpanID":["abcdef1234567890"]}, "valid":0}`
 				err := s.AddSpans(ctx, traces)
-				So(errors.Details(err), ShouldContainSubstring, "some spans were invalid")
+				So(errors.Details(err), ShouldContainSubstring, `"invalidSpanID":["abcdef1234567890"]`)
 			})
 			Convey("should error on invalid json response", func() {
-				retString = `OK`
+				retString = `"OK"`
 				err := s.AddSpans(ctx, traces)
-				So(errors.Details(err), ShouldContainSubstring, "cannot unmarshal response body")
+				So(err, ShouldBeNil)
 			})
 			Reset(func() {
 				if blockResponse != nil {
