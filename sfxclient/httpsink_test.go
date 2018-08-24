@@ -615,3 +615,13 @@ func BenchmarkHTTPSink_AddSpans(b *testing.B) {
 	}
 	b.SetBytes(bytes)
 }
+
+var GoSpanSource = &goSpans{}
+
+type goSpans struct{}
+
+func (g *goSpans) Spans() []*trace.Span {
+	var tt []*trace.Span
+	json.Unmarshal([]byte(longTraceExample), &tt)
+	return tt
+}
