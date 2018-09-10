@@ -12,6 +12,7 @@ import (
 	"github.com/signalfx/golib/datapoint/dptest"
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 	"github.com/signalfx/golib/trace"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,10 +24,16 @@ func TestCounterSink(t *testing.T) {
 		{},
 		{},
 	}
+	i := int64(0)
 	ctx := context.Background()
 	bs := dptest.NewBasicSink()
 	count := &Counter{
-		Logger: log.Discard,
+		Logger:    log.Discard,
+		LoggerKey: logkey.Caller,
+		LoggerFunc: func(ctx context.Context) string {
+			atomic.AddInt64(&i, 1)
+			return "blarg"
+		},
 	}
 	histo := NewHistoCounter(count)
 	middleSink := NextWrap(histo)(bs)
@@ -47,6 +54,7 @@ func TestCounterSink(t *testing.T) {
 		t.Fatal("Expected an error!")
 	}
 	assert.Equal(t, int64(1), atomic.LoadInt64(&count.TotalProcessErrors), "Error should be sent through")
+	assert.Equal(t, int64(1), i, "Number of errors should equal log statements")
 }
 
 func TestCounterSinkEvent(t *testing.T) {
