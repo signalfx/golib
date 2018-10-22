@@ -124,6 +124,11 @@ func ExampleHTTPSink() {
 func TestHTTPDatapointSink(t *testing.T) {
 	Convey("A default sink", t, func() {
 		s := NewHTTPSink()
+		count := 0
+		s.ResponseCallback = func(resp *http.Response, responseBody []byte) {
+			count++
+		}
+		s.AdditionalHeaders = map[string]string{"key": "value"}
 		s.DisableCompression = true
 		ctx := context.Background()
 		dps := GoMetricsSource.Datapoints()
@@ -264,6 +269,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "invalid response body")
 				retString = `INVALID_JSON`
 				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "cannot unmarshal response body")
+				So(count, ShouldEqual, 2)
 			})
 			Convey("context cancel should work", func() {
 				blockResponse = make(chan struct{})
