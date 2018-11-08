@@ -1,14 +1,13 @@
 package disco
 
 import (
+	"context"
 	"math/rand"
 	"net"
-
 	"time"
 
-	"github.com/signalfx/golib/errors"
-
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/logkey"
 )
@@ -46,11 +45,11 @@ func NewThriftTransportWithMaxBufferSize(service *Service, timeout time.Duration
 }
 
 // Flush the underline transport
-func (d *ThriftTransport) Flush() (err error) {
+func (d *ThriftTransport) Flush(ctx context.Context) (err error) {
 	if d.currentTransport == nil {
 		return nil
 	}
-	err = d.currentTransport.Flush()
+	err = d.currentTransport.Flush(ctx)
 	if err != nil {
 		log.IfErr(d.logger, d.currentTransport.Close())
 		d.currentTransport = nil

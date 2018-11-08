@@ -3,9 +3,6 @@ package pdbcycle
 import (
 	"bytes"
 	"context"
-	"github.com/boltdb/bolt"
-	"github.com/signalfx/golib/boltcycle"
-	"github.com/signalfx/golib/errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,6 +11,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/boltdb/bolt"
+	"github.com/signalfx/golib/boltcycle"
+	"github.com/signalfx/golib/errors"
 )
 
 type blob struct {
@@ -146,10 +147,10 @@ type CyclePDB struct {
 	asyncErrors chan<- error
 	// wg controls waiting for the read movement loop
 	wg sync.WaitGroup
-	// stats records useful operation information for reporting back out by the user
-	stats boltcycle.Stats
 	// whether we should create a file on initialization or not
 	initdb bool
+	// stats records useful operation information for reporting back out by the user
+	stats boltcycle.Stats
 }
 
 var errorUnableToFindRootBucket = errors.New("unable to find root bucket")
