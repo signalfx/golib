@@ -1,6 +1,7 @@
 package disco
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -61,9 +62,11 @@ func TestThrift(t *testing.T) {
 	trans.WrappedFactory = thrift.NewTTransportFactory()
 	assert.NotNil(t, trans)
 
+	ctx := context.Background()
+
 	assert.False(t, trans.IsOpen())
 
-	assert.NoError(t, trans.Flush())
+	assert.NoError(t, trans.Flush(ctx))
 	assert.NoError(t, trans.Close())
 
 	_, err = trans.Read([]byte{})
@@ -89,7 +92,7 @@ func TestThrift(t *testing.T) {
 	_, err = trans.Write([]byte{0})
 	assert.NoError(t, err)
 
-	assert.NoError(t, trans.Flush())
+	assert.NoError(t, trans.Flush(ctx))
 
 	assert.NoError(t, trans.NextConnection())
 }
@@ -99,7 +102,7 @@ var errNope = errors.New("nope")
 type errorTransport struct {
 }
 
-func (d *errorTransport) Flush() (err error) {
+func (d *errorTransport) Flush(ctx context.Context) (err error) {
 	return errNope
 }
 
@@ -134,9 +137,10 @@ func TestCurrentTransportErrors(t *testing.T) {
 		currentTransport: &errorTransport{},
 		logger:           log.Discard,
 	}
+	ctx := context.Background()
 	assert.Error(t, trans.Close())
 	trans.currentTransport = &errorTransport{}
-	assert.Error(t, trans.Flush())
+	assert.Error(t, trans.Flush(ctx))
 
 	trans.currentTransport = &errorTransport{}
 	_, err := trans.Read([]byte{})

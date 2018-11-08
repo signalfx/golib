@@ -8,7 +8,8 @@ go:
 
 before_install:
   - go get -u github.com/signalfx/gobuild
-  - go get -u github.com/alecthomas/gometalinter 
+  - go get -u github.com/alecthomas/gometalinter
+  - go get -u github.com/golang/dep/cmd/dep
   - gometalinter --install --update
 
 install:
@@ -16,10 +17,10 @@ install:
   - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
   - echo -e "Host git.apache.org\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
   - go get -d -v -t ./...
-  - CUR=$PWD
-  - cd "$GOPATH/src/git.apache.org/thrift.git/"
-  - git checkout 327ebb6c2b6df8bf075da02ef45a2a034e9b79ba
-  - cd "$CUR"
+#  - CUR=$PWD
+#  - cd "$GOPATH/src/git.apache.org/thrift.git/"
+#  - git checkout 327ebb6c2b6df8bf075da02ef45a2a034e9b79ba
+#  - cd "$CUR"
 
 script:
   - export PATH=$HOME/gopath/bin:$PATH
