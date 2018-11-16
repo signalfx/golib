@@ -449,8 +449,8 @@ func (c *CyclePDB) moveRecentReads(readLocations []readToLocation) error {
 	})
 }
 
-//// Read bytes from the first available bucket.  Do not modify the returned bytes because
-//// they are recopied to later cycle databases if needed.
+// Read bytes from the first available bucket.  Do not modify the returned bytes because
+// they are recopied to later cycle databases if needed.
 func (c *CyclePDB) Read(toread [][]byte) ([][]byte, error) {
 	atomic.AddInt64(&c.stats.TotalReadCount, int64(len(toread)))
 	readLocations, err := c.indexToLocation(toread)
@@ -460,7 +460,9 @@ func (c *CyclePDB) Read(toread [][]byte) ([][]byte, error) {
 
 	skips := int64(0)
 	adds := int64(0)
-	for _, readLocation := range readLocations {
+	res := make([][]byte, len(readLocations))
+	for idx, readLocation := range readLocations {
+		res[idx] = readLocation.value
 		if readLocation.needsCopy {
 			select {
 			case c.readMovements <- readLocation:
@@ -470,6 +472,7 @@ func (c *CyclePDB) Read(toread [][]byte) ([][]byte, error) {
 			}
 		}
 	}
+
 	if skips != 0 {
 		atomic.AddInt64(&c.stats.TotalReadMovementsSkipped, skips)
 	}
@@ -477,10 +480,6 @@ func (c *CyclePDB) Read(toread [][]byte) ([][]byte, error) {
 		atomic.AddInt64(&c.stats.TotalReadMovementsAdded, adds)
 	}
 
-	res := make([][]byte, len(readLocations))
-	for i, rl := range readLocations {
-		res[i] = rl.value
-	}
 	return res, nil
 }
 
