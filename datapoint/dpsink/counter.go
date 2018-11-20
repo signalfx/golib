@@ -1,10 +1,11 @@
 package dpsink
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
-	"context"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/log"
@@ -18,17 +19,18 @@ var DefaultLogger = log.DefaultLogger.CreateChild()
 
 // Counter records stats on datapoints to go through it as a sink middleware
 type Counter struct {
-	TotalProcessErrors int64
-	TotalDatapoints    int64
-	TotalEvents        int64
-	TotalSpans         int64
-	TotalProcessCalls  int64
-	ProcessErrorPoints int64
-	ProcessErrorEvents int64
-	ProcessErrorSpans  int64
-	TotalProcessTimeNs int64
-	CallsInFlight      int64
-	Logger             log.Logger
+	TotalProcessErrors          int64
+	TotalDatapoints             int64
+	TotalEvents                 int64
+	TotalSpans                  int64
+	TotalProcessCalls           int64
+	ProcessErrorPoints          int64
+	ProcessErrorEvents          int64
+	ProcessErrorSpans           int64
+	TotalProcessTimeNs          int64
+	CallsInFlight               int64
+	IncomingDatapointsBatchSize int64
+	Logger                      log.Logger
 }
 
 // Datapoints returns counter stats
@@ -44,6 +46,7 @@ func (c *Counter) Datapoints() []*datapoint.Datapoint {
 		sfxclient.Cumulative("dropped_spans", nil, atomic.LoadInt64(&c.ProcessErrorSpans)),
 		sfxclient.Cumulative("process_time_ns", nil, atomic.LoadInt64(&c.TotalProcessTimeNs)),
 		sfxclient.Gauge("calls_in_flight", nil, atomic.LoadInt64(&c.CallsInFlight)),
+		sfxclient.Gauge("datapoints_batch_size_bytes", nil, atomic.LoadInt64(&c.IncomingDatapointsBatchSize)),
 	}
 }
 
@@ -52,6 +55,7 @@ func (c *Counter) AddDatapoints(ctx context.Context, points []*datapoint.Datapoi
 	atomic.AddInt64(&c.TotalDatapoints, int64(len(points)))
 	atomic.AddInt64(&c.TotalProcessCalls, 1)
 	atomic.AddInt64(&c.CallsInFlight, 1)
+	c.countIncomingBatchSize(points)
 	start := time.Now()
 	err := next.AddDatapoints(ctx, points)
 	atomic.AddInt64(&c.TotalProcessTimeNs, time.Since(start).Nanoseconds())
@@ -62,6 +66,16 @@ func (c *Counter) AddDatapoints(ctx context.Context, points []*datapoint.Datapoi
 		c.logger().Log(log.Err, err, "Unable to process datapoints")
 	}
 	return err
+}
+
+func (c *Counter) countIncomingBatchSize(points []*datapoint.Datapoint) {
+	batchSize := int64(0)
+	for _, point := range points {
+		batchSize += int64(unsafe.Sizeof(point))
+	}
+	if batchSize != 0 {
+		atomic.AddInt64(&c.IncomingDatapointsBatchSize, batchSize)
+	}
 }
 
 func (c *Counter) logger() log.Logger {
