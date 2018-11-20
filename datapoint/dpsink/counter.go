@@ -1,10 +1,11 @@
 package dpsink
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
-	"context"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/log"
@@ -18,33 +19,36 @@ var DefaultLogger = log.DefaultLogger.CreateChild()
 
 // Counter records stats on datapoints to go through it as a sink middleware
 type Counter struct {
-	TotalProcessErrors int64
-	TotalDatapoints    int64
-	TotalEvents        int64
-	TotalSpans         int64
-	TotalProcessCalls  int64
-	ProcessErrorPoints int64
-	ProcessErrorEvents int64
-	ProcessErrorSpans  int64
-	TotalProcessTimeNs int64
-	CallsInFlight      int64
-	Logger             log.Logger
+	TotalProcessErrors          int64
+	TotalDatapoints             int64
+	TotalEvents                 int64
+	TotalSpans                  int64
+	TotalProcessCalls           int64
+	ProcessErrorPoints          int64
+	ProcessErrorEvents          int64
+	ProcessErrorSpans           int64
+	TotalProcessTimeNs          int64
+	CallsInFlight               int64
+	IncomingDatapointsBatchSize *sfxclient.RollingBucket
+	Logger                      log.Logger
 }
 
 // Datapoints returns counter stats
 func (c *Counter) Datapoints() []*datapoint.Datapoint {
-	return []*datapoint.Datapoint{
-		sfxclient.Cumulative("total_process_errors", nil, atomic.LoadInt64(&c.TotalProcessErrors)),
-		sfxclient.Cumulative("total_datapoints", nil, atomic.LoadInt64(&c.TotalDatapoints)),
-		sfxclient.Cumulative("total_events", nil, atomic.LoadInt64(&c.TotalEvents)),
-		sfxclient.Cumulative("total_spans", nil, atomic.LoadInt64(&c.TotalSpans)),
-		sfxclient.Cumulative("total_process_calls", nil, atomic.LoadInt64(&c.TotalProcessCalls)),
-		sfxclient.Cumulative("dropped_points", nil, atomic.LoadInt64(&c.ProcessErrorPoints)),
-		sfxclient.Cumulative("dropped_events", nil, atomic.LoadInt64(&c.ProcessErrorEvents)),
-		sfxclient.Cumulative("dropped_spans", nil, atomic.LoadInt64(&c.ProcessErrorSpans)),
-		sfxclient.Cumulative("process_time_ns", nil, atomic.LoadInt64(&c.TotalProcessTimeNs)),
-		sfxclient.Gauge("calls_in_flight", nil, atomic.LoadInt64(&c.CallsInFlight)),
-	}
+	dps := c.IncomingDatapointsBatchSize.Datapoints()
+	return append(dps,
+		[]*datapoint.Datapoint{
+			sfxclient.Cumulative("total_process_errors", nil, atomic.LoadInt64(&c.TotalProcessErrors)),
+			sfxclient.Cumulative("total_datapoints", nil, atomic.LoadInt64(&c.TotalDatapoints)),
+			sfxclient.Cumulative("total_events", nil, atomic.LoadInt64(&c.TotalEvents)),
+			sfxclient.Cumulative("total_spans", nil, atomic.LoadInt64(&c.TotalSpans)),
+			sfxclient.Cumulative("total_process_calls", nil, atomic.LoadInt64(&c.TotalProcessCalls)),
+			sfxclient.Cumulative("dropped_points", nil, atomic.LoadInt64(&c.ProcessErrorPoints)),
+			sfxclient.Cumulative("dropped_events", nil, atomic.LoadInt64(&c.ProcessErrorEvents)),
+			sfxclient.Cumulative("dropped_spans", nil, atomic.LoadInt64(&c.ProcessErrorSpans)),
+			sfxclient.Cumulative("process_time_ns", nil, atomic.LoadInt64(&c.TotalProcessTimeNs)),
+			sfxclient.Gauge("calls_in_flight", nil, atomic.LoadInt64(&c.CallsInFlight)),
+		}...)
 }
 
 // AddDatapoints will send points to the next sink and track points send to the next sink
@@ -52,6 +56,7 @@ func (c *Counter) AddDatapoints(ctx context.Context, points []*datapoint.Datapoi
 	atomic.AddInt64(&c.TotalDatapoints, int64(len(points)))
 	atomic.AddInt64(&c.TotalProcessCalls, 1)
 	atomic.AddInt64(&c.CallsInFlight, 1)
+	c.countIncomingBatchSize(points)
 	start := time.Now()
 	err := next.AddDatapoints(ctx, points)
 	atomic.AddInt64(&c.TotalProcessTimeNs, time.Since(start).Nanoseconds())
@@ -62,6 +67,17 @@ func (c *Counter) AddDatapoints(ctx context.Context, points []*datapoint.Datapoi
 		c.logger().Log(log.Err, err, "Unable to process datapoints")
 	}
 	return err
+}
+
+func (c *Counter) countIncomingBatchSize(points []*datapoint.Datapoint) {
+	punchDataTime := time.Now()
+	batchSize := float64(0)
+	for _, point := range points {
+		batchSize += float64(unsafe.Sizeof(point))
+	}
+	if batchSize != 0 {
+		c.IncomingDatapointsBatchSize.AddAt(batchSize, punchDataTime)
+	}
 }
 
 func (c *Counter) logger() log.Logger {
@@ -131,7 +147,7 @@ func (h *HistoCounter) AddSpans(ctx context.Context, spans []*trace.Span, next t
 	return h.sink.AddSpans(ctx, spans, next)
 }
 
-// Datapoints is rather self explanitory
+// Datapoints is rather self explanatory
 func (h *HistoCounter) Datapoints() []*datapoint.Datapoint {
 	dps := h.sink.Datapoints()
 	dps = append(dps, h.DatapointBucket.Datapoints()...)
@@ -142,9 +158,10 @@ func (h *HistoCounter) Datapoints() []*datapoint.Datapoint {
 
 // NewHistoCounter is a constructor
 func NewHistoCounter(sink *Counter) *HistoCounter {
+	sink.IncomingDatapointsBatchSize = sfxclient.NewRollingBucket("incoming_datapoint_batch_size", map[string]string{"path": "server"})
 	return &HistoCounter{
 		sink:            sink,
-		DatapointBucket: sfxclient.NewRollingBucket("datapoint_batch_size", map[string]string{}),
+		DatapointBucket: sfxclient.NewRollingBucket("datapoint_batch_len", map[string]string{}),
 		EventBucket:     sfxclient.NewRollingBucket("event_batch_size", map[string]string{}),
 		SpanBucket:      sfxclient.NewRollingBucket("span_batch_size", map[string]string{}),
 	}
