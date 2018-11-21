@@ -181,5 +181,6 @@ func TestDatapointBatchSize(t *testing.T) {
 		So(dpNamed("incoming_datapoint_batch_size.p99", dps).Value.String(), ShouldEqual, "12345678")
 		So(dpNamed("incoming_datapoint_batch_size.min", dps).Value.String(), ShouldEqual, "12345678")
 		So(dpNamed("incoming_datapoint_batch_size.max", dps).Value.String(), ShouldEqual, "12345678")
+
 	})
 }
