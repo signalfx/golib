@@ -158,10 +158,10 @@ func (h *HistoCounter) Datapoints() []*datapoint.Datapoint {
 
 // NewHistoCounter is a constructor
 func NewHistoCounter(sink *Counter) *HistoCounter {
-	sink.IncomingDatapointsBatchSize = sfxclient.NewRollingBucket("incoming_datapoint_batch_size", map[string]string{"path": "server"})
+	sink.IncomingDatapointsBatchSize = sfxclient.NewRollingBucket("batch_sizes", map[string]string{"path": "server"})
 	return &HistoCounter{
 		sink:            sink,
-		DatapointBucket: sfxclient.NewRollingBucket("datapoint_batch_len", map[string]string{}),
+		DatapointBucket: sfxclient.NewRollingBucket("datapoint_batch_size", map[string]string{}),
 		EventBucket:     sfxclient.NewRollingBucket("event_batch_size", map[string]string{}),
 		SpanBucket:      sfxclient.NewRollingBucket("span_batch_size", map[string]string{}),
 	}

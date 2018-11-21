@@ -140,7 +140,7 @@ func TestDatapointBatchSize(t *testing.T) {
 
 	count := &Counter{
 		Logger:                      log.Discard,
-		IncomingDatapointsBatchSize: sfxclient.NewRollingBucket("incoming_datapoint_batch_size", map[string]string{"path": "server"}),
+		IncomingDatapointsBatchSize: sfxclient.NewRollingBucket("batch_sizes", map[string]string{"path": "server"}),
 	}
 	r := count.IncomingDatapointsBatchSize
 	tk := timekeepertest.NewStubClock(time.Now())
@@ -148,14 +148,14 @@ func TestDatapointBatchSize(t *testing.T) {
 	Convey("Get datapoints should work", t, func() {
 		dps := r.Datapoints()
 		So(len(dps), ShouldEqual, 3)
-		So(dpNamed("incoming_datapoint_batch_size.sum", dps).Value.String(), ShouldEqual, "0")
+		So(dpNamed("batch_sizes.sum", dps).Value.String(), ShouldEqual, "0")
 	})
 
 	Convey("Unadvanced clock should get only the normal points", t, func() {
 		r.Add(float64(dp1.Value.(datapoint.IntValue).Int()))
 		dps := r.Datapoints()
 		So(len(dps), ShouldEqual, 3)
-		So(dpNamed("incoming_datapoint_batch_size.sum", dps).Value.String(), ShouldEqual, dp1.Value.String())
+		So(dpNamed("batch_sizes.sum", dps).Value.String(), ShouldEqual, dp1.Value.String())
 	})
 
 	Convey("Advanced clock should get the one point", t, func() {
@@ -164,8 +164,8 @@ func TestDatapointBatchSize(t *testing.T) {
 		r.Add(float64(dp2.Value.(datapoint.IntValue).Int()))
 		dps := r.Datapoints()
 		So(len(dps), ShouldEqual, 3+len(r.Quantiles)+2)
-		So(dpNamed("incoming_datapoint_batch_size.sum", dps).Value.String(), ShouldEqual, "12592590")
-		So(dpNamed("incoming_datapoint_batch_size.p90", dps).Value.String(), ShouldEqual, "123456")
+		So(dpNamed("batch_sizes.sum", dps).Value.String(), ShouldEqual, "12592590")
+		So(dpNamed("batch_sizes.p90", dps).Value.String(), ShouldEqual, "123456")
 	})
 
 	Convey("Percentiles testing for datapoints batch size", t, func() {
@@ -174,12 +174,13 @@ func TestDatapointBatchSize(t *testing.T) {
 			r.Add(float64(i * 1000))
 		}
 		dps := r.Datapoints()
-		So(dpNamed("incoming_datapoint_batch_size.sum", dps).Value.String(), ShouldEqual, "17642590")
-		So(dpNamed("incoming_datapoint_batch_size.p25", dps).Value.String(), ShouldEqual, "12345678")
-		So(dpNamed("incoming_datapoint_batch_size.p50", dps).Value.String(), ShouldEqual, "12345678")
-		So(dpNamed("incoming_datapoint_batch_size.p90", dps).Value.String(), ShouldEqual, "12345678")
-		So(dpNamed("incoming_datapoint_batch_size.p99", dps).Value.String(), ShouldEqual, "12345678")
-		So(dpNamed("incoming_datapoint_batch_size.min", dps).Value.String(), ShouldEqual, "12345678")
-		So(dpNamed("incoming_datapoint_batch_size.max", dps).Value.String(), ShouldEqual, "12345678")
+		So(dpNamed("batch_sizes.sum", dps).Value.String(), ShouldEqual, "17642590")
+		So(dpNamed("batch_sizes.p25", dps).Value.String(), ShouldEqual, "12345678")
+		So(dpNamed("batch_sizes.p50", dps).Value.String(), ShouldEqual, "12345678")
+		So(dpNamed("batch_sizes.p90", dps).Value.String(), ShouldEqual, "12345678")
+		So(dpNamed("batch_sizes.p99", dps).Value.String(), ShouldEqual, "12345678")
+		So(dpNamed("batch_sizes.min", dps).Value.String(), ShouldEqual, "12345678")
+		So(dpNamed("batch_sizes.max", dps).Value.String(), ShouldEqual, "12345678")
+
 	})
 }
