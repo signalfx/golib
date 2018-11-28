@@ -3,9 +3,10 @@ package log
 import (
 	"bytes"
 	"errors"
-	. "github.com/smartystreets/goconvey/convey"
 	"strings"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type errMarshall struct{}
@@ -34,7 +35,7 @@ func TestNewLogfmtLogger(t *testing.T) {
 		})
 		Convey("should write old len messages", func() {
 			l.Log("name")
-			So(strings.TrimSpace(buf.String()), ShouldResemble, "msg=name")
+			So(strings.TrimSpace(buf.String()), ShouldResemble, "message=name")
 		})
 		Convey("should write escaped messages", func() {
 			l.Log("name", "john doe")
