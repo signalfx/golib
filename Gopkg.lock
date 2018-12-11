@@ -2,11 +2,11 @@
 
 
 [[projects]]
-  digest = "1:47dcf566a0942cc58d2b5746106b9a05f3a30fffd6467aee76f48ff390fe0168"
+  digest = "1:f38bee55c484e6ddaf57e2ee74dc2a646531ec9e504c367ae1483f41ebff1f7c"
   name = "git.apache.org/thrift.git"
   packages = ["lib/go/thrift"]
   pruneopts = "NUT"
-  revision = "42ad86f35ae68fc7a696745131a284c2aa49e65a"
+  revision = "3838fa316492c1299c107fd1b29d3bc1634e756b"
   source = "github.com/signalfx/thrift"
 
 [[projects]]
@@ -160,18 +160,27 @@
   revision = "c4fab1ac1bec58281ad0667dc3f0907a9476ac47"
 
 [[projects]]
-  digest = "1:057c06926f48fe3d5fa06d6835c895de0a08108261d8eccad1bd653443385c85"
+  digest = "1:946db283b5540b64c60e7517b5afa54dc148b4672d69b38423a1c8d7fe24f3d1"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
     "host",
     "internal/common",
     "mem",
+    "net",
     "process",
   ]
   pruneopts = "NUT"
   revision = "3ec50d2876a36047b2ca39f955ba88fb7a455e92"
   version = "v2.18.10"
+
+[[projects]]
+  branch = "master"
+  digest = "1:869e13958e05ca96407cecebea71a60310256aba8f70244d05a06ce09e3f60ba"
+  name = "github.com/shirou/w32"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   branch = "master"
@@ -236,6 +245,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:76ee51c3f468493aff39dbacc401e8831fbb765104cbf613b89bef01cf4bad70"
+  name = "golang.org/x/net"
+  packages = ["context"]
+  pruneopts = "NUT"
+  revision = "610586996380ceef02dd726cc09df7e00a3f8e56"
 
 [[projects]]
   branch = "master"
