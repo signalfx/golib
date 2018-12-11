@@ -61,7 +61,6 @@ func (p *CalculatorClient) Add(num1 int32, num2 int32) (r int32, err error) {
 }
 
 func (p *CalculatorClient) sendAdd(num1 int32, num2 int32) (err error) {
-	ctx := context.Background()
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -74,7 +73,7 @@ func (p *CalculatorClient) sendAdd(num1 int32, num2 int32) (err error) {
 	args0.Num2 = num2
 	err = args0.Write(oprot)
 	oprot.WriteMessageEnd()
-	oprot.Flush(ctx)
+	oprot.Flush()
 	return
 }
 
@@ -147,7 +146,7 @@ func (p *CalculatorProcessor) Process(ctx context.Context, iprot, oprot thrift.T
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
 	x5.Write(oprot)
 	oprot.WriteMessageEnd()
-	oprot.Flush(ctx)
+	oprot.Flush()
 	return false, x5
 
 }
@@ -164,7 +163,7 @@ func (p *calculatorProcessorAdd) Process(ctx context.Context, seqId int32, iprot
 		oprot.WriteMessageBegin("add", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
-		oprot.Flush(ctx)
+		oprot.Flush()
 		return
 	}
 	iprot.ReadMessageEnd()
@@ -174,7 +173,7 @@ func (p *calculatorProcessorAdd) Process(ctx context.Context, seqId int32, iprot
 		oprot.WriteMessageBegin("add", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
-		oprot.Flush(ctx)
+		oprot.Flush()
 		return
 	}
 	if err2 := oprot.WriteMessageBegin("add", thrift.REPLY, seqId); err2 != nil {
@@ -186,7 +185,7 @@ func (p *calculatorProcessorAdd) Process(ctx context.Context, seqId int32, iprot
 	if err2 := oprot.WriteMessageEnd(); err == nil && err2 != nil {
 		err = err2
 	}
-	if err2 := oprot.Flush(ctx); err == nil && err2 != nil {
+	if err2 := oprot.Flush(); err == nil && err2 != nil {
 		err = err2
 	}
 	if err != nil {

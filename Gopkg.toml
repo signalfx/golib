@@ -28,7 +28,7 @@
 [[constraint]]
   name = "git.apache.org/thrift.git"
   source = "github.com/signalfx/thrift"
-  revision = "42ad86f35ae68fc7a696745131a284c2aa49e65a"
+  revision = "3838fa316492c1299c107fd1b29d3bc1634e756b"
 
 [[constraint]]
   name = "github.com/boltdb/bolt"

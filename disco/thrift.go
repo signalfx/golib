@@ -1,7 +1,6 @@
 package disco
 
 import (
-	"context"
 	"math/rand"
 	"net"
 	"time"
@@ -45,11 +44,11 @@ func NewThriftTransportWithMaxBufferSize(service *Service, timeout time.Duration
 }
 
 // Flush the underline transport
-func (d *ThriftTransport) Flush(ctx context.Context) (err error) {
+func (d *ThriftTransport) Flush() (err error) {
 	if d.currentTransport == nil {
 		return nil
 	}
-	err = d.currentTransport.Flush(ctx)
+	err = d.currentTransport.Flush()
 	if err != nil {
 		log.IfErr(d.logger, d.currentTransport.Close())
 		d.currentTransport = nil
