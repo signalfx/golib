@@ -204,6 +204,10 @@ func TestHTTPDatapointSink(t *testing.T) {
 			Convey("Send should normally work", func() {
 				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
 			})
+			Convey("Send should statusAccepted work", func() {
+				retCode = http.StatusAccepted
+				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
+			})
 			Convey("should send timestamps", func() {
 				dps = dps[0:1]
 				now := time.Now()
