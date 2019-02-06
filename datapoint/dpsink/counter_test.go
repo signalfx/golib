@@ -34,6 +34,7 @@ func TestCounterSink(t *testing.T) {
 			atomic.AddInt64(&i, 1)
 			return "blarg"
 		},
+		DroppedReason: "mwp™",
 	}
 	histo := NewHistoCounter(count)
 	middleSink := NextWrap(histo)(bs)
@@ -48,6 +49,7 @@ func TestCounterSink(t *testing.T) {
 	assert.Equal(t, int64(0), atomic.LoadInt64(&count.CallsInFlight), "Call is finished")
 	assert.Equal(t, int64(0), atomic.LoadInt64(&count.TotalProcessErrors), "No errors so far (see above)")
 	assert.Equal(t, numTests, len(histo.Datapoints()), "Just checking stats len()")
+	dptest.ExactlyOneDims(count.Datapoints(), "dropped_points", map[string]string{"reason": "mwp™"})
 
 	bs.RetError(errors.New("nope"))
 	if err := middleSink.AddDatapoints(ctx, dps); err == nil {
