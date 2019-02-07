@@ -222,25 +222,6 @@ func TestHTTPDatapointSink(t *testing.T) {
 				So(len(seenBodyPoints.Datapoints), ShouldEqual, 1)
 				So(*seenBodyPoints.Datapoints[0].Value.DoubleValue, ShouldEqual, 1.0)
 			})
-			Convey("Should send properties", func() {
-				dps[0].SetProperty("name", "jack")
-				dps = dps[0:1]
-				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
-				So(len(seenBodyPoints.Datapoints), ShouldEqual, 1)
-				So(*seenBodyPoints.Datapoints[0].Properties[0].Key, ShouldEqual, "name")
-			})
-			Convey("All property types should send", func() {
-				dps[0].SetProperty("name", "jack")
-				dps[0].SetProperty("age", 33)
-				dps[0].SetProperty("awesome", true)
-				dps[0].SetProperty("extra", int64(123))
-				dps[0].SetProperty("ratio", 1.0)
-				dps[0].SetProperty("unused", func() {})
-				dps = dps[0:1]
-				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
-				So(len(seenBodyPoints.Datapoints), ShouldEqual, 1)
-				So(len(seenBodyPoints.Datapoints[0].Properties), ShouldEqual, 5)
-			})
 			Convey("Strings should work", func() {
 				dps[0].Value = datapoint.NewStringValue("hi")
 				dps = dps[0:1]
@@ -358,16 +339,16 @@ func TestHTTPEventSink(t *testing.T) {
 		s := NewHTTPSink()
 		s.DisableCompression = true
 		ctx := context.Background()
-		dps := GoEventSource.Events()
+		events := GoEventSource.Events()
 		Convey("should timeout", func() {
 			s.Client.Timeout = time.Millisecond
-			So(s.AddEvents(ctx, dps), ShouldNotBeNil)
+			So(s.AddEvents(ctx, events), ShouldNotBeNil)
 		})
 		Convey("should not try dead contexts", func() {
 			var ctx = context.Background()
 			ctx, can := context.WithCancel(ctx)
 			can()
-			So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "context already closed")
+			So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "context already closed")
 			Convey("but empty events should always work", func() {
 				So(s.AddEvents(ctx, []*event.Event{}), ShouldBeNil)
 			})
@@ -376,11 +357,11 @@ func TestHTTPEventSink(t *testing.T) {
 			s.protoMarshaler = func(pb proto.Message) ([]byte, error) {
 				return nil, errors.New("failure to encode")
 			}
-			So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "failure to encode")
+			So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "failure to encode")
 		})
 		Convey("should check invalid endpoints", func() {
 			s.EventEndpoint = "%gh&%ij"
-			So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "cannot parse new HTTP request to")
+			So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "cannot parse new HTTP request to")
 		})
 		Convey("reading the full body should be checked", func() {
 			resp := &http.Response{
@@ -429,64 +410,64 @@ func TestHTTPEventSink(t *testing.T) {
 			}()
 			s.EventEndpoint = "http://" + l.Addr().String()
 			Convey("Send should normally work", func() {
-				So(s.AddEvents(ctx, dps), ShouldBeNil)
+				So(s.AddEvents(ctx, events), ShouldBeNil)
 			})
 			Convey("should send timestamps", func() {
-				dps = dps[0:1]
+				events = events[0:1]
 				now := time.Now()
-				dps[0].Timestamp = now
-				So(s.AddEvents(ctx, dps), ShouldBeNil)
+				events[0].Timestamp = now
+				So(s.AddEvents(ctx, events), ShouldBeNil)
 				So(*seenBodyEvents.Events[0].Timestamp, ShouldEqual, now.UnixNano()/time.Millisecond.Nanoseconds())
 			})
-			Convey("Should send properties", func() {
-				dps[0].Properties["name"] = "jack"
-				dps = dps[0:1]
-				So(s.AddEvents(ctx, dps), ShouldBeNil)
+			Convey("Should send properties for event", func() {
+				events[0].Properties["name"] = "jack"
+				events = events[0:1]
+				So(s.AddEvents(ctx, events), ShouldBeNil)
 				So(len(seenBodyEvents.Events), ShouldEqual, 1)
 				So(*seenBodyEvents.Events[0].Properties[0].Key, ShouldEqual, "name")
 			})
 			Convey("All property types should send", func() {
-				dps[0].Properties["name"] = "jack"
-				dps[0].Properties["age"] = 33
-				dps[0].Properties["awesome"] = true
-				dps[0].Properties["extra"] = int64(123)
-				dps[0].Properties["ratio"] = 1.0
-				dps[0].Properties["unused"] = func() {}
-				dps = dps[0:1]
-				So(s.AddEvents(ctx, dps), ShouldBeNil)
+				events[0].Properties["name"] = "jack"
+				events[0].Properties["age"] = 33
+				events[0].Properties["awesome"] = true
+				events[0].Properties["extra"] = int64(123)
+				events[0].Properties["ratio"] = 1.0
+				events[0].Properties["unused"] = func() {}
+				events = events[0:1]
+				So(s.AddEvents(ctx, events), ShouldBeNil)
 				So(len(seenBodyEvents.Events), ShouldEqual, 1)
 				So(len(seenBodyEvents.Events[0].Properties), ShouldEqual, 5)
 			})
 			Convey("empty key filtering should happen", func() {
-				dps[0].Dimensions = map[string]string{"": "hi"}
-				dps = dps[0:1]
-				So(s.AddEvents(ctx, dps), ShouldBeNil)
+				events[0].Dimensions = map[string]string{"": "hi"}
+				events = events[0:1]
+				So(s.AddEvents(ctx, events), ShouldBeNil)
 				So(len(seenBodyEvents.Events[0].Dimensions), ShouldEqual, 0)
 			})
 			Convey("invalid rune filtering should happen", func() {
-				dps[0].Dimensions = map[string]string{"hi.bob": "hi"}
-				dps = dps[0:1]
-				So(s.AddEvents(ctx, dps), ShouldBeNil)
+				events[0].Dimensions = map[string]string{"hi.bob": "hi"}
+				events = events[0:1]
+				So(s.AddEvents(ctx, events), ShouldBeNil)
 				So(*seenBodyEvents.Events[0].Dimensions[0].Key, ShouldEqual, "hi_bob")
 			})
 			Convey("Invalid events should panic", func() {
-				dps[0].Category = event.Category(999999)
-				So(func() { log.IfErr(log.Panic, s.AddEvents(ctx, dps)) }, ShouldPanic)
+				events[0].Category = event.Category(999999)
+				So(func() { log.IfErr(log.Panic, s.AddEvents(ctx, events)) }, ShouldPanic)
 			})
 			Convey("return code should be checked", func() {
 				retCode = http.StatusNotAcceptable
-				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "invalid status code")
+				So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "invalid status code")
 			})
 			Convey("return string should be checked", func() {
 				retString = `"nope"`
-				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "invalid response body")
+				So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "invalid response body")
 				retString = `INVALID_JSON`
-				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "cannot unmarshal response body")
+				So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "cannot unmarshal response body")
 			})
 			Convey("context cancel should work", func() {
 				blockResponse = make(chan struct{})
 				ctx, cancelCallback = context.WithCancel(ctx)
-				s := errors.Details(s.AddEvents(ctx, dps))
+				s := errors.Details(s.AddEvents(ctx, events))
 				if !strings.Contains(s, "canceled") && !strings.Contains(s, "closed") {
 					t.Errorf("Bad error string %s", s)
 				}
@@ -495,7 +476,7 @@ func TestHTTPEventSink(t *testing.T) {
 			Convey("timeouts should work", func() {
 				blockResponse = make(chan struct{})
 				s.Client.Timeout = time.Millisecond * 10
-				So(errors.Details(s.AddEvents(ctx, dps)), ShouldContainSubstring, "Client.Timeout")
+				So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "Client.Timeout")
 			})
 			Reset(func() {
 				if blockResponse != nil {

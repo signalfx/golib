@@ -1,10 +1,9 @@
 package datapoint
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
-
-	"encoding/json"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
