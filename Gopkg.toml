@@ -43,8 +43,8 @@
   name = "github.com/signalfx/gomemcache"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/signalfx/com_signalfx_metrics_protobuf"
+  revision = "1fb69526e88429e6c60a556f4637caf45d132fff"
 
 [[constraint]]
   revision = "3fdea8d05856a0c8df22ed4bc71b3219245e4485"
