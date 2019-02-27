@@ -183,12 +183,11 @@
   revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
-  branch = "master"
-  digest = "1:74a468852019b3440166581a31d8c4c8b44a8c8ae05979277c441ba9b6b53be3"
+  digest = "1:07444fd15b9d90d066171e7796144c6d9a7bc134b1b9f2c31c54c3468953bae6"
   name = "github.com/signalfx/com_signalfx_metrics_protobuf"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "93e507b42f43f458a109ca278d1542a26a0b87fc"
+  revision = "1fb69526e88429e6c60a556f4637caf45d132fff"
 
 [[projects]]
   branch = "master"
