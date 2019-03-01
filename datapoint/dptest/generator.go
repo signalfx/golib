@@ -8,6 +8,7 @@ import (
 
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
+	"github.com/signalfx/golib/pointer"
 	"github.com/signalfx/golib/trace"
 )
 
@@ -87,8 +88,9 @@ func E() *event.Event {
 type SpanSource struct {
 	mu sync.Mutex
 
-	TimeSource func() int64
-	Name       string
+	TimeSource   func() int64
+	Name         string
+	CurrentIndex int64
 }
 
 var globalSpanSource SpanSource
@@ -100,9 +102,11 @@ func (d *SpanSource) Next() *trace.Span {
 
 	randomID := strconv.FormatInt(d.TimeSource(), 16)
 	return &trace.Span{
-		TraceID: randomID,
-		ID:      randomID,
-		Name:    &d.Name,
+		TraceID:   randomID,
+		ID:        randomID,
+		Name:      &d.Name,
+		Timestamp: pointer.Int64(atomic.AddInt64(&d.CurrentIndex, 1)),
+		Duration:  pointer.Int64((d.CurrentIndex % 15) + 5), // set duration in the range [5..20}
 	}
 }
 
