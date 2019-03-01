@@ -98,10 +98,10 @@ func (d *SpanSource) Next() *trace.Span {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	randomId := strconv.FormatInt(d.TimeSource(), 16)
+	randomID := strconv.FormatInt(d.TimeSource(), 16)
 	return &trace.Span{
-		TraceID: randomId,
-		ID:      randomId,
+		TraceID: randomID,
+		ID:      randomID,
 		Name:    &d.Name,
 	}
 }
