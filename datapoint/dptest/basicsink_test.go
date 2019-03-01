@@ -122,6 +122,24 @@ func TestNextEvent(t *testing.T) {
 	})
 }
 
+func TestNextSpan(t *testing.T) {
+	ctx := context.Background()
+	b := NewBasicSink()
+	s := S()
+	go func() {
+		log.IfErr(log.Panic, b.AddSpans(ctx, []*trace.Span{s}))
+	}()
+	sSeen := b.NextSpan()
+	assert.Equal(t, sSeen, s)
+
+	go func() {
+		log.IfErr(log.Panic, b.AddSpans(ctx, []*trace.Span{s, s}))
+	}()
+	assert.Panics(t, func() {
+		b.NextSpan()
+	})
+}
+
 func TestResize(t *testing.T) {
 	b := NewBasicSink()
 	assert.Equal(t, 0, cap(b.PointsChan))
