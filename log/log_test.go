@@ -3,6 +3,7 @@ package log
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/signalfx/golib/eventcounter"
 	. "github.com/smartystreets/goconvey/convey"
 	"io"
@@ -227,6 +228,38 @@ func BenchmarkTenWith(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		lc.Log("k", "v")
+	}
+}
+
+func BenchmarkIfErr(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErr(l, fmt.Errorf("hello world"))
+	}
+}
+
+func BenchmarkIfErrAndReturn(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErrAndReturn(l, fmt.Errorf("hello world"))
+	}
+}
+
+func BenchmarkIfErrWithKeys(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErrWithKeys(l, fmt.Errorf("hello world"), Err, "test message")
+	}
+}
+
+func BenchmarkIfErrWithKeysAndReturn(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErrWithKeysAndReturn(l, fmt.Errorf("hello world"), Err, "test message")
 	}
 }
 
