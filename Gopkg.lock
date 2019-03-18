@@ -108,12 +108,12 @@
   revision = "d547d1d9531ed93dbdebcbff7f83e7c876a1e0ee"
 
 [[projects]]
-  digest = "1:6ddab442e52381bab82fb6c07ef3f4b565ff7ec4b8fae96d8dd4b8573a460597"
+  digest = "1:395b1480ae42c3fec6fff19823e66e173819f85826811387f9045c88515a7f0f"
   name = "github.com/jtolds/gls"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "77f18212c9c7edc9bd6a33d383a7b545ce62f064"
-  version = "v4.2.1"
+  revision = "b4936e06046bbecbb94cae9c18127ebe510a2cb9"
+  version = "v4.20"
 
 [[projects]]
   branch = "master"
@@ -160,27 +160,18 @@
   revision = "c4fab1ac1bec58281ad0667dc3f0907a9476ac47"
 
 [[projects]]
-  digest = "1:946db283b5540b64c60e7517b5afa54dc148b4672d69b38423a1c8d7fe24f3d1"
+  digest = "1:057c06926f48fe3d5fa06d6835c895de0a08108261d8eccad1bd653443385c85"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
     "host",
     "internal/common",
     "mem",
-    "net",
     "process",
   ]
   pruneopts = "NUT"
   revision = "3ec50d2876a36047b2ca39f955ba88fb7a455e92"
   version = "v2.18.10"
-
-[[projects]]
-  branch = "master"
-  digest = "1:869e13958e05ca96407cecebea71a60310256aba8f70244d05a06ce09e3f60ba"
-  name = "github.com/shirou/w32"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   digest = "1:07444fd15b9d90d066171e7796144c6d9a7bc134b1b9f2c31c54c3468953bae6"
@@ -205,7 +196,7 @@
   revision = "4f7ef64c72a9ee0760dcb58fdfbbac09f6ccb299"
 
 [[projects]]
-  digest = "1:1f0b284a6858827de4c27c66b49b2b25df3e16b031c2b57b7892273131e7dd2b"
+  digest = "1:5ce35aa0f67b06b4ab9205d344590d150449618a463a3652b1805b959da5f46c"
   name = "github.com/smartystreets/assertions"
   packages = [
     ".",
@@ -213,11 +204,10 @@
     "internal/oglematchers",
   ]
   pruneopts = "NUT"
-  revision = "7678a5452ebea5b7090a6b163f844c133f523da2"
-  version = "1.8.3"
+  revision = "980c5ac6f3acb6ce1cfe13160e49188807174fbe"
 
 [[projects]]
-  digest = "1:63a2c376f4796414e1c8dba50a0cdab08a0d0c573ea95a7b9adb2399f5834370"
+  digest = "1:4dccd132a83155851c5e9faaa134ee3a931965c666b6b3c076e238fe9b3577a4"
   name = "github.com/smartystreets/goconvey"
   packages = [
     "convey",
@@ -225,7 +215,7 @@
     "convey/reporting",
   ]
   pruneopts = "NUT"
-  revision = "cc5d85f4f15bd2163abf0fe6e6753356dde72aa2"
+  revision = "200a235640ff2643e3126834b67f3e93df76640a"
 
 [[projects]]
   digest = "1:e13e59572cc556c442ecefd85c3d104f1bfeaf16dd98a36bdc5ee7565ac7fbf6"

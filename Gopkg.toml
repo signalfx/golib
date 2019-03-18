@@ -61,10 +61,6 @@
 [[constraint]]
   name = "gopkg.in/logfmt.v0"
   version = "v0.1.0"
-#
-#[[constraint]]
-#  name = "github.com/jtolds/gls"
-#  version = "v4.2.0"
 
 [[constraint]]
   name = "github.com/golang/protobuf"
@@ -76,15 +72,15 @@
 
 [[constraint]]
   name = "github.com/smartystreets/goconvey"
-  revision = "cc5d85f4f15bd2163abf0fe6e6753356dde72aa2"
-
-#[[constraint]]
-#  name = "github.com/smartystreets/assertions"
-#  revision = "2d74a419fbe076f8c76ed8b1c7c633a676c5dc63"
+  revision = "200a235640ff2643e3126834b67f3e93df76640a"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
   revision = "c5d7a69bf8a2c9c374798160849c071093e41dd1"
+
+[[override]]
+  name = "github.com/smartystreets/assertions"
+  revision = "980c5ac6f3acb6ce1cfe13160e49188807174fbe"
 
 [[constraint]]
   branch = "master"
