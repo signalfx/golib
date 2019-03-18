@@ -272,13 +272,6 @@
   revision = "08ab82a63ef462ac643ec79e659f023891f588f5"
   version = "v0.1.0"
 
-[[projects]]
-  digest = "1:0ba0ec2bea1247837911a5611963c723cf7f6147a1b75a8c2a9c0618d4b5c8af"
-  name = "gopkg.in/stack.v1"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "ac4c579c437a23e1a15814c867ccb82122fb383b"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -288,6 +281,7 @@
     "github.com/dropbox/godropbox/errors",
     "github.com/facebookgo/stackerr",
     "github.com/go-kit/kit/log",
+    "github.com/go-stack/stack",
     "github.com/golang/protobuf/proto",
     "github.com/juju/errors",
     "github.com/mailru/easyjson",
@@ -305,7 +299,6 @@
     "github.com/stretchr/testify/require",
     "github.com/vaughan0/go-ini",
     "gopkg.in/logfmt.v0",
-    "gopkg.in/stack.v1",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

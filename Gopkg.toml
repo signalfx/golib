@@ -70,9 +70,9 @@
   name = "github.com/golang/protobuf"
   revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
 
-[[override]]
-  name = "gopkg.in/stack.v1"
-  revision = "ac4c579c437a23e1a15814c867ccb82122fb383b"
+[[constraint]]
+  name = "github.com/go-stack/stack"
+  version = "1.8.0"
 
 [[constraint]]
   name = "github.com/smartystreets/goconvey"
@@ -105,10 +105,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/vaughan0/go-ini"
-
-[[constraint]]
-  name = "gopkg.in/stack.v1"
-  version = "1.8.0"
 
 
 [prune]
