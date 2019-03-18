@@ -3,6 +3,7 @@ package log
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/signalfx/golib/eventcounter"
 	. "github.com/smartystreets/goconvey/convey"
 	"io"
@@ -230,6 +231,38 @@ func BenchmarkTenWith(b *testing.B) {
 	}
 }
 
+func BenchmarkIfErr(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErr(l, fmt.Errorf("hello world"))
+	}
+}
+
+func BenchmarkIfErrAndReturn(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErrAndReturn(l, fmt.Errorf("hello world"))
+	}
+}
+
+func BenchmarkIfErrWithKeys(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErrWithKeys(l, fmt.Errorf("hello world"), Err, "test message")
+	}
+}
+
+func BenchmarkIfErrWithKeysAndReturn(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		b := &bytes.Buffer{}
+		l := NewLogfmtLogger(b, Panic)
+		IfErrWithKeysAndReturn(l, fmt.Errorf("hello world"), Err, "test message")
+	}
+}
+
 func TestDisabledLog(t *testing.T) {
 	Convey("a nil log", t, func() {
 		var logger Logger
@@ -339,6 +372,56 @@ func TestIfErr(t *testing.T) {
 		t.Error("Expected empty string")
 	}
 	IfErr(l, errors.New("nope"))
+	if b.String() == "" {
+		t.Error("Expected error result")
+	}
+}
+
+func TestIfErrAndReturn(t *testing.T) {
+	b := &bytes.Buffer{}
+	l := NewLogfmtLogger(b, Panic)
+	if err := IfErrAndReturn(l, nil); err != nil {
+		t.Error("Expected an nil return value")
+	}
+	if b.String() != "" {
+		t.Error("Expected empty string")
+	}
+	testErr := errors.New("nope")
+	if err := IfErrAndReturn(l, testErr); err != testErr {
+		t.Error("Expected error to equal ")
+	}
+	if b.String() == "" {
+		t.Error("Expected error result")
+	}
+}
+
+func TestIfErrWithKeysAndReturn(t *testing.T) {
+	b := &bytes.Buffer{}
+	l := NewLogfmtLogger(b, Panic)
+	if err := IfErrWithKeysAndReturn(l, nil, Err, "test message"); err != nil {
+		t.Error("Expected an nil return value")
+	}
+	if b.String() != "" {
+		t.Error("Expected empty string")
+	}
+	testErr := errors.New("nope")
+	if err := IfErrWithKeysAndReturn(l, testErr, Err, "test message"); err != testErr {
+		t.Error("Expected error to equal ")
+	}
+	if b.String() == "" {
+		t.Error("Expected error result")
+	}
+}
+
+func TestIfErrWithKeys(t *testing.T) {
+	b := &bytes.Buffer{}
+	l := NewLogfmtLogger(b, Panic)
+	IfErrWithKeys(l, nil, Err, "test message")
+	if b.String() != "" {
+		t.Error("Expected empty string")
+	}
+	testErr := errors.New("nope")
+	IfErrWithKeys(l, testErr, Err, "test message")
 	if b.String() == "" {
 		t.Error("Expected error result")
 	}
