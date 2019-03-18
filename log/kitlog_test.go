@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-stack/stack"
 	"github.com/signalfx/golib/log"
-	"gopkg.in/stack.v1"
 )
 
 type panicLogger struct {
