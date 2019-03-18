@@ -344,6 +344,56 @@ func TestIfErr(t *testing.T) {
 	}
 }
 
+func TestIfErrAndReturn(t *testing.T) {
+	b := &bytes.Buffer{}
+	l := NewLogfmtLogger(b, Panic)
+	if err := IfErrAndReturn(l, nil); err != nil {
+		t.Error("Expected an nil return value")
+	}
+	if b.String() != "" {
+		t.Error("Expected empty string")
+	}
+	testErr := errors.New("nope")
+	if err := IfErrAndReturn(l, testErr); err != testErr {
+		t.Error("Expected error to equal ")
+	}
+	if b.String() == "" {
+		t.Error("Expected error result")
+	}
+}
+
+func TestIfErrWithKeysAndReturn(t *testing.T) {
+	b := &bytes.Buffer{}
+	l := NewLogfmtLogger(b, Panic)
+	if err := IfErrWithKeysAndReturn(l, nil, Err, "test message"); err != nil {
+		t.Error("Expected an nil return value")
+	}
+	if b.String() != "" {
+		t.Error("Expected empty string")
+	}
+	testErr := errors.New("nope")
+	if err := IfErrWithKeysAndReturn(l, testErr, Err, "test message"); err != testErr {
+		t.Error("Expected error to equal ")
+	}
+	if b.String() == "" {
+		t.Error("Expected error result")
+	}
+}
+
+func TestIfErrWithKeys(t *testing.T) {
+	b := &bytes.Buffer{}
+	l := NewLogfmtLogger(b, Panic)
+	IfErrWithKeys(l, nil, Err, "test message")
+	if b.String() != "" {
+		t.Error("Expected empty string")
+	}
+	testErr := errors.New("nope")
+	IfErrWithKeys(l, testErr, Err, "test message")
+	if b.String() == "" {
+		t.Error("Expected error result")
+	}
+}
+
 func TestChannelLoggerRace(t *testing.T) {
 	fullyVerifyLogger(t, func() (Logger, *bytes.Buffer) {
 		return NewChannelLogger(10, Discard), nil
