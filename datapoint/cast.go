@@ -75,9 +75,9 @@ func CastMetricValueWithBool(value interface{}) (metricValue Value, err error) {
 	switch value.(type) {
 	case bool:
 		if value.(bool) {
-			return intWire(int64(1)), nil
+			metricValue, err = intWire(int64(1)), nil
 		} else {
-			return intWire(int64(0)), nil
+			metricValue, err = intWire(int64(0)), nil
 		}
 	default:
 		metricValue, err = CastMetricValue(value)

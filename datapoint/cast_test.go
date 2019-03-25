@@ -16,7 +16,7 @@ type CastMetricValueTest struct {
 	wantErr         bool
 }
 
-var castMetricValueTests = []CastMetricValueTest {
+var castMetricValueTests = []CastMetricValueTest{
 	{
 		name: "cast float32 to int value",
 		args: args{
@@ -125,25 +125,25 @@ func TestCastMetricValue(t *testing.T) {
 	}
 }
 
-var castMetricValueBoolTests = append(castMetricValueTests,
-															CastMetricValueTest{
-																name: "cast bool true to int 1",
-																args: args{
-																	value: true,
-																},
-																wantMetricValue: NewIntValue(int64(1)),
-															},
-															CastMetricValueTest{
-																name: "cast bool false to int 0",
-																args: args{
-																	value: false,
-																},
-																wantMetricValue: NewIntValue(int64(0)),
-															},
-								)
+var castMetricValueWithBoolTests = append(castMetricValueTests,
+	CastMetricValueTest{
+		name: "cast bool true to int 1",
+		args: args{
+			value: true,
+		},
+		wantMetricValue: NewIntValue(int64(1)),
+	},
+	CastMetricValueTest{
+		name: "cast bool false to int 0",
+		args: args{
+			value: false,
+		},
+		wantMetricValue: NewIntValue(int64(0)),
+	},
+)
 
-func TestCastMetricValueBool(t *testing.T) {
-	for _, tt := range castMetricValueBoolTests {
+func TestCastMetricValueWithBool(t *testing.T) {
+	for _, tt := range castMetricValueWithBoolTests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotMetricValue, err := CastMetricValueWithBool(tt.args.value)
 			if (err != nil) != tt.wantErr {
