@@ -70,11 +70,17 @@ func CastMetricValue(value interface{}) (metricValue Value, err error) {
 	return
 }
 
-// CastMetricValueBool casts an interface to datapoint Value and handles bool
-func CastMetricValueBool(value interface{}) (metricValue Value, err error) {
+// CastMetricValueWithBool casts an interface to datapoint Value and handles bool
+func CastMetricValueWithBool(value interface{}) (metricValue Value, err error) {
 	switch value.(type) {
-	case bool: value = func() int {if value.(bool){ return 1}; return 0}()
+	case bool:
+		if value.(bool) {
+			return intWire(int64(1)), nil
+		} else {
+			return intWire(int64(0)), nil
+		}
+	default:
+		metricValue, err = CastMetricValue(value)
 	}
-	metricValue, err = CastMetricValue(value)
 	return
 }
