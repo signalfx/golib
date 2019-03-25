@@ -142,7 +142,7 @@ var castMetricValueBoolTests = append(castMetricValueTests,
 															},
 								)
 
-	func TestCastMetricValueBool(t *testing.T) {
+func TestCastMetricValueBool(t *testing.T) {
 	for _, tt := range castMetricValueBoolTests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotMetricValue, err := CastMetricValueWithBool(tt.args.value)
