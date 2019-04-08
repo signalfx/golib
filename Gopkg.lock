@@ -160,18 +160,27 @@
   revision = "c4fab1ac1bec58281ad0667dc3f0907a9476ac47"
 
 [[projects]]
-  digest = "1:057c06926f48fe3d5fa06d6835c895de0a08108261d8eccad1bd653443385c85"
+  digest = "1:946db283b5540b64c60e7517b5afa54dc148b4672d69b38423a1c8d7fe24f3d1"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
     "host",
     "internal/common",
     "mem",
+    "net",
     "process",
   ]
   pruneopts = "NUT"
   revision = "3ec50d2876a36047b2ca39f955ba88fb7a455e92"
   version = "v2.18.10"
+
+[[projects]]
+  branch = "master"
+  digest = "1:869e13958e05ca96407cecebea71a60310256aba8f70244d05a06ce09e3f60ba"
+  name = "github.com/shirou/w32"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   digest = "1:07444fd15b9d90d066171e7796144c6d9a7bc134b1b9f2c31c54c3468953bae6"
@@ -187,6 +196,39 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "1ccfd2ff508314074672f4450a917011a2060408"
+
+[[projects]]
+  digest = "1:7d0c3d929522a6ca47a76ac89fb4cbfb477014a05f240fb89f27bd5396f981e1"
+  name = "github.com/signalfx/golib"
+  packages = [
+    "boltcycle",
+    "datapoint",
+    "datapoint/dptest",
+    "dataunit",
+    "distconf",
+    "errors",
+    "event",
+    "eventcounter",
+    "explorable",
+    "expvar2",
+    "log",
+    "logkey",
+    "nettest",
+    "pointer",
+    "safeexec",
+    "sfxclient",
+    "sfxclient/spanfilter",
+    "sfxtest",
+    "timekeeper",
+    "timekeeper/timekeepertest",
+    "trace",
+    "trace/format",
+    "zkplus",
+    "zkplus/zktest",
+  ]
+  pruneopts = "NUT"
+  revision = "68565cfe71930e812d568bf6fae6026bf6e6edcc"
+  version = "v2.3.4"
 
 [[projects]]
   digest = "1:208fff1e4b8eddae4a60f06f723b846284f3dac84192b3cdbacac3f3c1bc4b63"
@@ -271,6 +313,7 @@
     "github.com/dropbox/godropbox/errors",
     "github.com/facebookgo/stackerr",
     "github.com/go-kit/kit/log",
+    "github.com/go-logfmt/logfmt",
     "github.com/go-stack/stack",
     "github.com/golang/protobuf/proto",
     "github.com/juju/errors",
@@ -283,12 +326,35 @@
     "github.com/shirou/gopsutil/mem",
     "github.com/signalfx/com_signalfx_metrics_protobuf",
     "github.com/signalfx/gohistogram",
+    "github.com/signalfx/golib/boltcycle",
+    "github.com/signalfx/golib/datapoint",
+    "github.com/signalfx/golib/datapoint/dptest",
+    "github.com/signalfx/golib/dataunit",
+    "github.com/signalfx/golib/distconf",
+    "github.com/signalfx/golib/errors",
+    "github.com/signalfx/golib/event",
+    "github.com/signalfx/golib/eventcounter",
+    "github.com/signalfx/golib/explorable",
+    "github.com/signalfx/golib/expvar2",
+    "github.com/signalfx/golib/log",
+    "github.com/signalfx/golib/logkey",
+    "github.com/signalfx/golib/nettest",
+    "github.com/signalfx/golib/pointer",
+    "github.com/signalfx/golib/safeexec",
+    "github.com/signalfx/golib/sfxclient",
+    "github.com/signalfx/golib/sfxclient/spanfilter",
+    "github.com/signalfx/golib/sfxtest",
+    "github.com/signalfx/golib/timekeeper",
+    "github.com/signalfx/golib/timekeeper/timekeepertest",
+    "github.com/signalfx/golib/trace",
+    "github.com/signalfx/golib/trace/format",
+    "github.com/signalfx/golib/zkplus",
+    "github.com/signalfx/golib/zkplus/zktest",
     "github.com/signalfx/gomemcache/memcache",
     "github.com/smartystreets/goconvey/convey",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/vaughan0/go-ini",
-    "gopkg.in/logfmt.v0",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
