@@ -160,18 +160,27 @@
   revision = "c4fab1ac1bec58281ad0667dc3f0907a9476ac47"
 
 [[projects]]
-  digest = "1:057c06926f48fe3d5fa06d6835c895de0a08108261d8eccad1bd653443385c85"
+  digest = "1:946db283b5540b64c60e7517b5afa54dc148b4672d69b38423a1c8d7fe24f3d1"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
     "host",
     "internal/common",
     "mem",
+    "net",
     "process",
   ]
   pruneopts = "NUT"
   revision = "3ec50d2876a36047b2ca39f955ba88fb7a455e92"
   version = "v2.18.10"
+
+[[projects]]
+  branch = "master"
+  digest = "1:869e13958e05ca96407cecebea71a60310256aba8f70244d05a06ce09e3f60ba"
+  name = "github.com/shirou/w32"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   digest = "1:07444fd15b9d90d066171e7796144c6d9a7bc134b1b9f2c31c54c3468953bae6"
@@ -281,6 +290,7 @@
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/host",
     "github.com/shirou/gopsutil/mem",
+    "github.com/shirou/gopsutil/net",
     "github.com/signalfx/com_signalfx_metrics_protobuf",
     "github.com/signalfx/gohistogram",
     "github.com/signalfx/gomemcache/memcache",
