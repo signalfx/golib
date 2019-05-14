@@ -504,7 +504,7 @@ func (c *CyclePDB) AsyncWrite(ctx context.Context, towrite []boltcycle.KvPair) {
 func (c *CyclePDB) Write(towrite []boltcycle.KvPair) (err error) {
 	atomic.AddInt64(&c.stats.TotalWriteCount, int64(len(towrite)))
 
-	return c.blobs.latest().Update(func(tx *bolt.Tx) error {
+	return c.blobs.latest().Batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(c.bucketTimesIn)
 		if bucket == nil {
 			return errorUnableToFindRootBucket
