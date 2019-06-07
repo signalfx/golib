@@ -324,6 +324,7 @@
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/host",
     "github.com/shirou/gopsutil/mem",
+    "github.com/shirou/gopsutil/net",
     "github.com/signalfx/com_signalfx_metrics_protobuf",
     "github.com/signalfx/gohistogram",
     "github.com/signalfx/golib/boltcycle",
