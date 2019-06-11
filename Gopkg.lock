@@ -144,6 +144,17 @@
   revision = "3fdea8d05856a0c8df22ed4bc71b3219245e4485"
 
 [[projects]]
+  digest = "1:f06c3ce27f08c9dd5e730176105cd209941873187acca0fb7bf618caa33f5807"
+  name = "github.com/opentracing/opentracing-go"
+  packages = [
+    ".",
+    "log",
+  ]
+  pruneopts = "NUT"
+  revision = "659c90643e714681897ec2521c60567dd21da733"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -286,11 +297,11 @@
     "github.com/mailru/easyjson",
     "github.com/mailru/easyjson/jlexer",
     "github.com/mailru/easyjson/jwriter",
+    "github.com/opentracing/opentracing-go",
     "github.com/samuel/go-zookeeper/zk",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/host",
     "github.com/shirou/gopsutil/mem",
-    "github.com/shirou/gopsutil/net",
     "github.com/signalfx/com_signalfx_metrics_protobuf",
     "github.com/signalfx/gohistogram",
     "github.com/signalfx/gomemcache/memcache",
