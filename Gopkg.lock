@@ -263,14 +263,6 @@
   pruneopts = "NUT"
   revision = "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399"
 
-[[projects]]
-  digest = "1:18c314a04303b5c43b93f5597deb939ae439578ab8ee69820c4db75bbbb7d4b4"
-  name = "gopkg.in/logfmt.v0"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "08ab82a63ef462ac643ec79e659f023891f588f5"
-  version = "v0.1.0"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -280,6 +272,7 @@
     "github.com/dropbox/godropbox/errors",
     "github.com/facebookgo/stackerr",
     "github.com/go-kit/kit/log",
+    "github.com/go-logfmt/logfmt",
     "github.com/go-stack/stack",
     "github.com/golang/protobuf/proto",
     "github.com/juju/errors",
@@ -290,7 +283,6 @@
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/host",
     "github.com/shirou/gopsutil/mem",
-    "github.com/shirou/gopsutil/net",
     "github.com/signalfx/com_signalfx_metrics_protobuf",
     "github.com/signalfx/gohistogram",
     "github.com/signalfx/gomemcache/memcache",
@@ -298,7 +290,6 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/vaughan0/go-ini",
-    "gopkg.in/logfmt.v0",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

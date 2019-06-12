@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/go-logfmt/logfmt"
 	"github.com/signalfx/golib/log"
-	"gopkg.in/logfmt.v0"
 )
 
 func TestLogfmtLogger(t *testing.T) {
