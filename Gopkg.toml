@@ -59,8 +59,8 @@
   version = "0.7.0"
 
 [[constraint]]
-  name = "gopkg.in/logfmt.v0"
-  version = "v0.1.0"
+  name = "github.com/go-logfmt/logfmt"
+  version = "0.3.0"
 
 [[constraint]]
   name = "github.com/golang/protobuf"
