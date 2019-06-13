@@ -1,13 +1,13 @@
 package clientcfg
 
 import (
+	"context"
 	"net/url"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"context"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/distconf"
 	"github.com/signalfx/golib/errors"
@@ -21,13 +21,15 @@ import (
 
 // ClientConfig configures a SfxClient
 type ClientConfig struct {
-	SourceName         *distconf.Str
-	AuthToken          *distconf.Str
-	Endpoint           *distconf.Str
-	ReportingInterval  *distconf.Duration
-	TimeKeeper         timekeeper.TimeKeeper
-	OsHostname         func() (name string, err error)
-	DisableCompression *distconf.Bool
+	SourceName               *distconf.Str
+	AuthToken                *distconf.Str
+	Endpoint                 *distconf.Str
+	ReportingInterval        *distconf.Duration
+	ReportingTimeoutInterval *distconf.Duration
+	TimeKeeper               timekeeper.TimeKeeper
+	OsHostname               func() (name string, err error)
+	DisableCompression       *distconf.Bool
+	DebugCollectDatapoints   *distconf.Bool
 }
 
 // Load the client config values from distconf
@@ -39,6 +41,8 @@ func (c *ClientConfig) Load(d *distconf.Distconf) {
 	c.TimeKeeper = timekeeper.RealTime{}
 	c.OsHostname = os.Hostname
 	c.DisableCompression = d.Bool("sf.metrics.disableCompression", false)
+	c.ReportingTimeoutInterval = d.Duration("sf.metrics.report_timeout_interval", time.Second)
+	c.DebugCollectDatapoints = d.Bool("sf.metrics.debug.collect.datapoints", false)
 }
 
 // DefaultDimensions extracts default sfxclient dimensions that identify the host

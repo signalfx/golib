@@ -2,6 +2,8 @@ package sfxclient
 
 import (
 	"runtime"
+	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"fmt"
 
 	"context"
+
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/timekeeper/timekeepertest"
@@ -23,6 +26,136 @@ type testSink struct {
 func (t *testSink) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) (err error) {
 	t.lastDatapoints <- points
 	return t.retErr
+}
+
+var (
+	collectors []Collector
+)
+
+func addBucketValues(bucket *RollingBucket, wg *sync.WaitGroup) {
+	rangeInt := 10
+	for idx := 0; idx < rangeInt; idx++ {
+		bucket.Add(float64(idx) * 2.233)
+	}
+	wg.Done()
+}
+
+func setupCollectors(collectorsCount int) {
+	wg := sync.WaitGroup{}
+	ccCollectorRange := 10
+	wg.Add(collectorsCount - ccCollectorRange - 1)
+	for idx := 0; idx < collectorsCount; idx++ {
+		if idx < ccCollectorRange {
+			cb := &CumulativeBucket{
+				MetricName: "dataSet" + strconv.Itoa(idx),
+				Dimensions: map[string]string{"type": "ccBucket"},
+			}
+			cb.Add(100)
+			collectors = append(collectors, cb)
+		} else if idx == ccCollectorRange {
+			collectors = append(collectors, GoMetricsSource)
+		} else {
+			metricName := "dataSet" + strconv.Itoa(idx)
+			bucket := NewRollingBucket(metricName, map[string]string{"type": "regularBucket"})
+			go addBucketValues(bucket, &wg)
+			collectors = append(collectors, bucket)
+		}
+	}
+	wg.Wait()
+}
+
+func TestScheduler_ReportOnce(t *testing.T) {
+	var handleErrors []error
+	var handleErrRet error
+	s := &Scheduler{
+		Sink: &testSink{
+			lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+		},
+		Timer: timekeepertest.NewStubClock(time.Now()),
+		ErrorHandler: func(e error) error {
+			handleErrors = append(handleErrors, e)
+			return errors.Wrap(handleErrRet, e)
+		},
+		ReportingDelayNs: time.Second.Nanoseconds(),
+		callbackMap:      make(map[string]*callbackPair),
+	}
+
+	setupCollectors(25)
+
+	ctx := context.Background()
+	for _, collector := range collectors {
+		s.AddCallback(collector)
+	}
+	Convey("testing report once", t, func() {
+		So(s.ReportOnce(ctx), ShouldBeNil)
+	})
+}
+
+func TestScheduler_ReportingTimeout(t *testing.T) {
+	var handleErrors []error
+	var handleErrRet error
+	s := &Scheduler{
+		Sink: &testSink{
+			lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+		},
+		ErrorHandler: func(e error) error {
+			handleErrors = append(handleErrors, e)
+			return errors.Wrap(handleErrRet, e)
+		},
+		ReportingDelayNs: time.Second.Nanoseconds(),
+		callbackMap:      make(map[string]*callbackPair),
+	}
+	tk := timekeepertest.NewStubClock(time.Now())
+	s.Timer = tk
+
+	ctx := context.Background()
+	Convey("testing longer processing time for ReportOnce", t, func() {
+		s.ReportingTimeout(time.Nanosecond)
+		setupCollectors(250 * 10)
+		for _, collector := range collectors {
+			s.AddCallback(collector)
+		}
+		go s.Schedule(ctx)
+		for atomic.LoadInt64(&s.stats.reportingTimeoutCounts) == 0 {
+			tk.Incr(time.Duration(s.ReportingDelayNs))
+			runtime.Gosched()
+		}
+		So(atomic.LoadInt64(&s.stats.reportingTimeoutCounts), ShouldEqual, int64(1))
+	})
+}
+
+func TestCollectDatapointDebug(t *testing.T) {
+	var handleErrors []error
+	var handleErrRet error
+	s := &Scheduler{
+		ErrorHandler: func(e error) error {
+			handleErrors = append(handleErrors, e)
+			return errors.Wrap(handleErrRet, e)
+		},
+		ReportingDelayNs: time.Second.Nanoseconds(),
+		callbackMap:      make(map[string]*callbackPair),
+	}
+	sink := &testSink{
+		lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+	}
+	s.Sink = sink
+	tk := timekeepertest.NewStubClock(time.Now())
+	s.Timer = tk
+
+	ctx := context.Background()
+	Convey("testing collect datapoints with debug mode enabled", t, func() {
+		s.Debug(true)
+		s.AddCallback(GoMetricsSource)
+		s.AddGroupedCallback("goMetrics", GoMetricsSource)
+		go s.Schedule(ctx)
+		for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
+			runtime.Gosched()
+			tk.Incr(time.Duration(s.ReportingDelayNs))
+			runtime.Gosched()
+		}
+		dps := <-sink.lastDatapoints
+		So(len(dps), ShouldEqual, 60)
+	})
 }
 
 func TestNewScheduler(t *testing.T) {
@@ -195,4 +328,91 @@ func ExampleScheduler() {
 	ctx := context.Background()
 	err := s.Schedule(ctx)
 	fmt.Println("Schedule result: ", err)
+}
+
+func BenchmarkScheduler_ReportOnce(b *testing.B) {
+	var handleErrors []error
+	var handleErrRet error
+	s := &Scheduler{
+		ErrorHandler: func(e error) error {
+			handleErrors = append(handleErrors, e)
+			return errors.Wrap(handleErrRet, e)
+		},
+		ReportingDelayNs: time.Second.Nanoseconds(),
+		callbackMap:      make(map[string]*callbackPair),
+	}
+	tk := timekeepertest.NewStubClock(time.Now())
+	s.Timer = tk
+	sink := &testSink{
+		lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+	}
+	s.Sink = sink
+
+	ctx := context.Background()
+	totalCb := 20
+	for idx := 0; idx < totalCb; idx++ {
+		if idx < 5 {
+			s.AddCallback(GoMetricsSource)
+		} else if idx < 10 {
+			s.AddGroupedCallback("group1", GoMetricsSource)
+		} else {
+			s.AddGroupedCallback("group2", GoMetricsSource)
+		}
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; b.N < n; n++ {
+		go s.Schedule(ctx)
+		for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
+			runtime.Gosched()
+			tk.Incr(time.Duration(s.ReportingDelayNs))
+			runtime.Gosched()
+		}
+		dps := <-sink.lastDatapoints
+		So(len(dps), ShouldEqual, 30*totalCb)
+	}
+}
+
+func BenchmarkScheduler_ReportOnce_With_Debug(b *testing.B) {
+	var handleErrors []error
+	var handleErrRet error
+	s := &Scheduler{
+		ErrorHandler: func(e error) error {
+			handleErrors = append(handleErrors, e)
+			return errors.Wrap(handleErrRet, e)
+		},
+		debug:            true,
+		ReportingDelayNs: time.Second.Nanoseconds(),
+		callbackMap:      make(map[string]*callbackPair),
+	}
+	tk := timekeepertest.NewStubClock(time.Now())
+	s.Timer = tk
+	sink := &testSink{
+		lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+	}
+	s.Sink = sink
+
+	ctx := context.Background()
+	totalCb := 20
+	for idx := 0; idx < totalCb; idx++ {
+		if idx < 5 {
+			s.AddCallback(GoMetricsSource)
+		} else if idx < 10 {
+			s.AddGroupedCallback("group1", GoMetricsSource)
+		} else {
+			s.AddGroupedCallback("group2", GoMetricsSource)
+		}
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; b.N < n; n++ {
+		go s.Schedule(ctx)
+		for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
+			runtime.Gosched()
+			tk.Incr(time.Duration(s.ReportingDelayNs))
+			runtime.Gosched()
+		}
+		dps := <-sink.lastDatapoints
+		So(len(dps), ShouldEqual, 30*totalCb)
+	}
 }
