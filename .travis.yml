@@ -26,3 +26,9 @@ script:
 after_script:
   - cat coverage.out
 
+# Because we disable automatic builds for all branches,
+# this configuration ensures that master is rebuilt when prs land on it
+# and updates status icon on the repo.
+branches:
+  only:
+    - master
