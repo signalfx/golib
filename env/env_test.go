@@ -21,8 +21,14 @@ func TestGetStringEnvVar(t *testing.T) {
 			convey.So(*loaded, convey.ShouldEqual, testVal)
 		})
 		convey.Convey("should return the default value if the environment variable is not set", func() {
-			loaded := GetStringEnvVar(testKey, pointer.String("defaultVal"))
+			testVal := pointer.String("defaultVal")
+			loaded := GetStringEnvVar(testKey, testVal)
+			convey.So(loaded, convey.ShouldNotEqual, testVal)
 			convey.So(*loaded, convey.ShouldEqual, "defaultVal")
+		})
+		convey.Convey("should return nil if the default value is nil and the environment variable is not set", func() {
+			loaded := GetStringEnvVar(testKey, nil)
+			convey.So(loaded, convey.ShouldEqual, nil)
 		})
 		convey.Reset(func() {
 			os.Unsetenv(testKey)
@@ -39,8 +45,14 @@ func TestGetDurationEnvVar(t *testing.T) {
 			convey.So(*loaded, convey.ShouldEqual, time.Second*5)
 		})
 		convey.Convey("should return the default value if the environment variable is not set", func() {
-			loaded := GetDurationEnvVar(testKey, pointer.Duration(1*time.Second))
+			testVal := pointer.Duration(1 * time.Second)
+			loaded := GetDurationEnvVar(testKey, testVal)
+			convey.So(loaded, convey.ShouldNotEqual, testVal)
 			convey.So(*loaded, convey.ShouldEqual, time.Second*1)
+		})
+		convey.Convey("should return nil if the default value is nil and the environment variable is not set", func() {
+			loaded := GetDurationEnvVar(testKey, nil)
+			convey.So(loaded, convey.ShouldEqual, nil)
 		})
 		convey.Reset(func() {
 			os.Unsetenv(testKey)
@@ -57,8 +69,14 @@ func TestGetUint64EnvVar(t *testing.T) {
 			convey.So(*loaded, convey.ShouldEqual, 5)
 		})
 		convey.Convey("should return the default value if the environment variable is not set", func() {
-			loaded := GetUint64EnvVar(testKey, pointer.Uint64(1))
+			testVal := pointer.Uint64(1)
+			loaded := GetUint64EnvVar(testKey, testVal)
+			convey.So(loaded, convey.ShouldNotEqual, testVal)
 			convey.So(*loaded, convey.ShouldEqual, 1)
+		})
+		convey.Convey("should return nil if the default value is nil and the environment variable is not set", func() {
+			loaded := GetUint64EnvVar(testKey, nil)
+			convey.So(loaded, convey.ShouldEqual, nil)
 		})
 		convey.Reset(func() {
 			os.Unsetenv(testKey)
@@ -75,8 +93,14 @@ func TestGetUintEnvVar(t *testing.T) {
 			convey.So(*loaded, convey.ShouldEqual, 10)
 		})
 		convey.Convey("should return the default value if the environment variable is not set", func() {
-			loaded := GetUintEnvVar(testKey, pointer.Uint(1))
+			testVal := pointer.Uint(1)
+			loaded := GetUintEnvVar(testKey, testVal)
+			convey.So(loaded, convey.ShouldNotEqual, testVal)
 			convey.So(*loaded, convey.ShouldEqual, 1)
+		})
+		convey.Convey("should return nil if the default value is nil and the environment variable is not set", func() {
+			loaded := GetUintEnvVar(testKey, nil)
+			convey.So(loaded, convey.ShouldEqual, nil)
 		})
 		convey.Reset(func() {
 			os.Unsetenv(testKey)
