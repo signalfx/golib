@@ -180,6 +180,7 @@ type Scheduler struct {
 		resetIntervalCounts    int64
 		reportingTimeoutCounts int64
 	}
+	Prefix string
 }
 
 // NewScheduler creates a default SignalFx scheduler that can report metrics to SignalFx at some
@@ -290,6 +291,11 @@ func (s *Scheduler) ReportOnce(ctx context.Context) error {
 		s.previousDatapoints = datapoints
 		return datapoints
 	}()
+	if s.Prefix != "" {
+		for _, datapoint := range datapoints {
+			datapoint.Metric = fmt.Sprintf("%s%s", s.Prefix, datapoint.Metric)
+		}
+	}
 	return s.Sink.AddDatapoints(ctx, datapoints)
 }
 
