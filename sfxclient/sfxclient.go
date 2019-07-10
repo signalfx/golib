@@ -291,12 +291,17 @@ func (s *Scheduler) ReportOnce(ctx context.Context) error {
 		s.previousDatapoints = datapoints
 		return datapoints
 	}()
+	s.prependPrefix(datapoints)
+	return s.Sink.AddDatapoints(ctx, datapoints)
+}
+
+// Prepend prefix to metric if provided in scheduler
+func (s *Scheduler) prependPrefix(datapoints []*datapoint.Datapoint) {
 	if s.Prefix != "" {
 		for _, datapoint := range datapoints {
 			datapoint.Metric = fmt.Sprintf("%s%s", s.Prefix, datapoint.Metric)
 		}
 	}
-	return s.Sink.AddDatapoints(ctx, datapoints)
 }
 
 // ReportingDelay sets the interval metrics are reported to SignalFx.
