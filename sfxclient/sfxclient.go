@@ -291,7 +291,7 @@ func (s *Scheduler) ReportOnce(ctx context.Context) error {
 		s.previousDatapoints = datapoints
 		return datapoints
 	}()
-	if s.Prefix != "" {
+	if s != nil && s.Prefix != "" {
 		for _, datapoint := range datapoints {
 			datapoint.Metric = fmt.Sprintf("%s%s", s.Prefix, datapoint.Metric)
 		}
