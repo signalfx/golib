@@ -61,6 +61,7 @@ import (
 	"expvar"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -299,7 +300,10 @@ func (s *Scheduler) ReportOnce(ctx context.Context) error {
 func (s *Scheduler) prependPrefix(datapoints []*datapoint.Datapoint) {
 	if s.Prefix != "" {
 		for _, datapoint := range datapoints {
-			datapoint.Metric = fmt.Sprintf("%s%s", s.Prefix, datapoint.Metric)
+			var sb strings.Builder
+			sb.WriteString(s.Prefix)
+			sb.WriteString(datapoint.Metric)
+			datapoint.Metric = sb.String()
 		}
 	}
 }
