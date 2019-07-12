@@ -1,0 +1,12 @@
+[vars]
+  # Get rid of race check since there is an intentional race.
+  testFlags = ["-covermode", "atomic", "-timeout", "60s", "-cpu", "4", "-parallel", "8"]
+  ignoreDirs = ["template"]
+  duplLimit = "1000"
+[gotestcoverage]
+  race = false
+[metalinter]
+  [metalinter.ignored]
+    # This method has a lot of little functions nested so it isn't as
+	# complicated as gocyclo thinks
+    gocyclo= "^.*Run().*$"
