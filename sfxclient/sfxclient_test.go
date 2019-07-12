@@ -3,6 +3,7 @@ package sfxclient
 import (
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -204,6 +205,21 @@ func TestNewScheduler(t *testing.T) {
 			So(s.ReportOnce(ctx), ShouldBeNil)
 			firstPoints := <-sink.lastDatapoints
 			So(len(firstPoints), ShouldEqual, 30)
+			s.RemoveCallback(GoMetricsSource)
+			So(s.ReportOnce(ctx), ShouldBeNil)
+			firstPoints = <-sink.lastDatapoints
+			So(len(firstPoints), ShouldEqual, 0)
+		})
+
+		Convey("datapoints should have the prefix if scheduler specifies", func() {
+			s.AddCallback(GoMetricsSource)
+			s.Prefix = "prefix"
+			So(s.ReportOnce(ctx), ShouldBeNil)
+			firstPoints := <-sink.lastDatapoints
+			So(len(firstPoints), ShouldEqual, 30)
+			for _, firstPoint := range firstPoints {
+				So(strings.HasPrefix(firstPoint.Metric, s.Prefix), ShouldBeTrue)
+			}
 			s.RemoveCallback(GoMetricsSource)
 			So(s.ReportOnce(ctx), ShouldBeNil)
 			firstPoints = <-sink.lastDatapoints
