@@ -13,6 +13,7 @@ import (
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/logkey"
+	"github.com/signalfx/golib/sfxclient/spanfilter"
 	"github.com/signalfx/golib/trace"
 	"github.com/stretchr/testify/assert"
 )
@@ -115,4 +116,13 @@ func TestCounterSinkTrace(t *testing.T) {
 		t.Fatal("Expected an error!")
 	}
 	assert.Equal(t, int64(1), atomic.LoadInt64(&count.TotalProcessErrors), "Error should be sent through")
+	assert.Equal(t, int64(2), atomic.LoadInt64(&count.ProcessErrorSpans), "Num should be 2")
+	m := &spanfilter.Map{}
+	m.Add("blarg", "foo")
+	bs.RetError(m)
+	if err := middleSink.AddSpans(ctx, es); err == nil {
+		t.Fatal("Expected an error!")
+	}
+	assert.Equal(t, int64(2), atomic.LoadInt64(&count.TotalProcessErrors), "Error should be sent through")
+	assert.Equal(t, int64(3), atomic.LoadInt64(&count.ProcessErrorSpans), "Num should be one more")
 }
