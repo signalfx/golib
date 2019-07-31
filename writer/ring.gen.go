@@ -10,7 +10,6 @@ import "github.com/signalfx/golib/datapoint"
 
 import (
 	"context"
-	"log"
 	"sync/atomic"
 )
 
@@ -162,8 +161,7 @@ func (w *DatapointRingWriter) Run(ctx context.Context) {
 		}
 
 		if lastHighStarted < nextDatapointIdx && bufferedCircuits > startedCircuits {
-			w.totalPotentiallyDropped = int64(bufferSize)*(bufferedCircuits-startedCircuits) + int64(nextDatapointIdx-lastHighStarted)
-			log.Printf("SignalFx writer: ring buffer overflowed, some instances were dropped. Set MaxBuffered to something higher (currently %d)", bufferSize)
+			w.totalPotentiallyDropped++
 		}
 		batched++
 
@@ -352,8 +350,7 @@ func (w *SpanRingWriter) Run(ctx context.Context) {
 		}
 
 		if lastHighStarted < nextDatapointIdx && bufferedCircuits > startedCircuits {
-			w.totalPotentiallyDropped = int64(bufferSize)*(bufferedCircuits-startedCircuits) + int64(nextDatapointIdx-lastHighStarted)
-			log.Printf("SignalFx writer: ring buffer overflowed, some instances were dropped. Set MaxBuffered to something higher (currently %d)", bufferSize)
+			w.totalPotentiallyDropped++
 		}
 		batched++
 

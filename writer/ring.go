@@ -2,7 +2,6 @@ package writer
 
 import (
 	"context"
-	"log"
 	"sync/atomic"
 
 	"github.com/mauricelam/genny/generic"
@@ -160,8 +159,7 @@ func (w *InstanceRingWriter) Run(ctx context.Context) {
 		}
 
 		if lastHighStarted < nextDatapointIdx && bufferedCircuits > startedCircuits {
-			w.totalPotentiallyDropped = int64(bufferSize)*(bufferedCircuits-startedCircuits) + int64(nextDatapointIdx-lastHighStarted)
-			log.Printf("SignalFx writer: ring buffer overflowed, some instances were dropped. Set MaxBuffered to something higher (currently %d)", bufferSize)
+			w.totalPotentiallyDropped++
 		}
 		batched++
 
