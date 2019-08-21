@@ -58,9 +58,12 @@ package sfxclient
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"expvar"
 	"fmt"
+	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -163,42 +166,27 @@ func (c *callbackPair) getDatapointsWithDebug(parentSpan opentracing.Span, now t
 	return ret
 }
 
-// A Scheduler reports metrics to SignalFx at some timely manner.
-type Scheduler struct {
-	Sink               Sink
-	Timer              timekeeper.TimeKeeper
-	SendZeroTime       bool
-	debug              bool
-	ErrorHandler       func(error) error
-	ReportingDelayNs   int64
-	ReportingTimeoutNs int64
+// CollectorCallbackManager is the basis for anything that aggregates datapoints from Collectors
+type CollectorCallbackManager struct {
+	Timer        timekeeper.TimeKeeper
+	SendZeroTime bool
+	debug        bool
 
 	callbackMutex      sync.Mutex
 	callbackMap        map[string]*callbackPair
 	previousDatapoints []*datapoint.Datapoint
-	stats              struct {
-		scheduledSleepCounts   int64
-		resetIntervalCounts    int64
-		reportingTimeoutCounts int64
-	}
-	Prefix string
 }
 
-// NewScheduler creates a default SignalFx scheduler that can report metrics to SignalFx at some
-// interval.
-func NewScheduler() *Scheduler {
-	return &Scheduler{
-		Sink:               NewHTTPSink(),
-		Timer:              timekeeper.RealTime{},
-		ErrorHandler:       DefaultErrorHandler,
-		ReportingDelayNs:   DefaultReportingDelay.Nanoseconds(),
-		ReportingTimeoutNs: DefaultReportingTimeout.Nanoseconds(),
-		callbackMap:        make(map[string]*callbackPair),
+// NewCollectorCallbackManager returns a new CollectorCallbackManager
+func NewCollectorCallbackManager() *CollectorCallbackManager {
+	return &CollectorCallbackManager{
+		Timer:       timekeeper.RealTime{},
+		callbackMap: make(map[string]*callbackPair),
 	}
 }
 
 // Var returns an expvar variable that prints the values of the previously reported datapoints.
-func (s *Scheduler) Var() expvar.Var {
+func (s *CollectorCallbackManager) Var() expvar.Var {
 	return expvar.Func(func() interface{} {
 		s.callbackMutex.Lock()
 		defer s.callbackMutex.Unlock()
@@ -207,7 +195,7 @@ func (s *Scheduler) Var() expvar.Var {
 }
 
 // CollectDatapoints gives a scheduler an external endpoint to be called
-func (s *Scheduler) CollectDatapoints() []*datapoint.Datapoint {
+func (s *CollectorCallbackManager) CollectDatapoints() []*datapoint.Datapoint {
 	ret := make([]*datapoint.Datapoint, 0, len(s.previousDatapoints))
 	now := s.Timer.Now()
 	if s.debug {
@@ -227,17 +215,17 @@ func (s *Scheduler) CollectDatapoints() []*datapoint.Datapoint {
 }
 
 // AddCallback adds a collector to the default group.
-func (s *Scheduler) AddCallback(db Collector) {
+func (s *CollectorCallbackManager) AddCallback(db Collector) {
 	s.AddGroupedCallback(defaultCallbackGroup, db)
 }
 
 // DefaultDimensions adds a dimension map that are appended to all metrics in the default group.
-func (s *Scheduler) DefaultDimensions(dims map[string]string) {
+func (s *CollectorCallbackManager) DefaultDimensions(dims map[string]string) {
 	s.GroupedDefaultDimensions(defaultCallbackGroup, dims)
 }
 
 // GroupedDefaultDimensions adds default dimensions to a specific group.
-func (s *Scheduler) GroupedDefaultDimensions(group string, dims map[string]string) {
+func (s *CollectorCallbackManager) GroupedDefaultDimensions(group string, dims map[string]string) {
 	s.callbackMutex.Lock()
 	defer s.callbackMutex.Unlock()
 	subgroup, exists := s.callbackMap[group]
@@ -252,7 +240,7 @@ func (s *Scheduler) GroupedDefaultDimensions(group string, dims map[string]strin
 }
 
 // AddGroupedCallback adds a collector to a specific group.
-func (s *Scheduler) AddGroupedCallback(group string, db Collector) {
+func (s *CollectorCallbackManager) AddGroupedCallback(group string, db Collector) {
 	s.callbackMutex.Lock()
 	defer s.callbackMutex.Unlock()
 	subgroup, exists := s.callbackMap[group]
@@ -267,12 +255,12 @@ func (s *Scheduler) AddGroupedCallback(group string, db Collector) {
 }
 
 // RemoveCallback removes a collector from the default group.
-func (s *Scheduler) RemoveCallback(db Collector) {
+func (s *CollectorCallbackManager) RemoveCallback(db Collector) {
 	s.RemoveGroupedCallback(defaultCallbackGroup, db)
 }
 
 // RemoveGroupedCallback removes a collector from a specific group.
-func (s *Scheduler) RemoveGroupedCallback(group string, db Collector) {
+func (s *CollectorCallbackManager) RemoveGroupedCallback(group string, db Collector) {
 	s.callbackMutex.Lock()
 	defer s.callbackMutex.Unlock()
 	if g, exists := s.callbackMap[group]; exists {
@@ -280,6 +268,81 @@ func (s *Scheduler) RemoveGroupedCallback(group string, db Collector) {
 		if len(g.callbacks) == 0 {
 			delete(s.callbackMap, group)
 		}
+	}
+}
+
+// CollectorAggregator is an
+type CollectorAggregator interface {
+	Var() expvar.Var
+	CollectDatapoints() []*datapoint.Datapoint
+	AddCallback(db Collector)
+	DefaultDimensions(dims map[string]string)
+	GroupedDefaultDimensions(group string, dims map[string]string)
+	AddGroupedCallback(group string, db Collector)
+	RemoveCallback(db Collector)
+	RemoveGroupedCallback(group string, db Collector)
+}
+
+// DefaultHTTPErrorHandler is the default way to handle errors by a CollectorHandler.  It attempts to reply with a 500 http error
+var DefaultHTTPErrorHandler = func(err error, w http.ResponseWriter, req *http.Request) error {
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	return err
+}
+
+// CollectorHandler aggregates collectors handles http requests for datapoints
+type CollectorHandler struct {
+	*CollectorCallbackManager
+	HTTPErrorHandler   func(error, http.ResponseWriter, *http.Request) error
+	jsonMarshallerFunc func(v interface{}) ([]byte, error)
+}
+
+// NewCollectorHandler gets you the new CollectorHandler
+func NewCollectorHandler() *CollectorHandler {
+	return &CollectorHandler{
+		CollectorCallbackManager: NewCollectorCallbackManager(),
+		HTTPErrorHandler:         DefaultHTTPErrorHandler,
+		jsonMarshallerFunc:       json.Marshal,
+	}
+}
+
+// Datapoints exposes a handler func to return datapoints from all callbacks
+func (c *CollectorHandler) Datapoints(w http.ResponseWriter, req *http.Request) {
+	dps := c.CollectDatapoints()
+	b, err := c.jsonMarshallerFunc(dps)
+	if err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(b)))
+		_, err = w.Write(b)
+	}
+	if err != nil {
+		_ = c.HTTPErrorHandler(err, w, req)
+	}
+}
+
+// A Scheduler reports metrics to SignalFx at some timely manner.
+type Scheduler struct {
+	*CollectorCallbackManager
+	Sink               Sink
+	ErrorHandler       func(error) error
+	ReportingDelayNs   int64
+	ReportingTimeoutNs int64
+	stats              struct {
+		scheduledSleepCounts   int64
+		resetIntervalCounts    int64
+		reportingTimeoutCounts int64
+	}
+	Prefix string
+}
+
+// NewScheduler creates a default SignalFx scheduler that can report metrics to SignalFx at some
+// interval.
+func NewScheduler() *Scheduler {
+	return &Scheduler{
+		CollectorCallbackManager: NewCollectorCallbackManager(),
+		Sink:                     NewHTTPSink(),
+		ErrorHandler:             DefaultErrorHandler,
+		ReportingDelayNs:         DefaultReportingDelay.Nanoseconds(),
+		ReportingTimeoutNs:       DefaultReportingTimeout.Nanoseconds(),
 	}
 }
 

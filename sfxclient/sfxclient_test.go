@@ -1,6 +1,7 @@
 package sfxclient
 
 import (
+	"net/http/httptest"
 	"runtime"
 	"strconv"
 	"strings"
@@ -69,16 +70,18 @@ func TestScheduler_ReportOnce(t *testing.T) {
 	var handleErrors []error
 	var handleErrRet error
 	s := &Scheduler{
+		CollectorCallbackManager: &CollectorCallbackManager{
+			Timer:       timekeepertest.NewStubClock(time.Now()),
+			callbackMap: make(map[string]*callbackPair),
+		},
 		Sink: &testSink{
 			lastDatapoints: make(chan []*datapoint.Datapoint, 1),
 		},
-		Timer: timekeepertest.NewStubClock(time.Now()),
 		ErrorHandler: func(e error) error {
 			handleErrors = append(handleErrors, e)
 			return errors.Wrap(handleErrRet, e)
 		},
 		ReportingDelayNs: time.Second.Nanoseconds(),
-		callbackMap:      make(map[string]*callbackPair),
 	}
 
 	setupCollectors(25)
@@ -96,6 +99,9 @@ func TestScheduler_ReportingTimeout(t *testing.T) {
 	var handleErrors []error
 	var handleErrRet error
 	s := &Scheduler{
+		CollectorCallbackManager: &CollectorCallbackManager{
+			callbackMap: make(map[string]*callbackPair),
+		},
 		Sink: &testSink{
 			lastDatapoints: make(chan []*datapoint.Datapoint, 1),
 		},
@@ -104,7 +110,6 @@ func TestScheduler_ReportingTimeout(t *testing.T) {
 			return errors.Wrap(handleErrRet, e)
 		},
 		ReportingDelayNs: time.Second.Nanoseconds(),
-		callbackMap:      make(map[string]*callbackPair),
 	}
 	tk := timekeepertest.NewStubClock(time.Now())
 	s.Timer = tk
@@ -129,12 +134,14 @@ func TestCollectDatapointDebug(t *testing.T) {
 	var handleErrors []error
 	var handleErrRet error
 	s := &Scheduler{
+		CollectorCallbackManager: &CollectorCallbackManager{
+			callbackMap: make(map[string]*callbackPair),
+		},
 		ErrorHandler: func(e error) error {
 			handleErrors = append(handleErrors, e)
 			return errors.Wrap(handleErrRet, e)
 		},
 		ReportingDelayNs: time.Second.Nanoseconds(),
-		callbackMap:      make(map[string]*callbackPair),
 	}
 	sink := &testSink{
 		lastDatapoints: make(chan []*datapoint.Datapoint, 1),
@@ -350,12 +357,14 @@ func BenchmarkScheduler_ReportOnce(b *testing.B) {
 	var handleErrors []error
 	var handleErrRet error
 	s := &Scheduler{
+		CollectorCallbackManager: &CollectorCallbackManager{
+			callbackMap: make(map[string]*callbackPair),
+		},
 		ErrorHandler: func(e error) error {
 			handleErrors = append(handleErrors, e)
 			return errors.Wrap(handleErrRet, e)
 		},
 		ReportingDelayNs: time.Second.Nanoseconds(),
-		callbackMap:      make(map[string]*callbackPair),
 	}
 	tk := timekeepertest.NewStubClock(time.Now())
 	s.Timer = tk
@@ -393,13 +402,15 @@ func BenchmarkScheduler_ReportOnce_With_Debug(b *testing.B) {
 	var handleErrors []error
 	var handleErrRet error
 	s := &Scheduler{
+		CollectorCallbackManager: &CollectorCallbackManager{
+			debug:       true,
+			callbackMap: make(map[string]*callbackPair),
+		},
 		ErrorHandler: func(e error) error {
 			handleErrors = append(handleErrors, e)
 			return errors.Wrap(handleErrRet, e)
 		},
-		debug:            true,
 		ReportingDelayNs: time.Second.Nanoseconds(),
-		callbackMap:      make(map[string]*callbackPair),
 	}
 	tk := timekeepertest.NewStubClock(time.Now())
 	s.Timer = tk
@@ -431,4 +442,24 @@ func BenchmarkScheduler_ReportOnce_With_Debug(b *testing.B) {
 		dps := <-sink.lastDatapoints
 		So(len(dps), ShouldEqual, 30*totalCb)
 	}
+}
+
+func TestCollectorHandler(t *testing.T) {
+	Convey("test internal metrics", t, func() {
+		c := NewCollectorHandler()
+		req := httptest.NewRequest("GET", "/internal-metrics", nil)
+		w := httptest.NewRecorder()
+		c.Datapoints(w, req)
+		So(w.Body.String(), ShouldEqual, "[]")
+	})
+	Convey("test internal metrics", t, func() {
+		c := NewCollectorHandler()
+		c.jsonMarshallerFunc = func(v interface{}) ([]byte, error) {
+			return nil, errors.New("blarg")
+		}
+		req := httptest.NewRequest("GET", "/internal-metrics", nil)
+		w := httptest.NewRecorder()
+		c.Datapoints(w, req)
+		So(w.Body.String(), ShouldEqual, "blarg\n")
+	})
 }
