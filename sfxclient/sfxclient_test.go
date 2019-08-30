@@ -198,6 +198,7 @@ func TestNewScheduler(t *testing.T) {
 			So(len(cf.Datapoints()), ShouldEqual, 0)
 			So(c, ShouldEqual, 1)
 			s.AddCallback(cf)
+			So(len(s.CollectDatapoints()), ShouldEqual, 0)
 		})
 
 		Convey("callbacks should be removable", func() {
