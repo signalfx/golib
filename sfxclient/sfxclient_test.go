@@ -178,8 +178,11 @@ func TestNewScheduler(t *testing.T) {
 
 		var handledErrors []error
 		var handleErrRet error
+		var mu sync.Mutex
 		s.ErrorHandler = func(e error) error {
+			mu.Lock()
 			handledErrors = append(handledErrors, e)
+			mu.Unlock()
 			return errors.Wrap(handleErrRet, e)
 		}
 
