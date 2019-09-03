@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:f38bee55c484e6ddaf57e2ee74dc2a646531ec9e504c367ae1483f41ebff1f7c"
-  name = "git.apache.org/thrift.git"
-  packages = ["lib/go/thrift"]
-  pruneopts = "NUT"
-  revision = "3838fa316492c1299c107fd1b29d3bc1634e756b"
-  source = "github.com/signalfx/thrift"
-
-[[projects]]
   digest = "1:3ccf8ba7afe02fd470c4f07d6eea4d0e6875da3d129f95b925f2003ce5dd2024"
   name = "github.com/StackExchange/wmi"
   packages = ["."]
@@ -216,6 +208,13 @@
   revision = "4f7ef64c72a9ee0760dcb58fdfbbac09f6ccb299"
 
 [[projects]]
+  digest = "1:f38bee55c484e6ddaf57e2ee74dc2a646531ec9e504c367ae1483f41ebff1f7c"
+  name = "github.com/signalfx/thrift"
+  packages = ["lib/go/thrift"]
+  pruneopts = "NUT"
+  revision = "3838fa316492c1299c107fd1b29d3bc1634e756b"
+
+[[projects]]
   digest = "1:5ce35aa0f67b06b4ab9205d344590d150449618a463a3652b1805b959da5f46c"
   name = "github.com/smartystreets/assertions"
   packages = [
@@ -278,7 +277,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "git.apache.org/thrift.git/lib/go/thrift",
     "github.com/boltdb/bolt",
     "github.com/dropbox/godropbox/errors",
     "github.com/facebookgo/stackerr",
@@ -298,6 +296,7 @@
     "github.com/signalfx/com_signalfx_metrics_protobuf",
     "github.com/signalfx/gohistogram",
     "github.com/signalfx/gomemcache/memcache",
+    "github.com/signalfx/thrift/lib/go/thrift",
     "github.com/smartystreets/goconvey/convey",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",

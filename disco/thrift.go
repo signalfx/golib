@@ -5,10 +5,10 @@ import (
 	"net"
 	"time"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/signalfx/golib/errors"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/logkey"
+	"github.com/signalfx/thrift/lib/go/thrift"
 )
 
 // ThriftTransport can be used as the transport layer for thrift, connecting to services discovered
