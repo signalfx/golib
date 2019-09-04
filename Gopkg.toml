@@ -26,8 +26,7 @@
 
 
 [[constraint]]
-  name = "git.apache.org/thrift.git"
-  source = "github.com/signalfx/thrift"
+  name = "github.com/signalfx/thrift"
   revision = "3838fa316492c1299c107fd1b29d3bc1634e756b"
 
 [[constraint]]

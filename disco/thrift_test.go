@@ -10,12 +10,12 @@ import (
 
 	"sync/atomic"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/nettest"
 	"github.com/signalfx/golib/zkplus"
 	"github.com/signalfx/golib/zkplus/zktest"
+	"github.com/signalfx/thrift/lib/go/thrift"
 	"github.com/stretchr/testify/assert"
 )
 
