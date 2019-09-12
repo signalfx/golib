@@ -65,14 +65,14 @@ func GetCPU() (info *CPU, err error) {
 	var cpus []cpu.InfoStat
 
 	// On Windows this can sometimes take longer than the default timeout (3 seconds).
-	ctx, _ := context.WithTimeout(context.Background(), cpuTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cpuTimeout)
+	defer cancel()
+
 	if cpus, err = cpuInfo(ctx); err != nil {
 		return info, err
 	}
 
 	info.HostPhysicalCPUs = len(cpus)
-
-	ctx, _ = context.WithTimeout(context.Background(), cpuTimeout)
 
 	// get logical cpu stats
 	if info.HostLogicalCPUs, err = cpuCounts(ctx, true); err != nil {
