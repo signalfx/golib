@@ -1,6 +1,7 @@
 package hostmetadata
 
 import (
+	"context"
 	"errors"
 	"os"
 	"reflect"
@@ -14,8 +15,8 @@ import (
 
 func TestGetCPU(t *testing.T) {
 	type testfixture struct {
-		cpuInfo   func() ([]cpu.InfoStat, error)
-		cpuCounts func(bool) (int, error)
+		cpuInfo   func(context.Context) ([]cpu.InfoStat, error)
+		cpuCounts func(context.Context, bool) (int, error)
 	}
 	tests := []struct {
 		name     string
@@ -26,7 +27,7 @@ func TestGetCPU(t *testing.T) {
 		{
 			name: "successful host cpu info",
 			fixtures: testfixture{
-				cpuInfo: func() ([]cpu.InfoStat, error) {
+				cpuInfo: func(ctx context.Context) ([]cpu.InfoStat, error) {
 					return []cpu.InfoStat{
 						{
 							ModelName: "testmodelname",
@@ -38,7 +39,7 @@ func TestGetCPU(t *testing.T) {
 						},
 					}, nil
 				},
-				cpuCounts: func(bool) (int, error) {
+				cpuCounts: func(context.Context, bool) (int, error) {
 					return 2, nil
 				},
 			},
@@ -52,7 +53,7 @@ func TestGetCPU(t *testing.T) {
 		{
 			name: "unsuccessful host cpu info (missing cpu info)",
 			fixtures: testfixture{
-				cpuInfo: func() ([]cpu.InfoStat, error) {
+				cpuInfo: func(context.Context) ([]cpu.InfoStat, error) {
 					return nil, errors.New("bad cpu info")
 				},
 			},
@@ -67,7 +68,7 @@ func TestGetCPU(t *testing.T) {
 		{
 			name: "unsuccessful host cpu info (missing cpu counts)",
 			fixtures: testfixture{
-				cpuInfo: func() ([]cpu.InfoStat, error) {
+				cpuInfo: func(context.Context) ([]cpu.InfoStat, error) {
 					return []cpu.InfoStat{
 						{
 							ModelName: "testmodelname",
@@ -79,7 +80,7 @@ func TestGetCPU(t *testing.T) {
 						},
 					}, nil
 				},
-				cpuCounts: func(bool) (int, error) {
+				cpuCounts: func(context.Context, bool) (int, error) {
 					return 0, errors.New("bad cpu counts")
 				},
 			},
