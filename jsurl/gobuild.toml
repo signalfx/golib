@@ -1,0 +1,3 @@
+[metalinter]
+  [metalinter.ignored]
+    gocyclo = "jsurl\\.go"
