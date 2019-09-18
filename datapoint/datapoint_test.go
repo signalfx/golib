@@ -2,6 +2,7 @@ package datapoint
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,13 +38,13 @@ func TestDatapointJSONDecode(t *testing.T) {
 
 	Convey("Float datapoints encode/decode correctly", t, func() {
 		start := time.Now()
-		dpIn := New("test", map[string]string{"a": "b"}, NewFloatValue(.5), Gauge, start)
+		dpIn := New("test", map[string]string{"a": "b"}, NewFloatValue(.5), Count, start)
 		So(datapointInOut(dpIn).Value.(FloatValue).Float(), ShouldEqual, .5)
 	})
 
 	Convey("String datapoints encode/decode correctly", t, func() {
 		start := time.Now()
-		dpIn := New("test", map[string]string{"a": "b"}, NewStringValue("hi"), Gauge, start)
+		dpIn := New("test", map[string]string{"a": "b"}, NewStringValue("hi"), Counter, start)
 		So(datapointInOut(dpIn).Value.(StringValue).String(), ShouldEqual, "hi")
 	})
 }
@@ -91,6 +92,52 @@ func TestDatapointProperties(t *testing.T) {
 			Convey("GetProperties should return nil", func() {
 				So(dp.GetProperties(), ShouldBeNil)
 			})
+		})
+	})
+}
+
+func TestMetricTypeMarshaller(t *testing.T) {
+	metricTypeToStringMap := map[MetricType]string{
+		Gauge:     "gauge",
+		Count:     "counter",
+		Enum:      "enum",
+		Counter:   "cumulative counter",
+		Rate:      "rate",
+		Timestamp: "timestamp",
+	}
+
+	Convey("MetricType Stringer", t, func() {
+		Convey("shall handle standard values", func() {
+			for metricType, expectedText := range metricTypeToStringMap {
+				So(metricType.String(), ShouldEqual, expectedText)
+			}
+		})
+		Convey("shall handle out of range values", func() {
+			So(MetricType(123).String(), ShouldEqual, "MetricType(123)")
+		})
+	})
+
+	Convey("MetricType Text Unmarshaller", t, func() {
+		Convey("shall handle standard values", func() {
+			for expectedMetricType, text := range metricTypeToStringMap {
+				var mt MetricType
+				err := mt.UnmarshalText([]byte(text))
+				So(err, ShouldBeNil)
+				So(mt, ShouldEqual, expectedMetricType)
+			}
+		})
+		Convey("shall handle out of range values", func() {
+			var mt MetricType
+			So(mt.UnmarshalText([]byte("???")), ShouldNotBeNil)
+		})
+	})
+
+	Convey("MetricType JSON Unmarshaller", t, func() {
+		Convey("invalid metric type should error", func() {
+			dp := New("", nil, NewIntValue(1), Gauge, time.Now())
+			validJSON, _ := json.Marshal(dp)
+			invalidJSON := strings.Replace(string(validJSON), "metric_type\":0", "metric_type\":\"???\"", 1)
+			So(json.Unmarshal([]byte(invalidJSON), &dp), ShouldNotBeNil)
 		})
 	})
 }
