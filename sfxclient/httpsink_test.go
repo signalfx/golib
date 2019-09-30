@@ -23,6 +23,7 @@ import (
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/trace"
 	. "github.com/smartystreets/goconvey/convey"
+	"net/http/httptest"
 )
 
 type errReader struct {
@@ -159,7 +160,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			resp := &http.Response{
 				Body: ioutil.NopCloser(&errReader{}),
 			}
-			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)), ShouldEqual, errReadErr)
+			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)).Error(), ShouldEqual, "cannot fully read response body: read bad: map[]")
 		})
 		Convey("with a test endpoint", func() {
 			retString := `"OK"`
@@ -367,7 +368,7 @@ func TestHTTPEventSink(t *testing.T) {
 			resp := &http.Response{
 				Body: ioutil.NopCloser(&errReader{}),
 			}
-			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)), ShouldEqual, errReadErr)
+			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)).Error(), ShouldEqual, "cannot fully read response body: read bad: map[]")
 		})
 		Convey("with a test endpoint", func() {
 			retString := `"OK"`
@@ -525,7 +526,7 @@ func TestHTTPTraceSink(t *testing.T) {
 			resp := &http.Response{
 				Body: ioutil.NopCloser(&errReader{}),
 			}
-			So(errors.Tail(s.handleResponse(resp, spanResponseValidator)), ShouldEqual, errReadErr)
+			So(errors.Tail(s.handleResponse(resp, spanResponseValidator)).Error(), ShouldEqual, "cannot fully read response body: read bad: map[]")
 		})
 
 		Convey("with a test endpoint", func() {
@@ -615,4 +616,19 @@ func (g *goSpans) Spans() []*trace.Span {
 	var tt []*trace.Span
 	json.Unmarshal([]byte(longTraceExample), &tt)
 	return tt
+}
+
+func TestSetHeaders(t *testing.T) {
+	Convey("test headers", t, func() {
+		h := &HTTPSink{AuthToken: "foo", UserAgent: "agent"}
+		req := httptest.NewRequest("post", "/v2/datapoint", nil)
+		ctx := context.WithValue(context.Background(), XDebugID, "foo")
+		ctx = context.WithValue(ctx, XTracingDebug, "foo")
+		ctx = context.WithValue(ctx, XTracingID, "bar")
+		h.setHeadersOnBottom(ctx, req, "application/json", true)
+		So(req.Header.Get(string(XDebugID)), ShouldEqual, "foo")
+		So(req.Header.Get(string(XTracingDebug)), ShouldEqual, "foo")
+		So(req.Header.Get(string(XTracingID)), ShouldEqual, "bar")
+	})
+
 }
