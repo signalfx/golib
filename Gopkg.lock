@@ -85,11 +85,12 @@
   version = "v1.8.0"
 
 [[projects]]
-  digest = "1:b1ef763b6334cf7eb68249217b77955fdae4d2475e13d7d38eb4b452f0633944"
+  digest = "1:573ca21d3669500ff845bdebee890eb7fc7f0f50c59f2132f2a0c6b03d85086a"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   pruneopts = "NUT"
-  revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
+  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
+  version = "v1.3.2"
 
 [[projects]]
   branch = "master"
