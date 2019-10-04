@@ -618,6 +618,8 @@ func (g *goSpans) Spans() []*trace.Span {
 	return tt
 }
 
+type contextPut string
+
 func TestSetHeaders(t *testing.T) {
 	Convey("test headers", t, func() {
 		h := &HTTPSink{AuthToken: "foo", UserAgent: "agent"}
@@ -630,5 +632,12 @@ func TestSetHeaders(t *testing.T) {
 		So(req.Header.Get(string(XTracingDebug)), ShouldEqual, "foo")
 		So(req.Header.Get(string(XTracingID)), ShouldEqual, "bar")
 	})
-
+	Convey("test setTokenHeader", t, func() {
+		h := &HTTPSink{AuthToken: "foo", UserAgent: "agent"}
+		req := httptest.NewRequest("post", "/v2/datapoint", nil)
+		// nolint: golint
+		ctx := context.WithValue(context.Background(), TokenHeaderName, "bar")
+		h.setTokenHeader(ctx, req)
+		So(req.Header.Get(string(TokenHeaderName)), ShouldEqual, "bar")
+	})
 }
