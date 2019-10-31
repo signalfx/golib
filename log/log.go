@@ -5,6 +5,12 @@ type Logger interface {
 	Log(keyvals ...interface{})
 }
 
+// LoggerWithContext is an extension of the Logger interface with a method for retrieiving the underlying log Context
+type LoggerWithContext interface {
+	Logger
+	Context() *Context
+}
+
 // Disableable is an optional interface that a logger can implement to signal it is disabled and should not
 // be sent log messages for optimization reasons
 type Disableable interface {
@@ -127,6 +133,11 @@ func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	}
 }
 
+// Context returns the context from a logger
+func (l *Context) Context() *Context {
+	return l
+}
+
 // LoggerFunc converts a function into a Logger
 type LoggerFunc func(...interface{})
 
@@ -135,17 +146,29 @@ func (f LoggerFunc) Log(keyvals ...interface{}) {
 	f(keyvals...)
 }
 
+func getContext(l Logger) *Context {
+	if logger, ok := l.(LoggerWithContext); ok {
+		return logger.Context()
+	}
+
+	return NewContext(l)
+}
+
 // IfErr is a shorthand that will log an error if err is not nil
 func IfErr(l Logger, err error) {
 	if err != nil {
-		l.Log(Err, err)
+		if logCtx := getContext(l); logCtx != nil && !IsDisabled(logCtx.Logger) {
+			logCtx.Logger.Log(addArrays(copyIfDynamic(logCtx.KeyVals), []interface{}{Err, err})...)
+		}
 	}
 }
 
 // IfErrAndReturn is a shorthand that will log an error if err is not nil and returns the original err
 func IfErrAndReturn(l Logger, err error) error {
 	if err != nil {
-		l.Log(Err, err)
+		if logCtx := getContext(l); logCtx != nil && !IsDisabled(logCtx.Logger) {
+			logCtx.Logger.Log(addArrays(copyIfDynamic(logCtx.KeyVals), []interface{}{Err, err})...)
+		}
 	}
 	return err
 }
@@ -153,16 +176,20 @@ func IfErrAndReturn(l Logger, err error) error {
 // IfErrWithKeys logs an error with the supplied logger if it is not nil.
 // The error will be appended to the end of the supplied keys/messages
 func IfErrWithKeys(l Logger, err error, intf ...interface{}) {
-	if err != nil && l != nil {
-		l.Log(append(intf, err)...)
+	if err != nil {
+		if logCtx := getContext(l); logCtx != nil && !IsDisabled(logCtx.Logger) {
+			logCtx.Logger.Log(addArrays(copyIfDynamic(logCtx.KeyVals), addArrays(intf, []interface{}{Err, err}))...)
+		}
 	}
 }
 
 // IfErrWithKeysAndReturn logs an error with the supplied logger if it is not nil and then returns the original error.
 // The error will be appended to the end of the supplied keys/messages
 func IfErrWithKeysAndReturn(l Logger, err error, intf ...interface{}) error {
-	if err != nil && l != nil {
-		l.Log(append(intf, err)...)
+	if err != nil {
+		if logCtx := getContext(l); logCtx != nil && !IsDisabled(logCtx.Logger) {
+			logCtx.Logger.Log(addArrays(copyIfDynamic(logCtx.KeyVals), addArrays(intf, []interface{}{Err, err}))...)
+		}
 	}
 	return err
 }

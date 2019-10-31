@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
@@ -473,4 +474,50 @@ func raceCheckerIter(l Logger, deep int, iter int) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+type loggerWithOutGetContext struct{}
+
+func (l loggerWithOutGetContext) Log(keyvals ...interface{}) {}
+
+func Test_getContext(t *testing.T) {
+	ctx := NewContext(DefaultLogger).With(Msg, "hello")
+	ratePerSecond := NewOnePerSecond(ctx)
+	type args struct {
+		l Logger
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Context
+	}{
+		{
+			name: "rateLimitedLogger based on context",
+			args: args{
+				l: ratePerSecond,
+			},
+			want: ctx,
+		},
+		{
+			name: "nil logger",
+			args: args{
+				l: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "logger without context returns a new context utilizing that logger",
+			args: args{
+				l: &loggerWithOutGetContext{},
+			},
+			want: NewContext(&loggerWithOutGetContext{}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getContext(tt.args.l); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getContext() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

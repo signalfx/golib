@@ -26,15 +26,15 @@ func (r *RateLimitedLogger) now() time.Time {
 
 // Log kvs to the wrapped Logger if the limit hasn't been reached
 func (r *RateLimitedLogger) Log(kvs ...interface{}) {
-	now := r.now()
-	if r.EventCounter.Event(now) > r.Limit {
-		if r.LimitLogger != nil {
-			// Note: Log here messes up "caller" :/
-			r.LimitLogger.Log(kvs...)
-		}
+	// get the log context
+	var logCtx = r.Context()
+
+	if logCtx == nil || IsDisabled(logCtx.Logger) {
 		return
 	}
-	r.Logger.Log(kvs...)
+
+	// make the log statement
+	logCtx.Logger.Log(addArrays(copyIfDynamic(logCtx.KeyVals), kvs)...)
 }
 
 // Disabled returns true if this logger is over its limit or if the wrapped logger is
@@ -42,6 +42,17 @@ func (r *RateLimitedLogger) Log(kvs ...interface{}) {
 func (r *RateLimitedLogger) Disabled() bool {
 	now := r.now()
 	return r.EventCounter.Events(now, 0) > r.Limit || IsDisabled(r.Logger)
+}
+
+// Context returns the underlying log context based on the rate limit
+func (r *RateLimitedLogger) Context() *Context {
+	// get the appropriate logger from the ratelimited logger
+	if r.EventCounter.Event(r.now()) > r.Limit {
+		return getContext(r.LimitLogger)
+	}
+
+	// get a context from the logger
+	return getContext(r.Logger)
 }
 
 // NewOnePerSecond returns a *RateLimitedLogger that allows one message per second
