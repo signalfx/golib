@@ -252,7 +252,7 @@ func (s *Scheduler) GroupedDefaultDimensions(group string, dims map[string]strin
 	subgroup, exists := s.callbackMap[group]
 	if !exists {
 		subgroup = &callbackPair{
-			callbacks:         make(map[Collector]struct{}, 0),
+			callbacks:         make(map[Collector]struct{}),
 			defaultDimensions: dims,
 		}
 		s.callbackMap[group] = subgroup

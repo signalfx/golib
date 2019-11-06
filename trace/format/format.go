@@ -13,10 +13,10 @@ type Span trace.Span
 //easyjson:json
 type Trace trace.Trace
 
-// Annotation is an alias
+// Endpoint is an alias
 //easyjson:json
 type Endpoint trace.Endpoint
 
-// Endpoint is an alias
+// Annotation is an alias
 //easyjson:json
 type Annotation trace.Annotation

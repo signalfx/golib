@@ -7,6 +7,8 @@ var Discard ErrorHandlingDisableableLogger = nop{}
 
 // Log does nothing
 func (n nop) Log(keyvals ...interface{}) {
+	//nolint
+	return
 }
 
 // ErrorLogger returns the discard logger

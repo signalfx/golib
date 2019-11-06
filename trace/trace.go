@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+
 	"github.com/signalfx/golib/log"
 )
 

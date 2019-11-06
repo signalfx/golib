@@ -67,27 +67,27 @@ type ClientConfigChangerSink struct {
 }
 
 // WatchSinkChanges returns a new ClientConfigChangerSink that wraps a sink with auth/endpoint changes from distconf
-func WatchSinkChanges(sink sfxclient.Sink, Conf *ClientConfig, logger log.Logger) sfxclient.Sink {
+func WatchSinkChanges(sink sfxclient.Sink, conf *ClientConfig, logger log.Logger) sfxclient.Sink {
 	httpSink, ok := sink.(*sfxclient.HTTPSink)
 	if !ok {
 		return sink
 	}
-	return WatchHTTPSinkChange(httpSink, Conf, logger)
+	return WatchHTTPSinkChange(httpSink, conf, logger)
 }
 
 // WatchHTTPSinkChange returns anew ClientConfigChangerSink that takes an http sink, instead of a regular sinc
-func WatchHTTPSinkChange(httpSink *sfxclient.HTTPSink, Conf *ClientConfig, logger log.Logger) *ClientConfigChangerSink {
+func WatchHTTPSinkChange(httpSink *sfxclient.HTTPSink, conf *ClientConfig, logger log.Logger) *ClientConfigChangerSink {
 	ret := &ClientConfigChangerSink{
 		Destination: httpSink,
 		urlParse:    url.Parse,
 		logger:      logger,
 	}
-	ret.authTokenWatch(Conf.AuthToken, "")
-	ret.endpointWatch(Conf.Endpoint, "")
-	ret.disableCompressionWatch(Conf.DisableCompression, false)
-	Conf.Endpoint.Watch(ret.endpointWatch)
-	Conf.AuthToken.Watch(ret.authTokenWatch)
-	Conf.DisableCompression.Watch(ret.disableCompressionWatch)
+	ret.authTokenWatch(conf.AuthToken, "")
+	ret.endpointWatch(conf.Endpoint, "")
+	ret.disableCompressionWatch(conf.DisableCompression, false)
+	conf.Endpoint.Watch(ret.endpointWatch)
+	conf.AuthToken.Watch(ret.authTokenWatch)
+	conf.DisableCompression.Watch(ret.disableCompressionWatch)
 	return ret
 }
 

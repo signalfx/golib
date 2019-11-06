@@ -139,11 +139,11 @@ func (h *Handler) ServeHTTPC(ctx context.Context, rw http.ResponseWriter, r *htt
 }
 
 //NewHandler creates a new handler with no middleware layers
-func NewHandler(StartingContext context.Context, Ending ContextHandler) *Handler {
+func NewHandler(startingContext context.Context, ending ContextHandler) *Handler {
 	h := &Handler{
-		Ending:          Ending,
+		Ending:          ending,
 		Chain:           []Constructor{},
-		StartingContext: StartingContext,
+		StartingContext: startingContext,
 	}
 	h.Pool.New = func() interface{} {
 		return h.newStack()

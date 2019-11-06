@@ -2,9 +2,10 @@ package log
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/signalfx/golib/errors"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 )
 
 type panicError struct{}

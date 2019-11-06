@@ -1,9 +1,10 @@
 package dplocal
 
 import (
-	"github.com/signalfx/golib/datapoint"
 	"os"
 	"time"
+
+	"github.com/signalfx/golib/datapoint"
 )
 
 var osXXXHostname = os.Hostname

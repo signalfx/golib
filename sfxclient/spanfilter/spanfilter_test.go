@@ -2,9 +2,10 @@ package spanfilter
 
 import (
 	"context"
+	"testing"
+
 	"github.com/signalfx/golib/errors"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 )
 
 func Test(t *testing.T) {

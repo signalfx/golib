@@ -9,6 +9,8 @@ import (
 	"github.com/signalfx/golib/errors"
 
 	"fmt"
+	"sort"
+
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/zkplus"
@@ -16,7 +18,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sort"
 )
 
 func TestUnableToConn(t *testing.T) {

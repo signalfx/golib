@@ -1,7 +1,10 @@
 package log
 
-import "testing"
-import . "github.com/smartystreets/goconvey/convey"
+import (
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+)
 
 func TestNop(t *testing.T) {
 	Convey("A nop logger", t, func() {

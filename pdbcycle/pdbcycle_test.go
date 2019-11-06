@@ -3,10 +3,6 @@ package pdbcycle
 import (
 	"context"
 	"errors"
-	"github.com/boltdb/bolt"
-	"github.com/signalfx/golib/boltcycle"
-	. "github.com/smartystreets/goconvey/convey"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,6 +11,11 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/boltdb/bolt"
+	"github.com/signalfx/golib/boltcycle"
+	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func raceyReads(pdb *CyclePDB, closeChan <-chan struct{}, wg *sync.WaitGroup, t *testing.T) {

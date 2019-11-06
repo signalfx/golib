@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 
 	"context"
+
 	"github.com/signalfx/golib/datapoint"
 )
 

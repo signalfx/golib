@@ -1,9 +1,10 @@
 package dptest
 
 import (
+	"testing"
+
 	"github.com/signalfx/golib/datapoint"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 )
 
 func TestExactlyOne(t *testing.T) {

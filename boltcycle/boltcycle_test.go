@@ -13,6 +13,7 @@ import (
 	"bytes"
 
 	"context"
+
 	"github.com/boltdb/bolt"
 	"github.com/signalfx/golib/log"
 	. "github.com/smartystreets/goconvey/convey"

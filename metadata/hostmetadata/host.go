@@ -80,12 +80,12 @@ func GetCPU() (info *CPU, err error) {
 	}
 
 	// total number of cpu cores
-	for _, cpu := range cpus {
-		info.HostCPUCores += int64(cpu.Cores)
+	for i := range cpus {
+		info.HostCPUCores += int64(cpus[i].Cores)
 		// TODO: This is not ideal... if there are different processors
 		// we will only report one of the models... This is unlikely to happen,
 		// but it could
-		info.HostCPUModel = cpu.ModelName
+		info.HostCPUModel = cpus[i].ModelName
 	}
 
 	err = fillPlatformSpecificCPUData(info)

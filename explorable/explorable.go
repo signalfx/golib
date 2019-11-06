@@ -2,18 +2,21 @@ package explorable
 
 import (
 	"fmt"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
 	"html"
 	"net/http"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/logkey"
 )
 
 // DefaultLogger is used by explorable if a handler hasn't set a logger
 var DefaultLogger = log.Logger(log.DefaultLogger.CreateChild())
+
+const nilDesc = "<NIL>"
 
 // Result is the crude explorable representation of an object returned by ExploreObject
 type Result struct {
@@ -145,7 +148,7 @@ func exploreFunc(t reflect.Value, path []string) *Result {
 func exploreSlice(t reflect.Value, path []string) *Result {
 	ret := &Result{}
 	if t.IsNil() {
-		ret.Desc = "<NIL>"
+		ret.Desc = nilDesc
 		return ret
 	}
 	if len(path) == 0 {
@@ -168,7 +171,7 @@ func exploreSlice(t reflect.Value, path []string) *Result {
 func exploreMap(t reflect.Value, path []string) *Result {
 	ret := &Result{}
 	if t.IsNil() {
-		ret.Desc = "<NIL>"
+		ret.Desc = nilDesc
 		return ret
 	}
 	if len(path) == 0 {
@@ -216,7 +219,7 @@ func exploreStruct(t reflect.Value, path []string) *Result {
 func exploreChan(t reflect.Value, path []string) *Result {
 	ret := &Result{}
 	if t.IsNil() {
-		ret.Desc = "<NIL>"
+		ret.Desc = nilDesc
 		return ret
 	}
 	ret.Desc = fmt.Sprintf("chan-len(%d of %d)", t.Len(), t.Cap())
@@ -226,7 +229,7 @@ func exploreChan(t reflect.Value, path []string) *Result {
 func explorePtr(t reflect.Value, path []string) *Result {
 	ret := &Result{}
 	if t.IsNil() {
-		ret.Desc = "<NIL>"
+		ret.Desc = nilDesc
 		return ret
 	}
 	return ExploreObject(t.Elem(), path)
@@ -235,7 +238,7 @@ func explorePtr(t reflect.Value, path []string) *Result {
 func exploreInterface(t reflect.Value, path []string) *Result {
 	ret := &Result{}
 	if t.IsNil() {
-		ret.Desc = "<NIL>"
+		ret.Desc = nilDesc
 		return ret
 	}
 	return ExploreObject(t.Elem(), path)

@@ -3,8 +3,9 @@ package spanfilter
 import (
 	"context"
 	"encoding/json"
-	"github.com/signalfx/golib/errors"
 	"strings"
+
+	"github.com/signalfx/golib/errors"
 )
 
 // Map is the response we return from ingest wrt our span endpoint
@@ -38,7 +39,7 @@ func (s *Map) Error() string {
 
 // Add a error trace id
 func (s *Map) Add(errType string, id string) {
-	if strings.ToLower(errType) == OK {
+	if strings.EqualFold(errType, OK) {
 		s.Valid++
 	} else {
 		if s.Invalid == nil {
@@ -102,22 +103,16 @@ func GetSpanFilterMapFromContext(ctx context.Context) error {
 
 // IsMap returns whether an error is an instance of Map
 func IsMap(err error) bool {
-	if err != nil {
-		switch err.(type) {
-		case *Map:
-			return true
-		}
+	if _, ok := err.(*Map); ok {
+		return true
 	}
 	return false
 }
 
 // IsInvalid returns false if it's a Map with no invalid entries or nil, else true
 func IsInvalid(err error) bool {
-	if err != nil {
-		switch err.(type) {
-		case *Map:
-			return err.(*Map).CheckInvalid()
-		}
+	if m, ok := err.(*Map); ok {
+		return m.CheckInvalid()
 	}
 	return err != nil
 }

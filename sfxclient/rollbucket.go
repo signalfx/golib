@@ -117,7 +117,7 @@ func percentToString(f float64) string {
 	r := strconv.FormatInt(fInt, 10)
 	r = strings.TrimRight(r, "0")
 	for len(r) < 2 {
-		r = r + "0"
+		r += "0"
 	}
 	return r
 }

@@ -2,6 +2,7 @@ package dptest
 
 import (
 	"fmt"
+
 	"github.com/signalfx/golib/datapoint"
 )
 

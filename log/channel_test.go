@@ -1,11 +1,12 @@
 package log
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestChannelLogger(t *testing.T) {

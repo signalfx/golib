@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"net/http/httptest"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/signalfx/com_signalfx_metrics_protobuf"
 	"github.com/signalfx/golib/datapoint"
@@ -23,7 +25,6 @@ import (
 	"github.com/signalfx/golib/log"
 	"github.com/signalfx/golib/trace"
 	. "github.com/smartystreets/goconvey/convey"
-	"net/http/httptest"
 )
 
 type errReader struct {

@@ -10,6 +10,7 @@ import (
 	"github.com/signalfx/golib/errors"
 
 	"context"
+
 	"github.com/boltdb/bolt"
 )
 

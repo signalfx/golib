@@ -1,11 +1,12 @@
 package log
 
 import (
+	"testing"
+	"time"
+
 	"github.com/signalfx/golib/eventcounter"
 	"github.com/signalfx/golib/timekeeper/timekeepertest"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
-	"time"
 )
 
 func TestRateLimitedLogger(t *testing.T) {

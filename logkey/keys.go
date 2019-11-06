@@ -2,12 +2,6 @@ package logkey
 
 import "github.com/signalfx/golib/log"
 
-// ignored exists so that I can get some kind of coverage for this package
-func ignored() string {
-	// ignored
-	return ""
-}
-
 var (
 	// ArrLen is the len of an array
 	ArrLen = log.Key("arr_len")

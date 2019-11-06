@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/signalfx/golib/datapoint/dptest"
 	"github.com/signalfx/golib/distconf"
 	"github.com/signalfx/golib/log"

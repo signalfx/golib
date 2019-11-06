@@ -4,10 +4,11 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
-	"github.com/signalfx/golib/errors"
 	"io"
 	"io/ioutil"
 	"reflect"
+
+	"github.com/signalfx/golib/errors"
 )
 
 // JSONLogger logs out JSON objects to a writer
@@ -19,7 +20,7 @@ type JSONLogger struct {
 var _ ErrorLogger = &JSONLogger{}
 
 // NewJSONLogger creates a new JSON logger
-func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
+func NewJSONLogger(w io.Writer, errHandler ErrorHandler) Logger {
 	if w == ioutil.Discard {
 		return Discard
 	}
@@ -28,7 +29,7 @@ func NewJSONLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 			Out:             w,
 			MissingValueKey: Msg,
 		},
-		ErrHandler: ErrHandler,
+		ErrHandler: errHandler,
 	}
 }
 

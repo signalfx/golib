@@ -24,4 +24,5 @@ func TestPrefixParse(t *testing.T) {
 	b, err = l.Get("nothere")
 	assert.NoError(t, err)
 	assert.Nil(t, b)
+	l.Close()
 }

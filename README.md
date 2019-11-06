@@ -8,4 +8,4 @@ Please note that there is a dependency on Thrift v0.9.3 for some of the librarie
 
 ## License
 
-Apache Software License v2. Copyright © 2015-2017 SignalFx
+Apache Software License v2. Copyright © 2015-2019 SignalFx

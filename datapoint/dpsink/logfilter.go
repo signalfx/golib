@@ -175,9 +175,9 @@ func (f *ItemFlagger) Var() expvar.Var {
 	})
 }
 
-func dpMatches(dp *datapoint.Datapoint, MetricDimensionName string, dimsToCheck map[string]string) bool {
+func dpMatches(dp *datapoint.Datapoint, metricDimensionName string, dimsToCheck map[string]string) bool {
 	for k, v := range dimsToCheck {
-		if k == MetricDimensionName {
+		if k == metricDimensionName {
 			if v != dp.Metric {
 				return false
 			}

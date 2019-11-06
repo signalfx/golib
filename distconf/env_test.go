@@ -20,4 +20,5 @@ func TestEnvConf(t *testing.T) {
 	b, err = e.Get("test_TestEnvConf")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("abc"), b)
+	e.Close()
 }

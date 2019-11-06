@@ -1,8 +1,9 @@
 package dpsink
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestSinkDiscard(t *testing.T) {

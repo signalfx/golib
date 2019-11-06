@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/signalfx/golib/datapoint"
 	. "github.com/smartystreets/goconvey/convey"
 )

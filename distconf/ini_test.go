@@ -35,4 +35,6 @@ val1=abc
 	b, err = i.Get("val1")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("abc"), b)
+
+	i.Close()
 }

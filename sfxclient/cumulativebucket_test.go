@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/log"
 	. "github.com/smartystreets/goconvey/convey"

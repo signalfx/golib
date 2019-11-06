@@ -25,7 +25,7 @@ import (
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/sfxclient/spanfilter"
 	"github.com/signalfx/golib/trace"
-	"github.com/signalfx/golib/trace/format"
+	traceformat "github.com/signalfx/golib/trace/format"
 )
 
 const (
@@ -131,7 +131,7 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 	if err != nil {
 		// According to docs, resp can be ignored since err is non-nil, so we
 		// don't have to close body.
-		return fmt.Errorf("failed to send/recieve http request: %s: %v", err, req.Header)
+		return fmt.Errorf("failed to send/receive http request: %s: %v", err, req.Header)
 	}
 
 	return h.handleResponse(resp, respValidator)
