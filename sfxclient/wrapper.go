@@ -1,7 +1,7 @@
 package sfxclient
 
 import (
-	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/v3/datapoint"
 )
 
 // MultiCollector acts like a datapoint collector over multiple collectors.

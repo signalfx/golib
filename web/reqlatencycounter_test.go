@@ -6,7 +6,7 @@ import (
 
 	"context"
 
-	"github.com/signalfx/golib/timekeeper/timekeepertest"
+	"github.com/signalfx/golib/v3/timekeeper/timekeepertest"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

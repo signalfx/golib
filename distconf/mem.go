@@ -45,6 +45,8 @@ func (m *memConfig) Watch(key string, callback backingCallbackFunction) error {
 }
 
 func (m *memConfig) Close() {
+	//nolint
+	return
 }
 
 // Mem creates a memory config

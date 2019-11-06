@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/signalfx/golib/datapoint"
+	"github.com/signalfx/golib/v3/datapoint"
 )
 
 var startTime = time.Now()

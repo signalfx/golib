@@ -1,12 +1,13 @@
 package web
 
 import (
-	"github.com/signalfx/golib/sfxclient"
-	"github.com/signalfx/golib/timekeeper/timekeepertest"
-	. "github.com/smartystreets/goconvey/convey"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/signalfx/golib/v3/sfxclient"
+	"github.com/signalfx/golib/v3/timekeeper/timekeepertest"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestBucketRequestCounter(t *testing.T) {

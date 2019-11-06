@@ -1,10 +1,11 @@
 package log
 
 import (
-	"github.com/go-logfmt/logfmt"
-	"github.com/signalfx/golib/errors"
 	"io"
 	"io/ioutil"
+
+	"github.com/go-logfmt/logfmt"
+	"github.com/signalfx/golib/v3/errors"
 )
 
 // LogfmtLogger logs out in logfmt format
@@ -16,7 +17,7 @@ type LogfmtLogger struct {
 // NewLogfmtLogger returns a logger that encodes keyvals to the Writer in
 // logfmt format. The passed Writer must be safe for concurrent use by
 // multiple goroutines if the returned Logger will be used concurrently.
-func NewLogfmtLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
+func NewLogfmtLogger(w io.Writer, errHandler ErrorHandler) Logger {
 	if w == ioutil.Discard {
 		return Discard
 	}
@@ -25,7 +26,7 @@ func NewLogfmtLogger(w io.Writer, ErrHandler ErrorHandler) Logger {
 			Out:             w,
 			MissingValueKey: Msg,
 		},
-		ErrHandler: ErrHandler,
+		ErrHandler: errHandler,
 	}
 }
 

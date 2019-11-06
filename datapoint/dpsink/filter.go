@@ -4,7 +4,8 @@ import (
 	"sync/atomic"
 
 	"context"
-	"github.com/signalfx/golib/datapoint"
+
+	"github.com/signalfx/golib/v3/datapoint"
 )
 
 // EmptyMetricFilter filters empty metric name datapoints

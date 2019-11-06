@@ -1,3 +1,4 @@
+//nolint:gocritic
 package disco
 
 import (
@@ -18,13 +19,13 @@ import (
 	"encoding/binary"
 	"sort"
 
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
-	"github.com/signalfx/golib/pointer"
-	"github.com/signalfx/golib/zkplus"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
+	"github.com/signalfx/golib/v3/pointer"
+	"github.com/signalfx/golib/v3/zkplus"
 )
 
 // ServiceInstance defines a remote service and is similar to

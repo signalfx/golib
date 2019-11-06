@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

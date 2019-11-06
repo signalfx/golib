@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,4 +35,6 @@ val1=abc
 	b, err = i.Get("val1")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("abc"), b)
+
+	i.Close()
 }

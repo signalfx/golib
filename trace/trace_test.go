@@ -3,9 +3,10 @@ package trace
 import (
 	"context"
 	"encoding/json"
-	. "github.com/smartystreets/goconvey/convey"
 	"sync/atomic"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type end struct {

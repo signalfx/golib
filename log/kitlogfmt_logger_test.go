@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-logfmt/logfmt"
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 )
 
 func TestLogfmtLogger(t *testing.T) {

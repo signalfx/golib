@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 	"github.com/stretchr/testify/assert"
 )
 

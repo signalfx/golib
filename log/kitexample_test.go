@@ -3,7 +3,7 @@ package log_test
 import (
 	"os"
 
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 )
 
 func ExampleContext() {

@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
-	"github.com/signalfx/golib/zkplus/zktest"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
+	"github.com/signalfx/golib/v3/zkplus/zktest"
 )
 
 // ZkConnector tells ZkPlus how to create a zk connection

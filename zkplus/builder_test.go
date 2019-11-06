@@ -6,9 +6,9 @@ import (
 
 	"net"
 
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/zkplus/zktest"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/zkplus/zktest"
 	"github.com/stretchr/testify/assert"
 )
 

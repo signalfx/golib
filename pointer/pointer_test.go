@@ -1,11 +1,12 @@
 package pointer
 
 import (
-	"github.com/signalfx/golib/timekeeper"
-	"github.com/signalfx/golib/timekeeper/timekeepertest"
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
+
+	"github.com/signalfx/golib/v3/timekeeper"
+	"github.com/signalfx/golib/v3/timekeeper/timekeepertest"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type Job interface {

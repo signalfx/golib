@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"encoding/json"
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/log"
+
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/log"
 	"github.com/stretchr/testify/assert"
 )
 

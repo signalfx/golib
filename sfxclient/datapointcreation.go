@@ -3,8 +3,9 @@ package sfxclient
 import (
 	"time"
 
-	"github.com/signalfx/golib/datapoint"
 	"sync/atomic"
+
+	"github.com/signalfx/golib/v3/datapoint"
 )
 
 // Gauge creates a SignalFx gauge for integer values.

@@ -3,3 +3,4 @@
 authinfo.json
 .vscode
 .idea/
+coverage.out

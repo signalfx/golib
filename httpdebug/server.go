@@ -1,13 +1,14 @@
 package httpdebug
 
 import (
-	"github.com/signalfx/golib/explorable"
-	"github.com/signalfx/golib/expvar2"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/pointer"
 	"net/http"
 	"net/http/pprof"
 	"time"
+
+	"github.com/signalfx/golib/v3/explorable"
+	"github.com/signalfx/golib/v3/expvar2"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/pointer"
 )
 
 // Server exposes private debugging information

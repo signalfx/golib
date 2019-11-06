@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/signalfx/golib/distconf"
+	"github.com/signalfx/golib/v3/distconf"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/distconf"
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/event"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
-	"github.com/signalfx/golib/sfxclient"
-	"github.com/signalfx/golib/timekeeper"
-	"github.com/signalfx/golib/trace"
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/distconf"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
+	"github.com/signalfx/golib/v3/sfxclient"
+	"github.com/signalfx/golib/v3/timekeeper"
+	"github.com/signalfx/golib/v3/trace"
 )
 
 // ClientConfig configures a SfxClient
@@ -67,27 +67,27 @@ type ClientConfigChangerSink struct {
 }
 
 // WatchSinkChanges returns a new ClientConfigChangerSink that wraps a sink with auth/endpoint changes from distconf
-func WatchSinkChanges(sink sfxclient.Sink, Conf *ClientConfig, logger log.Logger) sfxclient.Sink {
+func WatchSinkChanges(sink sfxclient.Sink, conf *ClientConfig, logger log.Logger) sfxclient.Sink {
 	httpSink, ok := sink.(*sfxclient.HTTPSink)
 	if !ok {
 		return sink
 	}
-	return WatchHTTPSinkChange(httpSink, Conf, logger)
+	return WatchHTTPSinkChange(httpSink, conf, logger)
 }
 
 // WatchHTTPSinkChange returns anew ClientConfigChangerSink that takes an http sink, instead of a regular sinc
-func WatchHTTPSinkChange(httpSink *sfxclient.HTTPSink, Conf *ClientConfig, logger log.Logger) *ClientConfigChangerSink {
+func WatchHTTPSinkChange(httpSink *sfxclient.HTTPSink, conf *ClientConfig, logger log.Logger) *ClientConfigChangerSink {
 	ret := &ClientConfigChangerSink{
 		Destination: httpSink,
 		urlParse:    url.Parse,
 		logger:      logger,
 	}
-	ret.authTokenWatch(Conf.AuthToken, "")
-	ret.endpointWatch(Conf.Endpoint, "")
-	ret.disableCompressionWatch(Conf.DisableCompression, false)
-	Conf.Endpoint.Watch(ret.endpointWatch)
-	Conf.AuthToken.Watch(ret.authTokenWatch)
-	Conf.DisableCompression.Watch(ret.disableCompressionWatch)
+	ret.authTokenWatch(conf.AuthToken, "")
+	ret.endpointWatch(conf.Endpoint, "")
+	ret.disableCompressionWatch(conf.DisableCompression, false)
+	conf.Endpoint.Watch(ret.endpointWatch)
+	conf.AuthToken.Watch(ret.authTokenWatch)
+	conf.DisableCompression.Watch(ret.disableCompressionWatch)
 	return ret
 }
 

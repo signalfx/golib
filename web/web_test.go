@@ -11,7 +11,8 @@ import (
 	"sync/atomic"
 
 	"context"
-	"github.com/signalfx/golib/errors"
+
+	"github.com/signalfx/golib/v3/errors"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 )

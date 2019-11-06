@@ -2,13 +2,14 @@ package log
 
 import (
 	"errors"
-	. "github.com/smartystreets/goconvey/convey"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"strings"
 	"sync"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestFilter(t *testing.T) {

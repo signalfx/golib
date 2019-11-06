@@ -10,10 +10,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/event"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/trace"
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/trace"
 )
 
 // FlagCheck checks a context to see if a debug flag is set
@@ -175,9 +175,9 @@ func (f *ItemFlagger) Var() expvar.Var {
 	})
 }
 
-func dpMatches(dp *datapoint.Datapoint, MetricDimensionName string, dimsToCheck map[string]string) bool {
+func dpMatches(dp *datapoint.Datapoint, metricDimensionName string, dimsToCheck map[string]string) bool {
 	for k, v := range dimsToCheck {
-		if k == MetricDimensionName {
+		if k == metricDimensionName {
 			if v != dp.Metric {
 				return false
 			}

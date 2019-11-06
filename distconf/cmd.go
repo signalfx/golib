@@ -23,7 +23,7 @@ func (p *cmdDisco) Get(key string) ([]byte, error) {
 	return nil, nil
 }
 
-// Cmd creates a backing reader that reads config varaibles from command line parameters with a prefix
+// Cmd creates a backing reader that reads config variables from command line parameters with a prefix
 func Cmd(prefix string) Reader {
 	return &cmdDisco{
 		prefix: prefix,

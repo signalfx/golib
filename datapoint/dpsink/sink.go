@@ -2,8 +2,9 @@ package dpsink
 
 import (
 	"context"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/event"
+
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/event"
 )
 
 // A DSink is an object that can accept datapoints and do something with them, like forward them

@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
-	"github.com/signalfx/golib/sfxclient"
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
+	"github.com/signalfx/golib/v3/sfxclient"
 )
 
 // SHA1Reporter reports a gauge to Client that is the commit SHA1 of the current image

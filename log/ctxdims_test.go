@@ -3,8 +3,9 @@ package log
 import (
 	"bytes"
 	"context"
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestCtxDims(t *testing.T) {

@@ -8,13 +8,14 @@ import (
 	"sync/atomic"
 
 	"context"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/datapoint/dptest"
-	"github.com/signalfx/golib/event"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
-	"github.com/signalfx/golib/sfxclient/spanfilter"
-	"github.com/signalfx/golib/trace"
+
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/datapoint/dptest"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
+	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
+	"github.com/signalfx/golib/v3/trace"
 	"github.com/stretchr/testify/assert"
 )
 

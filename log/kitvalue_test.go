@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/timekeeper/timekeepertest"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/timekeeper/timekeepertest"
 )
 
 func TestValueBinding(t *testing.T) {

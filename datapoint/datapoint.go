@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 )
 
 // Documentation taken from http://metrics20.org/spec/

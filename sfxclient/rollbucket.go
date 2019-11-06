@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/signalfx/gohistogram"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/timekeeper"
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/timekeeper"
 )
 
 // DefaultQuantiles are the default set of percentiles RollingBucket should collect
@@ -117,7 +117,7 @@ func percentToString(f float64) string {
 	r := strconv.FormatInt(fInt, 10)
 	r = strings.TrimRight(r, "0")
 	for len(r) < 2 {
-		r = r + "0"
+		r += "0"
 	}
 	return r
 }

@@ -4,9 +4,10 @@ import (
 	"sync"
 
 	"context"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/event"
-	"github.com/signalfx/golib/trace"
+
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/trace"
 )
 
 // BasicSink is a pure testing sink that blocks forwarded points onto a channel

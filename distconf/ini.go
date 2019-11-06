@@ -1,7 +1,7 @@
 package distconf
 
 import (
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 	ini "github.com/vaughan0/go-ini"
 )
 

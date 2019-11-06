@@ -1,8 +1,9 @@
 package log
 
 import (
-	"github.com/signalfx/golib/eventcounter"
 	"time"
+
+	"github.com/signalfx/golib/v3/eventcounter"
 )
 
 // A RateLimitedLogger will disable itself after a Limit number of log messages in a period.

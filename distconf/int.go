@@ -5,7 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 )
 
 // IntWatch is called on any changes to a register integer config variable
