@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/zkplus/zktest"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/zkplus/zktest"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 )

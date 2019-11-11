@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-stack/stack"
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 )
 
 type panicLogger struct {

@@ -2,7 +2,8 @@ package dptest
 
 import (
 	"fmt"
-	"github.com/signalfx/golib/datapoint"
+
+	"github.com/signalfx/golib/v3/datapoint"
 )
 
 // ExactlyOne returns the datapoint with metricName and panics if there is not exactly one in dps

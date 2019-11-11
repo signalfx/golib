@@ -6,7 +6,7 @@ import (
 
 	"strings"
 
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 )
 
 // Execute a command, passing in stdin, returning stdout, stderr, and nil, only if the command

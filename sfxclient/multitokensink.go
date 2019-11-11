@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"context"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/event"
-	"github.com/signalfx/golib/trace"
+
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/trace"
 )
 
 // ContextKey is a custom key type for context values
@@ -131,7 +132,7 @@ func (a *AsyncTokenStatusCounter) Increment(status *tokenStatus) {
 	}
 }
 
-// NewAsyncTokenStatusCounter returns a structure for counting occurences of http statuses by token
+// NewAsyncTokenStatusCounter returns a structure for counting occurrences of http statuses by token
 func NewAsyncTokenStatusCounter(name string, buffer int, numWorkers int64, defaultDims map[string]string) *AsyncTokenStatusCounter {
 	a := &AsyncTokenStatusCounter{
 		name:              name,
@@ -202,7 +203,7 @@ func (w *datapointWorker) emit(token string) {
 	w.buffer = w.buffer[:0]
 }
 
-func (w *datapointWorker) handleError(err error, token string, datapoints []*datapoint.Datapoint, AddDatapoints func(context.Context, []*datapoint.Datapoint) error) {
+func (w *datapointWorker) handleError(err error, token string, datapoints []*datapoint.Datapoint, addDatapoints func(context.Context, []*datapoint.Datapoint) error) {
 	errr := err
 	status := &tokenStatus{
 		status: -1,
@@ -214,7 +215,7 @@ func (w *datapointWorker) handleError(err error, token string, datapoints []*dat
 		// retry in the cases where http status codes are not found or an http timeout status is encountered
 		if status.status == -1 || status.status == http.StatusRequestTimeout || status.status == http.StatusGatewayTimeout || status.status == 598 {
 			atomic.AddInt64(&w.stats.NumberOfRetries, 1)
-			errr = AddDatapoints(context.Background(), w.buffer)
+			errr = addDatapoints(context.Background(), w.buffer)
 			status = getHTTPStatusCode(status, errr)
 		} else {
 			break
@@ -317,7 +318,7 @@ func (w *eventWorker) emit(token string) {
 	w.buffer = w.buffer[:0]
 }
 
-func (w *eventWorker) handleError(err error, token string, events []*event.Event, AddEvents func(context.Context, []*event.Event) error) {
+func (w *eventWorker) handleError(err error, token string, events []*event.Event, addEvents func(context.Context, []*event.Event) error) {
 	errr := err
 	status := &tokenStatus{
 		status: -1,
@@ -329,7 +330,7 @@ func (w *eventWorker) handleError(err error, token string, events []*event.Event
 		// retry in the cases where http status codes are not found or an http timeout status is encountered
 		if status.status == -1 || status.status == http.StatusRequestTimeout || status.status == http.StatusGatewayTimeout || status.status == 598 {
 			atomic.AddInt64(&w.stats.NumberOfRetries, 1)
-			errr = AddEvents(context.Background(), w.buffer)
+			errr = addEvents(context.Background(), w.buffer)
 			status = getHTTPStatusCode(status, errr)
 		} else {
 			break
@@ -433,7 +434,7 @@ func (w *spanWorker) emit(token string) {
 	w.buffer = w.buffer[:0]
 }
 
-func (w *spanWorker) handleError(err error, token string, traces []*trace.Span, AddSpans func(context.Context, []*trace.Span) error) {
+func (w *spanWorker) handleError(err error, token string, traces []*trace.Span, addSpans func(context.Context, []*trace.Span) error) {
 	errr := err
 	status := &tokenStatus{
 		status: -1,
@@ -445,7 +446,7 @@ func (w *spanWorker) handleError(err error, token string, traces []*trace.Span, 
 		// retry in the cases where http status codes are not found or an http timeout status is encountered
 		if status.status == -1 || status.status == http.StatusRequestTimeout || status.status == http.StatusGatewayTimeout || status.status == 598 {
 			atomic.AddInt64(&w.stats.NumberOfRetries, 1)
-			errr = AddSpans(context.Background(), w.buffer)
+			errr = addSpans(context.Background(), w.buffer)
 			status = getHTTPStatusCode(status, errr)
 		} else {
 			break
@@ -599,9 +600,11 @@ type AsyncMultiTokenSink struct {
 
 // Datapoints returns a set of datapoints about the sink
 func (a *AsyncMultiTokenSink) Datapoints() (dps []*datapoint.Datapoint) {
-	dps = append(dps, Gauge("total_datapoints_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalDatapointsBuffered)))
-	dps = append(dps, Gauge("total_events_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalEventsBuffered)))
-	dps = append(dps, Gauge("total_spans_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalSpansBuffered)))
+	dps = append(dps, []*datapoint.Datapoint{
+		Gauge("total_datapoints_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalDatapointsBuffered)),
+		Gauge("total_events_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalEventsBuffered)),
+		Gauge("total_spans_buffered", a.stats.DefaultDimensions, atomic.LoadInt64(&a.stats.TotalSpansBuffered)),
+	}...)
 	dps = append(dps, a.stats.TotalDatapointsByToken.Datapoints()...)
 	dps = append(dps, a.stats.TotalEventsByToken.Datapoints()...)
 	dps = append(dps, a.stats.TotalSpansByToken.Datapoints()...)
@@ -824,15 +827,15 @@ type spanChannel struct {
 	workers []*spanWorker
 }
 
-func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (dpc *dpChannel) {
+func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, datapointEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (dpc *dpChannel) {
 	dpc = &dpChannel{
 		input:   make(chan *dpMsg, int64(buffer)),
 		workers: make([]*datapointWorker, numDrainingThreads),
 	}
 	for i := int64(0); i < numDrainingThreads; i++ {
 		dpWorker := newDatapointWorker(batchSize, errorHandler, stats, closing, done, dpc.input, maxRetry)
-		if DatapointEndpoint != "" {
-			dpWorker.sink.DatapointEndpoint = DatapointEndpoint
+		if datapointEndpoint != "" {
+			dpWorker.sink.DatapointEndpoint = datapointEndpoint
 		}
 		if userAgent != "" {
 			dpWorker.sink.UserAgent = userAgent
@@ -845,15 +848,15 @@ func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, Datapoint
 	return
 }
 
-func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, EventEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (evc *evChannel) {
+func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, eventEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (evc *evChannel) {
 	evc = &evChannel{
 		input:   make(chan *evMsg, int64(buffer)),
 		workers: make([]*eventWorker, numDrainingThreads),
 	}
 	for i := int64(0); i < numDrainingThreads; i++ {
 		evWorker := newEventWorker(batchSize, errorHandler, stats, closing, done, evc.input, maxRetry)
-		if EventEndpoint != "" {
-			evWorker.sink.EventEndpoint = EventEndpoint
+		if eventEndpoint != "" {
+			evWorker.sink.EventEndpoint = eventEndpoint
 		}
 		if userAgent != "" {
 			evWorker.sink.UserAgent = userAgent
@@ -866,15 +869,15 @@ func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, EventEndp
 	return
 }
 
-func newSpanChannel(numDrainingThreads int64, buffer int, batchSize int, TraceEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (spc *spanChannel) {
+func newSpanChannel(numDrainingThreads int64, buffer int, batchSize int, traceEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (spc *spanChannel) {
 	spc = &spanChannel{
 		input:   make(chan *spanMsg, int64(buffer)),
 		workers: make([]*spanWorker, numDrainingThreads),
 	}
 	for i := int64(0); i < numDrainingThreads; i++ {
 		spanWorker := newSpanWorker(batchSize, errorHandler, stats, closing, done, spc.input, maxRetry)
-		if TraceEndpoint != "" {
-			spanWorker.sink.TraceEndpoint = TraceEndpoint
+		if traceEndpoint != "" {
+			spanWorker.sink.TraceEndpoint = traceEndpoint
 		}
 		if userAgent != "" {
 			spanWorker.sink.UserAgent = userAgent
@@ -888,7 +891,7 @@ func newSpanChannel(numDrainingThreads int64, buffer int, batchSize int, TraceEn
 }
 
 // NewAsyncMultiTokenSink returns a sink that asynchronously emits datapoints with different tokens
-func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer int, batchSize int, DatapointEndpoint, EventEndpoint, TraceEndpoint, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, maxRetry int) *AsyncMultiTokenSink {
+func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer int, batchSize int, datapointEndpoint, eventEndpoint, traceEndpoint, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, maxRetry int) *AsyncMultiTokenSink {
 	a := &AsyncMultiTokenSink{
 		ShutdownTimeout: time.Second * 5,
 		errorHandler:    DefaultErrorHandler,
@@ -918,9 +921,9 @@ func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer 
 		a.NewHTTPClient = httpClient
 	}
 	for i := int64(0); i < numChannels; i++ {
-		a.dpChannels[i] = newDPChannel(numDrainingThreads, buffer, batchSize, DatapointEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.dpDone, a.maxRetry)
-		a.evChannels[i] = newEVChannel(numDrainingThreads, buffer, batchSize, EventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.evDone, a.maxRetry)
-		a.spanChannels[i] = newSpanChannel(numDrainingThreads, buffer, batchSize, TraceEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.spansDone, a.maxRetry)
+		a.dpChannels[i] = newDPChannel(numDrainingThreads, buffer, batchSize, datapointEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.dpDone, a.maxRetry)
+		a.evChannels[i] = newEVChannel(numDrainingThreads, buffer, batchSize, eventEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.evDone, a.maxRetry)
+		a.spanChannels[i] = newSpanChannel(numDrainingThreads, buffer, batchSize, traceEndpoint, userAgent, a.NewHTTPClient, a.errorHandler, a.stats, a.closing, a.spansDone, a.maxRetry)
 	}
 	atomic.StoreInt64(&a.stats.NumberOfDatapointWorkers, numChannels*numDrainingThreads)
 	atomic.StoreInt64(&a.stats.NumberOfEventWorkers, numChannels*numDrainingThreads)

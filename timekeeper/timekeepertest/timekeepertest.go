@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/signalfx/golib/timekeeper"
+	"github.com/signalfx/golib/v3/timekeeper"
 )
 
 type chanTime struct {

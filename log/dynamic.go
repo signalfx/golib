@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/go-stack/stack"
-	"github.com/signalfx/golib/timekeeper"
+	"github.com/signalfx/golib/v3/timekeeper"
 )
 
 // Dynamic values are evaluated at Log() time, not when they are added to the context. They are also only evaulated by

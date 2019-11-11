@@ -1,6 +1,6 @@
 package distconf
 
-import "github.com/signalfx/golib/log"
+import "github.com/signalfx/golib/v3/log"
 
 // A BackingLoader should run a single time and get a Reader for Config
 type BackingLoader interface {

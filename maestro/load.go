@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/safeexec"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/safeexec"
 )
 
 // Ships are the location of an instance

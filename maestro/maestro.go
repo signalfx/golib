@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 )
 
 // Maestro is the golang client for https://github.com/signalfuse/maestro-ng

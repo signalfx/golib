@@ -1,9 +1,10 @@
 package sfxclient
 
 import (
-	"github.com/signalfx/golib/datapoint"
 	"sync/atomic"
 	"time"
+
+	"github.com/signalfx/golib/v3/datapoint"
 )
 
 // TimeCounter counts durations exactly above/below a value.  NsBarrier is expected to be some

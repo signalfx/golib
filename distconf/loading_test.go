@@ -10,6 +10,7 @@ import (
 func TestFromLoaders(t *testing.T) {
 	c := FromLoaders([]BackingLoader{MemLoader()})
 	assert.Equal(t, 1, len(c.readers))
+	c.Close()
 }
 
 func TestFromLoadersWithErrors(t *testing.T) {

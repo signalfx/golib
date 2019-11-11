@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/signalfx/golib/nettest"
-	"github.com/signalfx/golib/zkplus"
+	"github.com/signalfx/golib/v3/nettest"
+	"github.com/signalfx/golib/v3/zkplus"
 	"github.com/stretchr/testify/assert"
 )
 

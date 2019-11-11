@@ -3,7 +3,6 @@ package logkey
 import "testing"
 
 func TestKeys(t *testing.T) {
-	ignored()
 	if Func.String() != "func" {
 		t.Error("unexpected func")
 	}

@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 )
 
 // TrackingDialer remembers connections it's made and allows users to close them

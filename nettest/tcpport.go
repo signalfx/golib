@@ -1,8 +1,9 @@
 package nettest
 
 import (
-	"github.com/signalfx/golib/log"
 	"net"
+
+	"github.com/signalfx/golib/v3/log"
 )
 
 // A NetworkListener is a listener that looks for data on a network address.  It is sometimes

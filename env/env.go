@@ -82,9 +82,7 @@ func GetCommaSeparatedStringEnvVar(envVar string, def []string) []string {
 
 	// return a copy of the default
 	var ret = make([]string, len(def))
-	for i, s := range def {
-		ret[i] = s
-	}
+	_ = copy(ret, def)
 
 	return ret
 }

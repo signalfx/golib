@@ -1,3 +1,4 @@
+//nolint:dogsled
 package distconf
 
 import (
@@ -8,10 +9,10 @@ import (
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
-	"github.com/signalfx/golib/pointer"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
+	"github.com/signalfx/golib/v3/pointer"
 )
 
 // ZkConn does zookeeper connections
@@ -72,10 +73,7 @@ func (c *callbackMap) copy() map[string][]backingCallbackFunction {
 	defer c.mu.Unlock()
 	ret := make(map[string][]backingCallbackFunction, len(c.callbacks))
 	for k, v := range c.callbacks {
-		ret[k] = []backingCallbackFunction{}
-		for _, c := range v {
-			ret[k] = append(ret[k], c)
-		}
+		ret[k] = append([]backingCallbackFunction{}, v...)
 	}
 	return ret
 }
@@ -108,7 +106,7 @@ type zkConfig struct {
 }
 
 func (back *zkConfig) configPath(key string) string {
-	return fmt.Sprintf("%s", key)
+	return key
 }
 
 // Get returns the config value from zookeeper
@@ -136,13 +134,13 @@ func (back *zkConfig) Write(key string, value []byte) error {
 		if value == nil {
 			return nil
 		}
-		_, err := back.conn.Create(path, value, 0, zk.WorldACL(zk.PermAll))
+		_, err = back.conn.Create(path, value, 0, zk.WorldACL(zk.PermAll))
 		return errors.Annotatef(err, "cannot create path %s", path)
 	}
 	if value == nil {
 		err = back.conn.Delete(path, stat.Version)
 	} else {
-		stat, err = back.conn.Set(path, value, stat.Version)
+		_, err = back.conn.Set(path, value, stat.Version)
 	}
 
 	return errors.Annotatef(err, "cannot change path %s", path)

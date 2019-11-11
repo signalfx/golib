@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 )
 
 // These test are designed to be run with the race detector.

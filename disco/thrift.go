@@ -5,9 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
 	"github.com/signalfx/thrift/lib/go/thrift"
 )
 

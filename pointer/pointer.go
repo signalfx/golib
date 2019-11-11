@@ -91,7 +91,7 @@ func FillDefaultFrom(defaultsList ...interface{}) interface{} {
 		}
 		defaultType := reflect.TypeOf(defaults)
 		if defaultType != existingType {
-			panic(fmt.Sprintf("Uncompatible types %s vs %s", existingType, defaultType))
+			panic(fmt.Sprintf("Incompatible types %s vs %s", existingType, defaultType))
 		}
 		defaultsVal := reflect.ValueOf(defaults)
 		if defaultsVal.IsNil() {

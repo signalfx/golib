@@ -7,9 +7,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/errors"
 
 	"context"
+
 	"github.com/boltdb/bolt"
 )
 

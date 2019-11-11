@@ -2,11 +2,12 @@ package web
 
 import (
 	"context"
-	"github.com/signalfx/golib/log"
-	. "github.com/smartystreets/goconvey/convey"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/signalfx/golib/v3/log"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type handleCall struct {

@@ -67,10 +67,10 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/timekeeper"
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/timekeeper"
 )
 
 const (
@@ -252,7 +252,7 @@ func (s *Scheduler) GroupedDefaultDimensions(group string, dims map[string]strin
 	subgroup, exists := s.callbackMap[group]
 	if !exists {
 		subgroup = &callbackPair{
-			callbacks:         make(map[Collector]struct{}, 0),
+			callbacks:         make(map[Collector]struct{}),
 			defaultDimensions: dims,
 		}
 		s.callbackMap[group] = subgroup

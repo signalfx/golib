@@ -2,11 +2,12 @@ package web
 
 import (
 	"context"
-	"github.com/signalfx/golib/log"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"sync"
+
+	"github.com/signalfx/golib/v3/log"
 )
 
 // HeaderCtxFlag sets a debug value in the context if HeaderName is not empty, a flag string has

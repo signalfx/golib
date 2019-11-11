@@ -1,8 +1,9 @@
 package log
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestMultiLogger(t *testing.T) {

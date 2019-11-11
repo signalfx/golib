@@ -2,11 +2,12 @@ package gojavahash
 
 import (
 	"errors"
-	. "github.com/smartystreets/goconvey/convey"
 	"math/rand"
 	"net"
 	"testing"
 	"time"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type fakeaddr struct {

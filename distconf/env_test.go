@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,4 +20,5 @@ func TestEnvConf(t *testing.T) {
 	b, err = e.Get("test_TestEnvConf")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("abc"), b)
+	e.Close()
 }

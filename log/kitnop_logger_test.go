@@ -3,7 +3,7 @@ package log_test
 import (
 	"testing"
 
-	"github.com/signalfx/golib/log"
+	"github.com/signalfx/golib/v3/log"
 )
 
 func TestNopLogger(t *testing.T) {

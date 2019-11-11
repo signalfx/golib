@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/signalfx/golib/eventcounter"
-	. "github.com/smartystreets/goconvey/convey"
 	"io"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/signalfx/golib/v3/eventcounter"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestWithConcurrentInternal(t *testing.T) {

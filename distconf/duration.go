@@ -1,11 +1,12 @@
 package distconf
 
 import (
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
 )
 
 // DurationWatch is executed if registered on a Duration variable any time the contents change

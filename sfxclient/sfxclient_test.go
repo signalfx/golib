@@ -13,9 +13,9 @@ import (
 
 	"context"
 
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/errors"
-	"github.com/signalfx/golib/timekeeper/timekeepertest"
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/errors"
+	"github.com/signalfx/golib/v3/timekeeper/timekeepertest"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

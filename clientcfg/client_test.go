@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"context"
-	"github.com/signalfx/golib/datapoint/dptest"
-	"github.com/signalfx/golib/distconf"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/sfxclient"
+
+	"github.com/signalfx/golib/v3/datapoint/dptest"
+	"github.com/signalfx/golib/v3/distconf"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/sfxclient"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

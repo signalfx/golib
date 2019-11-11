@@ -1,10 +1,11 @@
 package log
 
 import (
-	"github.com/go-kit/kit/log"
-	. "github.com/smartystreets/goconvey/convey"
 	"io/ioutil"
 	"testing"
+
+	"github.com/go-kit/kit/log"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestFromGokit(t *testing.T) {

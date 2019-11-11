@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"context"
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/event"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/sfxclient"
-	"github.com/signalfx/golib/sfxclient/spanfilter"
-	"github.com/signalfx/golib/trace"
+
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/sfxclient"
+	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
+	"github.com/signalfx/golib/v3/trace"
 )
 
 // DefaultLogger is used by package structs that don't have a default logger set.

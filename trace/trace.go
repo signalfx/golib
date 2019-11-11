@@ -2,7 +2,8 @@ package trace
 
 import (
 	"context"
-	"github.com/signalfx/golib/log"
+
+	"github.com/signalfx/golib/v3/log"
 )
 
 // Trace is a list of spans

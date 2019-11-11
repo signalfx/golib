@@ -8,9 +8,10 @@ import (
 	"math"
 
 	"expvar"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/logkey"
 	"runtime"
+
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/logkey"
 )
 
 // DefaultLogger is used by package structs that don't have a default logger set.
@@ -55,6 +56,8 @@ type noopCloser struct {
 }
 
 func (n *noopCloser) Close() {
+	//nolint
+	return
 }
 
 // DistType is used to type each of the DistInfos

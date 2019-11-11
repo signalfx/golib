@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"expvar"
-	"github.com/signalfx/golib/errors"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"text/template"
+
+	"github.com/signalfx/golib/v3/errors"
 )
 
 // A Filter controls if logging should happen.
@@ -84,10 +85,7 @@ func (f *RegexFilter) WouldLog(keyvals ...interface{}) bool {
 		shouldPass = true
 	}
 	f.mu.RUnlock()
-	if shouldPass {
-		return true
-	}
-	return false
+	return shouldPass
 }
 
 func (f *RegexFilter) varStats() interface{} {

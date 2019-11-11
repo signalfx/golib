@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"expvar"
 	"fmt"
-	"github.com/signalfx/golib/log"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/signalfx/golib/v3/log"
 )
 
 // Handler can serve via HTTP expvar variables as well as custom variables inside

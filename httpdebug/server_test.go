@@ -2,14 +2,15 @@ package httpdebug
 
 import (
 	"fmt"
-	"github.com/signalfx/golib/nettest"
-	"github.com/signalfx/golib/pointer"
-	. "github.com/smartystreets/goconvey/convey"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/signalfx/golib/v3/nettest"
+	"github.com/signalfx/golib/v3/pointer"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type toExplore struct {

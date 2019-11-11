@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/signalfx/golib/boltcycle"
-	"github.com/signalfx/golib/errors"
+	"github.com/signalfx/golib/v3/boltcycle"
+	"github.com/signalfx/golib/v3/errors"
 )
 
 type blob struct {

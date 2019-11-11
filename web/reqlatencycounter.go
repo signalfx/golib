@@ -6,8 +6,8 @@ import (
 
 	"context"
 
-	"github.com/signalfx/golib/datapoint"
-	"github.com/signalfx/golib/timekeeper"
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/timekeeper"
 )
 
 // FastRequestLimitDuration is the interface for getting the cutoff time for bad requests.

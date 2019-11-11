@@ -14,7 +14,7 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
-	"github.com/signalfx/golib/dataunit"
+	"github.com/signalfx/golib/v3/dataunit"
 )
 
 // HostEtc is the path to host etc and can be set using the env var "HOST_ETC"
@@ -80,12 +80,12 @@ func GetCPU() (info *CPU, err error) {
 	}
 
 	// total number of cpu cores
-	for _, cpu := range cpus {
-		info.HostCPUCores += int64(cpu.Cores)
+	for i := range cpus {
+		info.HostCPUCores += int64(cpus[i].Cores)
 		// TODO: This is not ideal... if there are different processors
 		// we will only report one of the models... This is unlikely to happen,
 		// but it could
-		info.HostCPUModel = cpu.ModelName
+		info.HostCPUModel = cpus[i].ModelName
 	}
 
 	err = fillPlatformSpecificCPUData(info)

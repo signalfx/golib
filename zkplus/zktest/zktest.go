@@ -8,10 +8,11 @@ import (
 
 	"sync"
 
-	"github.com/samuel/go-zookeeper/zk"
-	"github.com/signalfx/golib/log"
-	"github.com/signalfx/golib/sfxtest"
 	"sync/atomic"
+
+	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/v3/log"
+	"github.com/signalfx/golib/v3/sfxtest"
 )
 
 // DefaultLogger is used by zktest if no logger is set
@@ -35,7 +36,6 @@ func EnsureDelete(z ZkConnSupported, path string) error {
 	c, _, err := z.Children(path)
 	if err == nil {
 		wg := sync.WaitGroup{}
-		var err error
 		for _, chil := range c {
 			wg.Add(1)
 			go func(chil string) {
