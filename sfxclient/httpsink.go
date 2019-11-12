@@ -407,7 +407,8 @@ func mapToProperties(properties map[string]interface{}) []*com_signalfx_metrics_
 }
 
 func spanResponseValidator(respBody []byte) error {
-	if string(respBody) != `"OK"` {
+	body := string(respBody)
+	if body != `"OK"` && body != "" {
 		return spanfilter.ReturnInvalidOrError(respBody)
 	}
 
