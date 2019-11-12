@@ -63,3 +63,46 @@ func TestRateLimitedLogger(t *testing.T) {
 		})
 	})
 }
+
+func BenchmarkRateLimitedWithContext(b *testing.B) {
+	tk := timekeepertest.NewStubClock(time.Now())
+	l := NewContext(Discard).With(Key("caller"), DefaultCaller)
+	r := RateLimitedLogger{
+		EventCounter: eventcounter.New(tk.Now(), time.Second*2),
+		Now:          tk.Now,
+		Limit:        1,
+		Logger:       l,
+		LimitLogger:  l,
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for i := 0; i < 10; i++ {
+			r.Log("hello")
+		}
+		tk.Incr(time.Second)
+		r.Log("world")
+		tk.Incr(time.Second)
+	}
+}
+
+func BenchmarkRateLimitedWithOutContext(b *testing.B) {
+	tk := timekeepertest.NewStubClock(time.Now())
+	r := RateLimitedLogger{
+		EventCounter: eventcounter.New(tk.Now(), time.Second*2),
+		Now:          tk.Now,
+		Limit:        1,
+		Logger:       Discard,
+		LimitLogger:  Discard,
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for i := 0; i < 10; i++ {
+			r.Log("hello")
+		}
+		tk.Incr(time.Second)
+		r.Log("world")
+		tk.Incr(time.Second)
+	}
+}
