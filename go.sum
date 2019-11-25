@@ -55,6 +55,7 @@ github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526
 github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526e884/go.mod h1:muYA2clvwCdj7nzAJ5vJIXYpJsUumhAl4Uu1wUNpWzA=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 h1:WsShHmu12ZztYPfh9b+I+VjYD1o8iOHhB67WZCMEEE8=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083/go.mod h1:adPDS6s7WaajdFBV9mQ7i0dKfQ8xiDnF9ZNETVPpp7c=
+github.com/signalfx/golib v2.5.1+incompatible h1:rw16Flfx5Z29DahDSNGAA3ch8dOeNc3oOMUJm493yao=
 github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9 h1:M3hb9iDDlB3LrR1xI6wiWIA75Ol9eenD5fbV5d3bxjc=
 github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9/go.mod h1:Ytb8KfCSyuwy/VILnROdgCvbQLA5ch0nkbG7lKT0BXw=
 github.com/signalfx/thrift v0.0.0-20181211001559-3838fa316492 h1:xWH5x1J8QgMdxs1q+jcuVyBKmazAee82UWeS9BPMxzY=
