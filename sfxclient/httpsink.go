@@ -26,6 +26,7 @@ import (
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
 	traceformat "github.com/signalfx/golib/v3/trace/format"
+	"github.com/signalfx/sapm-proto/translator"
 )
 
 const (
@@ -41,8 +42,18 @@ const (
 	// TraceIngestEndpointV1 is the v1 version of the signalfx trace endpoint
 	TraceIngestEndpointV1 = "https://ingest.signalfx.com/v1/trace"
 
+	// TraceIngestSAPMEndpointV2 is the of the sapm trace endpoint
+	TraceIngestSAPMEndpointV2 = "https://ingest.signalfx.com/v2/trace"
+
 	// DefaultTimeout is the default time to fail signalfx datapoint requests if they don't succeed
 	DefaultTimeout = time.Second * 5
+)
+
+type protocol int
+
+const (
+	ProtoSFX protocol = iota
+	ProtoSAPM
 )
 
 // DefaultUserAgent is the UserAgent string sent to signalfx
@@ -62,6 +73,7 @@ type HTTPSink struct {
 	jsonMarshal        func(v []*trace.Span) ([]byte, error)
 	DisableCompression bool
 	zippers            sync.Pool
+	proto              protocol
 
 	stats struct {
 		readingBody int64
@@ -420,6 +432,20 @@ func (h *HTTPSink) AddSpans(ctx context.Context, traces []*trace.Span) (err erro
 	if len(traces) == 0 || h.TraceEndpoint == "" {
 		return nil
 	}
+
+	var fn func(context.Context, []*trace.Span) error
+	switch h.proto {
+	case ProtoSAPM:
+		fn = h.addSAPMSpans
+	case ProtoSFX:
+		fallthrough
+	default:
+		fn = h.addSFXSpans
+	}
+	return fn(ctx, traces)
+}
+
+func (h *HTTPSink) addSFXSpans(ctx context.Context, traces []*trace.Span) (err error) {
 	return h.doBottom(ctx, func() (io.Reader, bool, error) {
 		b, err := h.jsonMarshal(traces)
 		if err != nil {
@@ -428,10 +454,27 @@ func (h *HTTPSink) AddSpans(ctx context.Context, traces []*trace.Span) (err erro
 		return h.getReader(b)
 	}, "application/json", h.TraceEndpoint, spanResponseValidator)
 }
+
+// addSAPMSpans forwards the traces to SignalFx using the SAPM protocol
+func (h *HTTPSink) addSAPMSpans(ctx context.Context, traces []*trace.Span) (err error) {
+	return h.doBottom(ctx, func() (io.Reader, bool, error) {
+		b, err := sapmMarshal(traces)
+		if err != nil {
+			return nil, false, errors.Annotate(err, "cannot encode traces into SAPM format")
+		}
+		return h.getReader(b)
+	}, "application/x-protobuf", h.TraceEndpoint, spanResponseValidator)
+}
+
 func jsonMarshal(v []*trace.Span) ([]byte, error) {
 	// Yeah, i did that.
 	y := (*traceformat.Trace)(unsafe.Pointer(&v))
 	return easyjson.Marshal(y)
+}
+
+func sapmMarshal(v []*trace.Span) ([]byte, error) {
+	msg := translator.SFXToSAPMPostRequest(v)
+	return proto.Marshal(msg)
 }
 
 // NewHTTPSink creates a default NewHTTPSink using package level constants as
@@ -451,5 +494,6 @@ func NewHTTPSink() *HTTPSink {
 			return gzip.NewWriter(nil)
 		}},
 		jsonMarshal: jsonMarshal,
+		proto:       ProtoSAPM,
 	}
 }
