@@ -52,7 +52,7 @@ const (
 type protocol int
 
 const (
-	ProtoSFX protocol = iota
+	ProtoSFX  protocol = iota
 	ProtoSAPM
 )
 
@@ -494,6 +494,10 @@ func NewHTTPSink() *HTTPSink {
 			return gzip.NewWriter(nil)
 		}},
 		jsonMarshal: jsonMarshal,
-		proto:       ProtoSAPM,
 	}
+}
+
+func WithSAPMExporter(s *HTTPSink) *HTTPSink {
+	s.proto = ProtoSAPM
+	return s
 }
