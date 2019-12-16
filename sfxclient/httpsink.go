@@ -49,11 +49,11 @@ const (
 	DefaultTimeout = time.Second * 5
 )
 
-type protocol int
+type protocol string
 
 const (
-	ProtoSFX protocol = iota
-	ProtoSAPM
+	ProtoSFX  protocol = "sfx"
+	ProtoSAPM protocol = "sapm"
 )
 
 // DefaultUserAgent is the UserAgent string sent to signalfx
@@ -494,6 +494,10 @@ func NewHTTPSink() *HTTPSink {
 			return gzip.NewWriter(nil)
 		}},
 		jsonMarshal: jsonMarshal,
-		proto:       ProtoSAPM,
 	}
+}
+
+func WithSAPMExporter(s *HTTPSink) *HTTPSink {
+	s.proto = ProtoSAPM
+	return s
 }
