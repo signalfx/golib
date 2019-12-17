@@ -14,6 +14,7 @@ install:
   - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 
 script:
+  - echo "test pr"
   - export PATH=$(go env GOPATH)/bin:$PATH
   - export GO111MODULE=on
   - go mod download
