@@ -26,6 +26,7 @@ import (
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
 	traceformat "github.com/signalfx/golib/v3/trace/format"
+	"github.com/signalfx/sapm-proto/translator"
 )
 
 const (
@@ -41,8 +42,14 @@ const (
 	// TraceIngestEndpointV1 is the v1 version of the signalfx trace endpoint
 	TraceIngestEndpointV1 = "https://ingest.signalfx.com/v1/trace"
 
+	// TraceIngestSAPMEndpointV2 is the of the sapm trace endpoint
+	TraceIngestSAPMEndpointV2 = "https://ingest.signalfx.com/v2/trace"
+
 	// DefaultTimeout is the default time to fail signalfx datapoint requests if they don't succeed
 	DefaultTimeout = time.Second * 5
+
+	contentTypeHeaderJSON = "application/json"
+	contentTypeHeaderSAPM = "application/x-protobuf"
 )
 
 // DefaultUserAgent is the UserAgent string sent to signalfx
@@ -59,9 +66,10 @@ type HTTPSink struct {
 	ResponseCallback   func(resp *http.Response, responseBody []byte)
 	Client             *http.Client
 	protoMarshaler     func(pb proto.Message) ([]byte, error)
-	jsonMarshal        func(v []*trace.Span) ([]byte, error)
+	traceMarshal       func(v []*trace.Span) ([]byte, error)
 	DisableCompression bool
 	zippers            sync.Pool
+	contentTypeHeader  string
 
 	stats struct {
 		readingBody int64
@@ -420,25 +428,33 @@ func (h *HTTPSink) AddSpans(ctx context.Context, traces []*trace.Span) (err erro
 	if len(traces) == 0 || h.TraceEndpoint == "" {
 		return nil
 	}
+
 	return h.doBottom(ctx, func() (io.Reader, bool, error) {
-		b, err := h.jsonMarshal(traces)
+		b, err := h.traceMarshal(traces)
 		if err != nil {
-			return nil, false, errors.Annotate(err, "cannot encode traces into json")
+			return nil, false, errors.Annotate(err, "cannot encode traces")
 		}
 		return h.getReader(b)
-	}, "application/json", h.TraceEndpoint, spanResponseValidator)
+	}, h.contentTypeHeader, h.TraceEndpoint, spanResponseValidator)
+
 }
+
 func jsonMarshal(v []*trace.Span) ([]byte, error) {
 	// Yeah, i did that.
 	y := (*traceformat.Trace)(unsafe.Pointer(&v))
 	return easyjson.Marshal(y)
 }
 
+func sapmMarshal(v []*trace.Span) ([]byte, error) {
+	msg := translator.SFXToSAPMPostRequest(v)
+	return proto.Marshal(msg)
+}
+
 // NewHTTPSink creates a default NewHTTPSink using package level constants as
 // defaults, including an empty auth token.  If sending directly to SignalFx, you will be required
 // to explicitly set the AuthToken
-func NewHTTPSink() *HTTPSink {
-	return &HTTPSink{
+func NewHTTPSink(opts ...HTTPSinkOption) *HTTPSink {
+	s := &HTTPSink{
 		EventEndpoint:     EventIngestEndpointV2,
 		DatapointEndpoint: IngestEndpointV2,
 		TraceEndpoint:     TraceIngestEndpointV1,
@@ -450,6 +466,11 @@ func NewHTTPSink() *HTTPSink {
 		zippers: sync.Pool{New: func() interface{} {
 			return gzip.NewWriter(nil)
 		}},
-		jsonMarshal: jsonMarshal,
+		traceMarshal:      jsonMarshal,
+		contentTypeHeader: contentTypeHeaderJSON,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
