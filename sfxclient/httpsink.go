@@ -26,7 +26,7 @@ import (
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
 	traceformat "github.com/signalfx/golib/v3/trace/format"
-	"github.com/signalfx/sapm-proto/translator"
+	"github.com/signalfx/golib/v3/trace/translator"
 )
 
 const (

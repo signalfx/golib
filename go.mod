@@ -5,8 +5,10 @@ go 1.13
 replace git.apache.org/thrift.git => github.com/signalfx/thrift v0.0.0-20181211001559-3838fa316492
 
 require (
+	git.apache.org/thrift.git v0.0.0-00010101000000-000000000000
 	github.com/boltdb/bolt v1.3.1
 	github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9
+	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/stackerr v0.0.0-20150612192056-c2fcf88613f4
 	github.com/go-kit/kit v0.9.0
 	github.com/go-logfmt/logfmt v0.4.0
@@ -22,8 +24,7 @@ require (
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526e884
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083
 	github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9
-	github.com/signalfx/sapm-proto v0.2.0
-	github.com/signalfx/thrift v0.0.0-20181211001559-3838fa316492
+	github.com/signalfx/sapm-proto v0.4.0
 	github.com/smartystreets/goconvey v1.6.4-0.20190306220146-200a235640ff
 	github.com/stretchr/testify v1.4.0
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
