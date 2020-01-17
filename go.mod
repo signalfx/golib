@@ -2,6 +2,8 @@ module github.com/signalfx/golib/v3
 
 go 1.13
 
+replace git.apache.org/thrift.git => github.com/signalfx/thrift v0.0.0-20181211001559-3838fa316492
+
 require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9
@@ -9,7 +11,9 @@ require (
 	github.com/go-kit/kit v0.9.0
 	github.com/go-logfmt/logfmt v0.4.0
 	github.com/go-stack/stack v1.8.0
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.3.2
+	github.com/jaegertracing/jaeger v1.15.1
 	github.com/juju/errors v0.0.0-20181012004132-a4583d0a56ea
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e
 	github.com/opentracing/opentracing-go v1.1.0
