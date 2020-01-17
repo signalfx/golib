@@ -1,6 +1,6 @@
 # sfxclient
 
-    import "github.com/signalfx/golib/sfxclient"
+    import "github.com/signalfx/golib/v3/sfxclient"
 
 Package signalfx creates convenient go functions and wrappers to send metrics to
 SignalFx.
