@@ -325,6 +325,16 @@ func (c *CyclePDB) CycleNodes() error {
 	return err
 }
 
+// EndCacheStaging ends the staging mode of the cache and adds the staging bucket to the slice of buckets
+func (c *CyclePDB) EndCacheStaging() error {
+	atomic.AddInt64(&c.stats.TotalCycleCount, int64(1))
+	err := c.blobs.purgeOldBlobs(c)
+	if err == nil {
+		err = c.blobs.cycleDbs(c)
+	}
+	return err
+}
+
 type readToLocation struct {
 	// bucket we found the []byte key in
 	dbndx int
