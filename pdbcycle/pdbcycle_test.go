@@ -2,11 +2,6 @@ package pdbcycle
 
 import (
 	"context"
-	"errors"
-	"github.com/boltdb/bolt"
-	"github.com/signalfx/golib/boltcycle"
-	. "github.com/smartystreets/goconvey/convey"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,6 +10,13 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/boltdb/bolt"
+
+	"github.com/signalfx/golib/boltcycle"
+	"github.com/signalfx/golib/errors"
+	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func raceyReads(pdb *CyclePDB, closeChan <-chan struct{}, wg *sync.WaitGroup, t *testing.T) {
@@ -91,6 +93,7 @@ func TestDataRaces(t *testing.T) {
 			AsyncErrors(myErrs),
 			InitDB(true),
 		)
+		pdb.EndCacheStaging()
 		So(err, ShouldBeNil)
 		wg := &sync.WaitGroup{}
 		wg.Add(4)
@@ -102,6 +105,21 @@ func TestDataRaces(t *testing.T) {
 		<-time.After(time.Second * 5)
 		close(closeChan)
 		wg.Wait()
+	})
+}
+
+func TestEndCacheStaging(t *testing.T) {
+	Convey("test without ending cache staging", t, func() {
+		dir, err := ioutil.TempDir(os.TempDir(), "pdbcycle")
+		Print("Temp directory used: " + dir + " ")
+		So(err, ShouldBeNil)
+		pdb, err := New(dir,
+			InitDB(true),
+		)
+		So(err, ShouldBeNil)
+		So(len(pdb.blobs.dbs), ShouldBeZeroValue)
+		pdb.EndCacheStaging()
+		So(len(pdb.blobs.dbs), ShouldEqual, 1)
 	})
 }
 
@@ -121,6 +139,7 @@ func Test(t *testing.T) {
 			MaxBatchSize(3),
 			InitDB(true),
 		)
+		pdb.EndCacheStaging()
 		So(err, ShouldBeNil)
 		So(pdb, ShouldNotBeNil)
 		Convey("test normal use", func() {
@@ -135,6 +154,7 @@ func Test(t *testing.T) {
 				So(len(data), ShouldEqual, 1)
 				So(string(data[0]), ShouldEqual, "firstdata")
 				So(pdb.CycleNodes(), ShouldBeNil)
+				pdb.EndCacheStaging()
 				infos, err := ioutil.ReadDir(dir)
 				So(err, ShouldBeNil)
 				So(len(infos), ShouldEqual, 2)
@@ -142,6 +162,7 @@ func Test(t *testing.T) {
 					err = pdb.Write([]boltcycle.KvPair{{Key: []byte("second"), Value: []byte("seconddata")}})
 					So(err, ShouldBeNil)
 					So(pdb.CycleNodes(), ShouldBeNil)
+					pdb.EndCacheStaging()
 					infos, err = ioutil.ReadDir(dir)
 					So(err, ShouldBeNil)
 					So(len(infos), ShouldEqual, 3)
@@ -154,6 +175,7 @@ func Test(t *testing.T) {
 							err = pdb.Write([]boltcycle.KvPair{{Key: []byte("third"), Value: []byte("thirddata")}})
 							So(err, ShouldBeNil)
 							So(pdb.CycleNodes(), ShouldBeNil)
+							pdb.EndCacheStaging()
 							infos, err = ioutil.ReadDir(dir)
 							So(err, ShouldBeNil)
 							So(len(infos), ShouldEqual, 3)
@@ -275,6 +297,7 @@ func TestErr(t *testing.T) {
 			So(err, ShouldBeNil)
 			myErrs := make(chan error)
 			pdb, err := New(dir, AsyncErrors(myErrs))
+			pdb.EndCacheStaging()
 			So(err, ShouldBeNil)
 
 			err = pdb.blobs.latest().Update(func(tx *bolt.Tx) error {
@@ -311,6 +334,7 @@ func TestErr(t *testing.T) {
 			So(err, ShouldBeNil)
 			myErrs := make(chan error, 10)
 			pdb, err := New(dir, AsyncErrors(myErrs))
+			pdb.EndCacheStaging()
 			So(err, ShouldBeNil)
 			pdb.AsyncWrite(context.Background(), []boltcycle.KvPair{{Key: []byte(""), Value: []byte("blargdata")}})
 			time.Sleep(time.Second)
@@ -319,6 +343,7 @@ func TestErr(t *testing.T) {
 			dir, err := ioutil.TempDir(os.TempDir(), "pdbcycle")
 			So(err, ShouldBeNil)
 			pdb, err := New(dir, ReadMovementBacklog(0))
+			pdb.EndCacheStaging()
 			So(err, ShouldBeNil)
 			So(pdb.Write([]boltcycle.KvPair{
 				{Key: []byte("blarg1"), Value: []byte("blargdata")},
@@ -329,6 +354,7 @@ func TestErr(t *testing.T) {
 			}), ShouldBeNil)
 			for pdb.Stats().TotalReadMovementsSkipped == 0 {
 				So(pdb.CycleNodes(), ShouldBeNil)
+				pdb.EndCacheStaging()
 				_, err = pdb.Read([][]byte{
 					[]byte("blarg1"),
 					[]byte("blarg2"),
