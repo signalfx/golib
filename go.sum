@@ -91,14 +91,18 @@ github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526
 github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526e884/go.mod h1:muYA2clvwCdj7nzAJ5vJIXYpJsUumhAl4Uu1wUNpWzA=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 h1:WsShHmu12ZztYPfh9b+I+VjYD1o8iOHhB67WZCMEEE8=
 github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083/go.mod h1:adPDS6s7WaajdFBV9mQ7i0dKfQ8xiDnF9ZNETVPpp7c=
-github.com/signalfx/golib v2.5.1+incompatible h1:rw16Flfx5Z29DahDSNGAA3ch8dOeNc3oOMUJm493yao=
 github.com/signalfx/golib/v3 v3.0.0/go.mod h1:p+krygP/cDlWvCBEgdkQp3H16rbP4NW7YQa81TDMRe8=
 github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9 h1:M3hb9iDDlB3LrR1xI6wiWIA75Ol9eenD5fbV5d3bxjc=
 github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9/go.mod h1:Ytb8KfCSyuwy/VILnROdgCvbQLA5ch0nkbG7lKT0BXw=
 github.com/signalfx/sapm-proto v0.2.0 h1:uaNhSN9qE8g16YtXSbryPmbkRiyCt8Bw4XTjV/MC5Xg=
 github.com/signalfx/sapm-proto v0.2.0/go.mod h1:X/wS1ofuOAW+OTFhCALiHVZvihqMDiNPhzmbusWCQi8=
+github.com/signalfx/sapm-proto v0.3.1-0.20200117222306-7b55fd81b38c h1:TC0N/wQoHpPphOjob7Cuy8OmRkeqcvh83zzv91+joWY=
+github.com/signalfx/sapm-proto v0.3.1-0.20200117222306-7b55fd81b38c/go.mod h1:x3gtwJ1GRejtkghB4nYpwixh2zqJrLbPU959ZNhM0Fk=
+github.com/signalfx/sapm-proto v0.4.0 h1:5lQX++6FeIjUZEIcnSgBqhOpmSjMkRBW3y/4ZiKMo5E=
+github.com/signalfx/sapm-proto v0.4.0/go.mod h1:x3gtwJ1GRejtkghB4nYpwixh2zqJrLbPU959ZNhM0Fk=
 github.com/signalfx/thrift v0.0.0-20181211001559-3838fa316492 h1:xWH5x1J8QgMdxs1q+jcuVyBKmazAee82UWeS9BPMxzY=
 github.com/signalfx/thrift v0.0.0-20181211001559-3838fa316492/go.mod h1:Xv29nl9fxdk0hmeqcUHgAZZwvYrOhduNW+9qk4H+6K0=
+github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d h1:zE9ykElWQ6/NYmHa3jpm/yHnI4xSofP+UP6SpjHcSeM=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=
 github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac h1:wbW+Bybf9pXxnCFAOWZTqkRjAc7rAIwo2e1ArUhiHxg=
 github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=
@@ -137,6 +141,7 @@ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20190502145724-3ef323f4f1fd h1:r7DufRZuZbWB7j439YfAzP8RPDa9unLkpwQKUYbIMPI=
 golang.org/x/sys v0.0.0-20190502145724-3ef323f4f1fd/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191026070338-33540a1f6037 h1:YyJpGZS1sBuBCzLAR1VEpK193GlqGZbnPFnPV/5Rsb4=
 golang.org/x/sys v0.0.0-20191026070338-33540a1f6037/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
