@@ -24,14 +24,15 @@ import (
 
 type bucketID [32]byte
 
-// spanBatcher is simpler version of OpenTelemetry's Node Batcher.
-// spanBatcher takes spans and groups them into Jaeger Batches using
+// SpanBatcher is simpler version of OpenTelemetry's Node Batcher.
+// SpanBatcher takes spans and groups them into Jaeger Batches using
 // the Span Process objects.
-type spanBatcher struct {
+type SpanBatcher struct {
 	buckets map[bucketID]*jaegerpb.Batch
 }
 
-func (b *spanBatcher) add(span *jaegerpb.Span) {
+// Add jaeger spans to the batcher
+func (b *SpanBatcher) Add(span *jaegerpb.Span) {
 	if b.buckets == nil {
 		b.buckets = make(map[bucketID]*jaegerpb.Batch)
 	}
@@ -49,7 +50,8 @@ func (b *spanBatcher) add(span *jaegerpb.Span) {
 	batch.Spans = append(batch.Spans, span)
 }
 
-func (b *spanBatcher) batches() []*jaegerpb.Batch {
+// Batches returns an array of jaeger batches
+func (b *SpanBatcher) Batches() []*jaegerpb.Batch {
 	batches := make([]*jaegerpb.Batch, 0, len(b.buckets))
 	for _, b := range b.buckets {
 		batches = append(batches, b)
@@ -57,7 +59,7 @@ func (b *spanBatcher) batches() []*jaegerpb.Batch {
 	return batches
 }
 
-func (b *spanBatcher) genBucketID(process *jaegerpb.Process) (bucketID, error) {
+func (b *SpanBatcher) genBucketID(process *jaegerpb.Process) (bucketID, error) {
 	if process != nil {
 		sortTags(process.Tags)
 		key, err := proto.Marshal(process)
@@ -69,7 +71,7 @@ func (b *spanBatcher) genBucketID(process *jaegerpb.Process) (bucketID, error) {
 	return bucketID{}, nil
 }
 
-func (b *spanBatcher) getOrAddBatch(id bucketID, p *jaegerpb.Process) *jaegerpb.Batch {
+func (b *SpanBatcher) getOrAddBatch(id bucketID, p *jaegerpb.Process) *jaegerpb.Batch {
 	batch, ok := b.buckets[id]
 	if !ok {
 		batch = &jaegerpb.Batch{
