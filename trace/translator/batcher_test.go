@@ -67,12 +67,12 @@ func TestBatcher(t *testing.T) {
 		{SpanID: jaegerpb.SpanID(9)},
 	}
 
-	b := &spanBatcher{}
+	b := &SpanBatcher{}
 	for _, s := range spans {
-		b.add(s)
+		b.Add(s)
 	}
 
-	batches := b.batches()
+	batches := b.Batches()
 	assert.Len(t, batches, 4)
 
 	b1 := findBatchWithProcessServiceName(batches, p1)

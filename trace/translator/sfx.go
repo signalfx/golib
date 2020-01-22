@@ -42,14 +42,14 @@ const (
 func SFXToSAPMPostRequest(spans []*trace.Span) *gen.PostSpansRequest {
 	sr := &gen.PostSpansRequest{}
 
-	batcher := spanBatcher{}
+	batcher := SpanBatcher{}
 
 	for _, sfxSpan := range spans {
-		span := sapmSpanFromSFXSpan(sfxSpan)
-		batcher.add(span)
+		span := SAPMSpanFromSFXSpan(sfxSpan)
+		batcher.Add(span)
 	}
 
-	sr.Batches = batcher.batches()
+	sr.Batches = batcher.Batches()
 	return sr
 }
 
@@ -68,7 +68,8 @@ func getLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
 	}
 }
 
-func sapmSpanFromSFXSpan(sfxSpan *trace.Span) *jaegerpb.Span {
+// SAPMSpanFromSFXSpan converts an individual SignalFx format span to a SAPM span
+func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) *jaegerpb.Span {
 	spanID, err := jaegerpb.SpanIDFromString(sfxSpan.ID)
 	if err != nil {
 		return nil
