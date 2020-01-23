@@ -46,10 +46,11 @@ func TestData(t *testing.T) {
 		}{
 			{"valid", ValidJSON},
 		}
-		for _, test := range tests {
-			Convey(test.desc, func() {
+		for _, t1 := range tests {
+			t1 := t1
+			Convey(t1.desc, func() {
 				var traces Trace
-				err := json.Unmarshal([]byte(test.json), &traces)
+				err := json.Unmarshal([]byte(t1.json), &traces)
 				if err != nil {
 					Println(err)
 				}

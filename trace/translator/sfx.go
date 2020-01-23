@@ -69,55 +69,51 @@ func getLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
 }
 
 // SAPMSpanFromSFXSpan converts an individual SignalFx format span to a SAPM span
-func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) *jaegerpb.Span {
+func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) (span *jaegerpb.Span) {
 	spanID, err := jaegerpb.SpanIDFromString(sfxSpan.ID)
-	if err != nil {
-		return nil
-	}
-
-	traceID, err := jaegerpb.TraceIDFromString(sfxSpan.TraceID)
-	if err != nil {
-		return nil
-	}
-
-	span := &jaegerpb.Span{
-		SpanID:  spanID,
-		TraceID: traceID,
-		Process: &jaegerpb.Process{},
-	}
-
-	if sfxSpan.Name != nil {
-		span.OperationName = *sfxSpan.Name
-	}
-
-	if sfxSpan.Duration != nil {
-		span.Duration = durationFromMicroseconds(*sfxSpan.Duration)
-	}
-
-	if sfxSpan.Timestamp != nil {
-		span.StartTime = timeFromMicrosecondsSinceEpoch(*sfxSpan.Timestamp)
-	}
-
-	if sfxSpan.Debug != nil && *sfxSpan.Debug {
-		span.Flags.SetDebug()
-	}
-
-	span.Tags, span.Process.Tags = sfxTagsToJaegerTags(sfxSpan.Tags, sfxSpan.RemoteEndpoint, sfxSpan.Kind)
-
-	getLocalEndpointInfo(sfxSpan, span)
-
-	if sfxSpan.ParentID != nil {
-		parentID, err := jaegerpb.SpanIDFromString(*sfxSpan.ParentID)
+	if err == nil {
+		traceID, err := jaegerpb.TraceIDFromString(sfxSpan.TraceID)
 		if err == nil {
-			span.References = append(span.References, jaegerpb.SpanRef{
+			span = &jaegerpb.Span{
+				SpanID:  spanID,
 				TraceID: traceID,
-				SpanID:  parentID,
-				RefType: jaegerpb.SpanRefType_CHILD_OF,
-			})
+				Process: &jaegerpb.Process{},
+			}
+
+			if sfxSpan.Name != nil {
+				span.OperationName = *sfxSpan.Name
+			}
+
+			if sfxSpan.Duration != nil {
+				span.Duration = durationFromMicroseconds(*sfxSpan.Duration)
+			}
+
+			if sfxSpan.Timestamp != nil {
+				span.StartTime = timeFromMicrosecondsSinceEpoch(*sfxSpan.Timestamp)
+			}
+
+			if sfxSpan.Debug != nil && *sfxSpan.Debug {
+				span.Flags.SetDebug()
+			}
+
+			span.Tags, span.Process.Tags = sfxTagsToJaegerTags(sfxSpan.Tags, sfxSpan.RemoteEndpoint, sfxSpan.Kind)
+
+			getLocalEndpointInfo(sfxSpan, span)
+
+			if sfxSpan.ParentID != nil {
+				parentID, err := jaegerpb.SpanIDFromString(*sfxSpan.ParentID)
+				if err == nil {
+					span.References = append(span.References, jaegerpb.SpanRef{
+						TraceID: traceID,
+						SpanID:  parentID,
+						RefType: jaegerpb.SpanRefType_CHILD_OF,
+					})
+				}
+			}
+
+			span.Logs = sfxAnnotationsToJaegerLogs(sfxSpan.Annotations)
 		}
 	}
-
-	span.Logs = sfxAnnotationsToJaegerLogs(sfxSpan.Annotations)
 	return span
 }
 
@@ -175,19 +171,18 @@ func sfxTagsToJaegerTags(tags map[string]string, remoteEndpoint *trace.Endpoint,
 func sfxAnnotationsToJaegerLogs(annotations []*trace.Annotation) []jaegerpb.Log {
 	logs := make([]jaegerpb.Log, 0, len(annotations))
 	for _, ann := range annotations {
-		if ann.Value == nil {
-			continue
+		if ann.Value != nil {
+			log := jaegerpb.Log{}
+			if ann.Timestamp != nil {
+				log.Timestamp = timeFromMicrosecondsSinceEpoch(*ann.Timestamp)
+			}
+			var err error
+			log.Fields, err = fieldsFromJSONString(*ann.Value)
+			if err != nil {
+				continue
+			}
+			logs = append(logs, log)
 		}
-		log := jaegerpb.Log{}
-		if ann.Timestamp != nil {
-			log.Timestamp = timeFromMicrosecondsSinceEpoch(*ann.Timestamp)
-		}
-		var err error
-		log.Fields, err = fieldsFromJSONString(*ann.Value)
-		if err != nil {
-			continue
-		}
-		logs = append(logs, log)
 	}
 	return logs
 }

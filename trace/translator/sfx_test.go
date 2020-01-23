@@ -128,6 +128,7 @@ func sortLogs(t []jaegerpb.Log) {
 	sort.Slice(t, func(i, j int) bool {
 		return t[i].String() <= t[j].String()
 	})
+	// noscopelint
 	for _, l := range t {
 		sortTags(l.Fields)
 	}

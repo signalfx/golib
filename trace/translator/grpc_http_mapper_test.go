@@ -15,6 +15,7 @@
 package translator
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +26,8 @@ func TestHTTPStatusFromOTStatus(t *testing.T) {
 		httpStatus := HTTPStatusCodeFromOCStatus(otelStatus)
 		assert.True(t, httpStatus != 0)
 	}
+
+	assert.Equal(t, int32(http.StatusInternalServerError), HTTPStatusCodeFromOCStatus(12345))
 }
 
 func TestOTStatusFromHTTPStatus(t *testing.T) {
