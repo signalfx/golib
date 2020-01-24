@@ -41,7 +41,7 @@ func TestTimeTranslator(t *testing.T) {
 	want, err := time.Parse(time.RFC3339Nano, "2019-12-10T13:56:44.988181Z")
 	require.NoError(t, err)
 
-	got := timeFromMicrosecondsSinceEpoch(timeInMicros).UTC()
+	got := TimeFromMicrosecondsSinceEpoch(timeInMicros).UTC()
 	assert.Equal(t, want, got)
 }
 
@@ -53,7 +53,7 @@ func TestDurationTranslator(t *testing.T) {
 	}
 
 	for ms, want := range cases {
-		got := durationFromMicroseconds(ms)
+		got := DurationFromMicroseconds(ms)
 		assert.Equal(t, want, got)
 	}
 }

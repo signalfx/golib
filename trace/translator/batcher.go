@@ -21,22 +21,21 @@ import (
 	jaegerpb "github.com/jaegertracing/jaeger/model"
 )
 
-type bucketID [32]byte
-
 // SpanBatcher is simpler version of OpenTelemetry's Node Batcher.
 // SpanBatcher takes spans and groups them into Jaeger Batches using
 // the Span Process objects.
 type SpanBatcher struct {
-	buckets map[bucketID]*jaegerpb.Batch
+	// Buckets are a map of jaeger batches with a key generated from the jaeger process
+	Buckets map[[32]byte]*jaegerpb.Batch
 }
 
 // Add jaeger spans to the batcher
 func (b *SpanBatcher) Add(span *jaegerpb.Span) {
-	if b.buckets == nil {
-		b.buckets = make(map[bucketID]*jaegerpb.Batch)
+	if b.Buckets == nil {
+		b.Buckets = make(map[[32]byte]*jaegerpb.Batch)
 	}
 
-	id, err := b.genBucketID(span.Process)
+	id, err := GenSpanBatcherBucketID(span.Process)
 	if err == nil {
 		batchByProcess := span.Process
 		batch := b.getOrAddBatch(id, batchByProcess)
@@ -49,14 +48,26 @@ func (b *SpanBatcher) Add(span *jaegerpb.Span) {
 
 // Batches returns an array of jaeger batches
 func (b *SpanBatcher) Batches() []*jaegerpb.Batch {
-	batches := make([]*jaegerpb.Batch, 0, len(b.buckets))
-	for _, b := range b.buckets {
+	batches := make([]*jaegerpb.Batch, 0, len(b.Buckets))
+	for _, b := range b.Buckets {
 		batches = append(batches, b)
 	}
 	return batches
 }
 
-func (b *SpanBatcher) genBucketID(process *jaegerpb.Process) (bid bucketID, err error) {
+func (b *SpanBatcher) getOrAddBatch(id [32]byte, p *jaegerpb.Process) *jaegerpb.Batch {
+	batch, ok := b.Buckets[id]
+	if !ok {
+		batch = &jaegerpb.Batch{
+			Process: p,
+		}
+		b.Buckets[id] = batch
+	}
+	return batch
+}
+
+// GenSpanBatcherBucketID generates a SpanBatcher bucket id from a jaeger process
+func GenSpanBatcherBucketID(process *jaegerpb.Process) (bid [32]byte, err error) {
 	if process != nil {
 		sortTags(process.Tags)
 		var key []byte
@@ -66,15 +77,4 @@ func (b *SpanBatcher) genBucketID(process *jaegerpb.Process) (bid bucketID, err 
 		}
 	}
 	return bid, err
-}
-
-func (b *SpanBatcher) getOrAddBatch(id bucketID, p *jaegerpb.Process) *jaegerpb.Batch {
-	batch, ok := b.buckets[id]
-	if !ok {
-		batch = &jaegerpb.Batch{
-			Process: p,
-		}
-		b.buckets[id] = batch
-	}
-	return batch
 }

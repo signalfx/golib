@@ -75,6 +75,11 @@ func TestBatcher(t *testing.T) {
 	batches := b.Batches()
 	assert.Len(t, batches, 4)
 
+	assert.Len(t, b.Buckets, 4)
+	p1BucketID, bucketLookUpError := GenSpanBatcherBucketID(p1)
+	assert.Nil(t, bucketLookUpError)
+	assertSpansAreEqual(t, b.Buckets[p1BucketID].Spans, []*jaegerpb.Span{spans[0], spans[1], spans[2]})
+
 	b1 := findBatchWithProcessServiceName(batches, p1)
 	assert.NotNil(t, b1)
 	assert.Equal(t, b1.Process, p1)

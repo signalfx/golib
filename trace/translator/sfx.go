@@ -53,7 +53,8 @@ func SFXToSAPMPostRequest(spans []*trace.Span) *gen.PostSpansRequest {
 	return sr
 }
 
-func getLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
+// GetLocalEndpointInfo sets the jaeger span's local endpoint extracted from the SignalFx span
+func GetLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
 	if sfxSpan.LocalEndpoint != nil {
 		if sfxSpan.LocalEndpoint.ServiceName != nil {
 			span.Process.ServiceName = *sfxSpan.LocalEndpoint.ServiceName
@@ -85,20 +86,20 @@ func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) (span *jaegerpb.Span) {
 			}
 
 			if sfxSpan.Duration != nil {
-				span.Duration = durationFromMicroseconds(*sfxSpan.Duration)
+				span.Duration = DurationFromMicroseconds(*sfxSpan.Duration)
 			}
 
 			if sfxSpan.Timestamp != nil {
-				span.StartTime = timeFromMicrosecondsSinceEpoch(*sfxSpan.Timestamp)
+				span.StartTime = TimeFromMicrosecondsSinceEpoch(*sfxSpan.Timestamp)
 			}
 
 			if sfxSpan.Debug != nil && *sfxSpan.Debug {
 				span.Flags.SetDebug()
 			}
 
-			span.Tags, span.Process.Tags = sfxTagsToJaegerTags(sfxSpan.Tags, sfxSpan.RemoteEndpoint, sfxSpan.Kind)
+			span.Tags, span.Process.Tags = SFXTagsToJaegerTags(sfxSpan.Tags, sfxSpan.RemoteEndpoint, sfxSpan.Kind)
 
-			getLocalEndpointInfo(sfxSpan, span)
+			GetLocalEndpointInfo(sfxSpan, span)
 
 			if sfxSpan.ParentID != nil {
 				parentID, err := jaegerpb.SpanIDFromString(*sfxSpan.ParentID)
@@ -117,7 +118,8 @@ func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) (span *jaegerpb.Span) {
 	return span
 }
 
-func sfxTagsToJaegerTags(tags map[string]string, remoteEndpoint *trace.Endpoint, kind *string) ([]jaegerpb.KeyValue, []jaegerpb.KeyValue) {
+// SFXTagsToJaegerTags returns process tags and span tags from the SignalFx span tags, endpoint (remote), and kind
+func SFXTagsToJaegerTags(tags map[string]string, remoteEndpoint *trace.Endpoint, kind *string) ([]jaegerpb.KeyValue, []jaegerpb.KeyValue) {
 	processTags := make([]jaegerpb.KeyValue, 0, len(tags))
 	spanTags := make([]jaegerpb.KeyValue, 0, len(tags)+3)
 
@@ -174,10 +176,10 @@ func sfxAnnotationsToJaegerLogs(annotations []*trace.Annotation) []jaegerpb.Log 
 		if ann.Value != nil {
 			log := jaegerpb.Log{}
 			if ann.Timestamp != nil {
-				log.Timestamp = timeFromMicrosecondsSinceEpoch(*ann.Timestamp)
+				log.Timestamp = TimeFromMicrosecondsSinceEpoch(*ann.Timestamp)
 			}
 			var err error
-			log.Fields, err = fieldsFromJSONString(*ann.Value)
+			log.Fields, err = FieldsFromJSONString(*ann.Value)
 			if err != nil {
 				continue
 			}
@@ -187,7 +189,8 @@ func sfxAnnotationsToJaegerLogs(annotations []*trace.Annotation) []jaegerpb.Log 
 	return logs
 }
 
-func fieldsFromJSONString(jStr string) ([]jaegerpb.KeyValue, error) {
+// FieldsFromJSONString returns an array of jaeger KeyValues from a json string
+func FieldsFromJSONString(jStr string) ([]jaegerpb.KeyValue, error) {
 	fields := make(map[string]string)
 	kv := make([]jaegerpb.KeyValue, 0, len(fields))
 	err := json.Unmarshal([]byte(jStr), &fields)
@@ -228,11 +231,13 @@ func sfxKindToJaeger(kind string) jaegerpb.KeyValue {
 	return kv
 }
 
-func durationFromMicroseconds(micros int64) time.Duration {
+// DurationFromMicroseconds returns the number of microseconds as a duration
+func DurationFromMicroseconds(micros int64) time.Duration {
 	return time.Duration(micros) * nanosInOneMicro
 }
 
-func timeFromMicrosecondsSinceEpoch(micros int64) time.Time {
+// TimeFromMicrosecondsSinceEpoch returns the number of microseconds since the epoch as a time.Time
+func TimeFromMicrosecondsSinceEpoch(micros int64) time.Time {
 	nanos := micros * int64(nanosInOneMicro)
 	return time.Unix(0, nanos).UTC()
 }
