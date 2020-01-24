@@ -16,7 +16,6 @@ package translator
 
 import (
 	"crypto/sha256"
-	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	jaegerpb "github.com/jaegertracing/jaeger/model"
@@ -37,17 +36,15 @@ func (b *SpanBatcher) Add(span *jaegerpb.Span) {
 		b.buckets = make(map[bucketID]*jaegerpb.Batch)
 	}
 
-	batchByProcess := span.Process
 	id, err := b.genBucketID(span.Process)
-	if err != nil {
-		batchByProcess = nil
+	if err == nil {
+		batchByProcess := span.Process
+		batch := b.getOrAddBatch(id, batchByProcess)
+		if batch.Process != nil {
+			span.Process = nil
+		}
+		batch.Spans = append(batch.Spans, span)
 	}
-
-	batch := b.getOrAddBatch(id, batchByProcess)
-	if batch.Process != nil {
-		span.Process = nil
-	}
-	batch.Spans = append(batch.Spans, span)
 }
 
 // Batches returns an array of jaeger batches
@@ -59,16 +56,16 @@ func (b *SpanBatcher) Batches() []*jaegerpb.Batch {
 	return batches
 }
 
-func (b *SpanBatcher) genBucketID(process *jaegerpb.Process) (bucketID, error) {
+func (b *SpanBatcher) genBucketID(process *jaegerpb.Process) (bid bucketID, err error) {
 	if process != nil {
 		sortTags(process.Tags)
-		key, err := proto.Marshal(process)
-		if err != nil {
-			return bucketID{}, fmt.Errorf("error generating bucket ID: %s", err.Error())
+		var key []byte
+		key, err = proto.Marshal(process)
+		if err == nil {
+			return sha256.Sum256(key), nil
 		}
-		return sha256.Sum256(key), nil
 	}
-	return bucketID{}, nil
+	return bid, err
 }
 
 func (b *SpanBatcher) getOrAddBatch(id bucketID, p *jaegerpb.Process) *jaegerpb.Batch {
