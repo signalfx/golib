@@ -54,6 +54,7 @@ type Stats struct {
 	TotalWriteCount               int64
 	TotalDeleteCount              int64
 	TotalCycleCount               int64
+	TotalEndCacheStagingCount     int64
 	TotalErrorsDuringRecopy       int64
 	TotalReadMovementsSkipped     int64
 	TotalReadMovementsAdded       int64

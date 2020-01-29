@@ -24,6 +24,7 @@ type blob struct {
 
 var prefix = "PDB_"
 var suffix = ".bolt"
+var stagingBucket *blob
 
 type syncblobs struct {
 	dbs []*blob
@@ -118,7 +119,7 @@ func (s *syncblobs) cycleDbs(c *CyclePDB) (err error) {
 	b, err := c.getBlob(newFile)
 
 	if err == nil {
-		s.dbs = append(s.dbs, b)
+		stagingBucket = b
 	}
 	return err
 }
@@ -314,14 +315,23 @@ func (c *CyclePDB) getBlob(file string) (ret *blob, err error) {
 	return ret, err
 }
 
-// CycleNodes deletes the first, oldest node in the primary bucket while there are >= minNumOldBuckets
-// and creates a new, empty last node
+// CycleNodes creates a staging node which is then added to buckets by EndCacheStaging()
 func (c *CyclePDB) CycleNodes() error {
 	atomic.AddInt64(&c.stats.TotalCycleCount, int64(1))
-	err := c.blobs.purgeOldBlobs(c)
-	if err == nil {
-		err = c.blobs.cycleDbs(c)
+	err := c.blobs.cycleDbs(c)
+	return err
+}
+
+// EndCacheStaging ends the staging mode of the cache, adds the staging bucket to the slice of buckets and deletes the
+// first, oldest node in the primary bucket while there are >= minNumOldBuckets
+func (c *CyclePDB) EndCacheStaging() error {
+	atomic.AddInt64(&c.stats.TotalEndCacheStagingCount, int64(1))
+	var err error
+	if stagingBucket != nil {
+		err = c.blobs.purgeOldBlobs(c)
+		c.blobs.dbs = append(c.blobs.dbs, stagingBucket)
 	}
+	stagingBucket = nil
 	return err
 }
 
