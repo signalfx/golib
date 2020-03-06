@@ -519,6 +519,11 @@ func (s *Service) byteHashes() string {
 	return r
 }
 
+// StateLog is returned for nesting in wrapping clients.
+func (s *Service) StateLog() log.Logger {
+	return s.stateLog
+}
+
 func childrenServices(logger log.Logger, serviceName string, children []string, zkConn ZkConn) ([]ServiceInstance, error) {
 	logger.Log("getting services")
 	ret := make([]ServiceInstance, len(children))
