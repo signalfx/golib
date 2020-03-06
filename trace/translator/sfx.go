@@ -16,7 +16,9 @@ package translator
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	jaegerpb "github.com/jaegertracing/jaeger/model"
@@ -150,7 +152,10 @@ func SFXTagsToJaegerTags(tags map[string]string, remoteEndpoint *trace.Endpoint,
 	}
 
 	if kind != nil {
-		spanTags = append(spanTags, sfxKindToJaeger(*kind))
+		kindTag, err := sfxKindToJaeger(*kind)
+		if err == nil {
+			spanTags = append(spanTags, kindTag)
+		}
 	}
 
 	for k, v := range tags {
@@ -213,11 +218,13 @@ func FieldsFromJSONString(jStr string) ([]jaegerpb.KeyValue, error) {
 	return kv, nil
 }
 
-func sfxKindToJaeger(kind string) jaegerpb.KeyValue {
+func sfxKindToJaeger(kind string) (jaegerpb.KeyValue, error) {
 	kv := jaegerpb.KeyValue{
 		Key: spanKind,
 	}
 
+	// Normalize to uppercase before checking against uppercase constant values
+	kind = strings.ToUpper(kind)
 	switch kind {
 	case clientKind:
 		kv.VStr = spanKindRPCClient
@@ -227,8 +234,10 @@ func sfxKindToJaeger(kind string) jaegerpb.KeyValue {
 		kv.VStr = spanKindProducer
 	case consumerKind:
 		kv.VStr = spanKindConsumer
+	default:
+		return kv, fmt.Errorf("unknown span kind %s", kind)
 	}
-	return kv
+	return kv, nil
 }
 
 // DurationFromMicroseconds returns the number of microseconds as a duration

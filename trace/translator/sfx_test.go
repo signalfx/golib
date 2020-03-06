@@ -435,6 +435,44 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					Logs: []jaegerpb.Log{},
 				},
 			},
+		}, {
+			Process: &jaegerpb.Process{
+				ServiceName: "api4",
+				Tags: []jaegerpb.KeyValue{
+					{
+						Key:   "ip",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "10.53.67.54",
+					},
+					{
+						Key:   "jaeger.version",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "Python-3.6.0",
+					},
+					{
+						Key:   "hostname",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "api4-sjc1",
+					},
+				},
+			},
+			Spans: []*jaegerpb.Span{
+				{
+					TraceID:       jaegerpb.TraceID{Low: 18025686685695023675},
+					SpanID:        jaegerpb.SpanID(63028799254727739),
+					OperationName: "get",
+					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					Duration:      time.Microsecond * 22938,
+					Tags: []jaegerpb.KeyValue{
+						{
+							Key:   "peer.ipv6",
+							VType: jaegerpb.ValueType_STRING,
+							VStr:  "::1",
+						},
+					},
+					Logs: []jaegerpb.Log{},
+				},
+			},
 		},
 	},
 }
@@ -589,7 +627,7 @@ var sourceSpans = []*trace.Span{
 		TraceID: "fa281a8955571a3a",
 		ID:      "DFEC5BE6328C3A",
 		Name:    pointer.String("get"),
-		Kind:    &ClientKind,
+		Kind:    pointer.String("client"),
 		LocalEndpoint: &trace.Endpoint{
 			ServiceName: pointer.String("api3"),
 			Ipv4:        pointer.String("10.53.67.53"),
@@ -601,6 +639,25 @@ var sourceSpans = []*trace.Span{
 		Duration:  pointer.Int64(22938),
 		Tags: map[string]string{
 			"hostname":       "api3-sjc1",
+			"jaeger.version": "Python-3.6.0",
+		},
+	},
+	{
+		TraceID: "fa281a8955571a3b",
+		ID:      "DFEC5BE6328C3B",
+		Name:    pointer.String("get"),
+		Kind:    pointer.String("notakind"),
+		LocalEndpoint: &trace.Endpoint{
+			ServiceName: pointer.String("api4"),
+			Ipv4:        pointer.String("10.53.67.54"),
+		},
+		RemoteEndpoint: &trace.Endpoint{
+			Ipv6: pointer.String("::1"),
+		},
+		Timestamp: pointer.Int64(1485467191639875),
+		Duration:  pointer.Int64(22938),
+		Tags: map[string]string{
+			"hostname":       "api4-sjc1",
 			"jaeger.version": "Python-3.6.0",
 		},
 	},
