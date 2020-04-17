@@ -1,6 +1,7 @@
 package sfxclient
 
 import (
+	"errors"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -54,8 +55,9 @@ func getHTTPStatusCode(status *tokenStatus, err error) *tokenStatus {
 	if err == nil {
 		status.status = http.StatusOK
 	} else {
-		if obj, ok := err.(SFXAPIError); ok {
-			status.status = obj.StatusCode
+		var apiErr *SFXAPIError
+		if errors.As(err, &apiErr) {
+			status.status = apiErr.StatusCode
 		}
 	}
 	return status

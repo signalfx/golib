@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -86,6 +87,32 @@ func (se SFXAPIError) Error() string {
 	return fmt.Sprintf("invalid status code %d: %s", se.StatusCode, se.ResponseBody)
 }
 
+// TooManyRequestError is returned when the API returns HTTP 429 error.
+// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429 fot details.
+type TooManyRequestError struct {
+	// Throttle-Type header returned with the 429 which indicates what the reason.
+	// This is a SignalFx-specific header, and the value may be empty.
+	ThrottleType string
+
+	// The client should retry after certain intervals.
+	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After for details.
+	RetryAfter time.Duration
+
+	// wrapped error.
+	Err error
+}
+
+func (e *TooManyRequestError) Error() string {
+	if e.ThrottleType == "" {
+		return fmt.Sprintf("too many requests, retry after %.3f seconds", e.RetryAfter.Seconds())
+	}
+	return fmt.Sprintf("too many %s requests, retry after %.3f seconds", e.ThrottleType, e.RetryAfter.Seconds())
+}
+
+func (e *TooManyRequestError) Unwrap() error {
+	return e.Err
+}
+
 type responseValidator func(respBody []byte) error
 
 func (h *HTTPSink) handleResponse(resp *http.Response, respValidator responseValidator) (err error) {
@@ -101,10 +128,23 @@ func (h *HTTPSink) handleResponse(resp *http.Response, respValidator responseVal
 
 	// all 2XXs
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return SFXAPIError{
+		baseErr := &SFXAPIError{
 			StatusCode:   resp.StatusCode,
 			ResponseBody: string(respBody),
 		}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfter, err := parseRetryAfterHeader(resp.Header.Get("Retry-After"))
+			if err == nil && retryAfter > 0 {
+				return &TooManyRequestError{
+					ThrottleType: resp.Header.Get("Throttle-Type"),
+					RetryAfter:   retryAfter,
+					Err:          baseErr,
+				}
+			}
+		}
+
+		return baseErr
 	}
 	if h.ResponseCallback != nil {
 		h.ResponseCallback(resp, respBody)
@@ -448,6 +488,25 @@ func jsonMarshal(v []*trace.Span) ([]byte, error) {
 func sapmMarshal(v []*trace.Span) ([]byte, error) {
 	msg := translator.SFXToSAPMPostRequest(v)
 	return proto.Marshal(msg)
+}
+
+func parseRetryAfterHeader(v string) (time.Duration, error) {
+	if v == "" {
+		return 0, errors.New("empty header value")
+	}
+
+	// Retry-After: <http-date>
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
+	if t, err := http.ParseTime(v); err == nil {
+		return t.Sub(time.Now()), nil
+	}
+
+	// Retry-After: <delay-seconds>
+	if i, err := strconv.Atoi(v); err != nil {
+		return 0, err
+	} else {
+		return time.Duration(i) * time.Second, nil
+	}
 }
 
 // NewHTTPSink creates a default NewHTTPSink using package level constants as
