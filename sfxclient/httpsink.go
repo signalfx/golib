@@ -102,16 +102,11 @@ type TooManyRequestError struct {
 	Err error
 }
 
-func (e *TooManyRequestError) Error() string {
+func (e TooManyRequestError) Error() string {
 	if e.ThrottleType == "" {
 		return fmt.Sprintf("too many requests, retry after %.3f seconds", e.RetryAfter.Seconds())
 	}
 	return fmt.Sprintf("too many %s requests, retry after %.3f seconds", e.ThrottleType, e.RetryAfter.Seconds())
-}
-
-// Unwrap returns the wrapped error.
-func (e *TooManyRequestError) Unwrap() error {
-	return e.Err
 }
 
 type responseValidator func(respBody []byte) error
