@@ -103,10 +103,8 @@ type TooManyRequestError struct {
 }
 
 func (e TooManyRequestError) Error() string {
-	if e.ThrottleType == "" {
-		return fmt.Sprintf("too many requests, retry after %.3f seconds", e.RetryAfter.Seconds())
-	}
-	return fmt.Sprintf("too many %s requests, retry after %.3f seconds", e.ThrottleType, e.RetryAfter.Seconds())
+	return fmt.Sprintf("[%s] too many requests, retry after %.3f seconds",
+		e.ThrottleType, e.RetryAfter.Seconds())
 }
 
 type responseValidator func(respBody []byte) error
@@ -487,10 +485,6 @@ func sapmMarshal(v []*trace.Span) ([]byte, error) {
 }
 
 func parseRetryAfterHeader(v string) (time.Duration, error) {
-	if v == "" {
-		return 0, errors.New("empty header value")
-	}
-
 	// Retry-After: <http-date>
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
 	if t, err := http.ParseTime(v); err == nil {
