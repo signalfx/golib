@@ -109,6 +109,7 @@ func (e *TooManyRequestError) Error() string {
 	return fmt.Sprintf("too many %s requests, retry after %.3f seconds", e.ThrottleType, e.RetryAfter.Seconds())
 }
 
+// Unwrap returns the wrapped error.
 func (e *TooManyRequestError) Unwrap() error {
 	return e.Err
 }
@@ -498,15 +499,15 @@ func parseRetryAfterHeader(v string) (time.Duration, error) {
 	// Retry-After: <http-date>
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
 	if t, err := http.ParseTime(v); err == nil {
-		return t.Sub(time.Now()), nil
+		return time.Until(t), nil
 	}
 
 	// Retry-After: <delay-seconds>
-	if i, err := strconv.Atoi(v); err != nil {
+	i, err := strconv.Atoi(v)
+	if err != nil {
 		return 0, err
-	} else {
-		return time.Duration(i) * time.Second, nil
 	}
+	return time.Duration(i) * time.Second, nil
 }
 
 // NewHTTPSink creates a default NewHTTPSink using package level constants as
