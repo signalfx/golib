@@ -102,15 +102,9 @@ type TooManyRequestError struct {
 	Err error
 }
 
-func (e *TooManyRequestError) Error() string {
-	if e.ThrottleType == "" {
-		return fmt.Sprintf("too many requests, retry after %.3f seconds", e.RetryAfter.Seconds())
-	}
-	return fmt.Sprintf("too many %s requests, retry after %.3f seconds", e.ThrottleType, e.RetryAfter.Seconds())
-}
-
-func (e *TooManyRequestError) Unwrap() error {
-	return e.Err
+func (e TooManyRequestError) Error() string {
+	return fmt.Sprintf("[%s] too many requests, retry after %.3f seconds",
+		e.ThrottleType, e.RetryAfter.Seconds())
 }
 
 type responseValidator func(respBody []byte) error
@@ -491,22 +485,18 @@ func sapmMarshal(v []*trace.Span) ([]byte, error) {
 }
 
 func parseRetryAfterHeader(v string) (time.Duration, error) {
-	if v == "" {
-		return 0, errors.New("empty header value")
-	}
-
 	// Retry-After: <http-date>
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
 	if t, err := http.ParseTime(v); err == nil {
-		return t.Sub(time.Now()), nil
+		return time.Until(t), nil
 	}
 
 	// Retry-After: <delay-seconds>
-	if i, err := strconv.Atoi(v); err != nil {
+	i, err := strconv.Atoi(v)
+	if err != nil {
 		return 0, err
-	} else {
-		return time.Duration(i) * time.Second, nil
 	}
+	return time.Duration(i) * time.Second, nil
 }
 
 // NewHTTPSink creates a default NewHTTPSink using package level constants as

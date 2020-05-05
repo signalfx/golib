@@ -165,6 +165,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 		Convey("with a test endpoint", func() {
 			retString := `"OK"`
 			retCode := http.StatusOK
+			retHeaders := map[string]string{}
 			var blockResponse chan struct{}
 			var cancelCallback func()
 			seenBodyPoints := &com_signalfx_metrics_protobuf.DataPointUploadMessage{}
@@ -174,6 +175,9 @@ func TestHTTPDatapointSink(t *testing.T) {
 				log.IfErr(log.Panic, err)
 				log.IfErr(log.Panic, req.Body.Close())
 				log.IfErr(log.Panic, proto.Unmarshal(bodyBytes.Bytes(), seenBodyPoints))
+				for k, v := range retHeaders {
+					rw.Header().Add(k, v)
+				}
 				rw.WriteHeader(retCode)
 				errors.PanicIfErrWrite(io.WriteString(rw, retString))
 				if blockResponse != nil {
@@ -249,6 +253,30 @@ func TestHTTPDatapointSink(t *testing.T) {
 			Convey("return code should be checked", func() {
 				retCode = http.StatusNotAcceptable
 				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "invalid status code")
+			})
+			Convey("HTTP 429 should be checked", func() {
+				retCode = http.StatusTooManyRequests
+				retHeaders = map[string]string{
+					"Throttle-Type": "x",
+				}
+				Convey("retry after seconds", func() {
+					retHeaders["Retry-After"] = "1"
+					err, ok := s.AddDatapoints(ctx, dps).(*TooManyRequestError)
+					So(ok, ShouldBeTrue)
+					So(err.RetryAfter, ShouldEqual, time.Second)
+					So(err.Error(), ShouldContainSubstring, "[x] too many requests, retry after")
+				})
+				Convey("retry until date", func() {
+					retHeaders["Retry-After"] = time.Now().Add(time.Second).Format(time.RFC850)
+					err, ok := s.AddDatapoints(ctx, dps).(*TooManyRequestError)
+					So(ok, ShouldBeTrue)
+					So(err.RetryAfter, ShouldBeLessThanOrEqualTo, time.Second)
+					So(err.Error(), ShouldContainSubstring, "[x] too many requests, retry after")
+				})
+				Convey("error fallback", func() {
+					retHeaders["Retry-After"] = ""
+					So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "invalid status code")
+				})
 			})
 			Convey("return string should be checked", func() {
 				retString = `"nope"`

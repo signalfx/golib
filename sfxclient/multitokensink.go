@@ -1,7 +1,6 @@
 package sfxclient
 
 import (
-	"errors"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -55,9 +54,12 @@ func getHTTPStatusCode(status *tokenStatus, err error) *tokenStatus {
 	if err == nil {
 		status.status = http.StatusOK
 	} else {
-		var apiErr *SFXAPIError
-		if errors.As(err, &apiErr) {
-			status.status = apiErr.StatusCode
+		// refactor: use `errors.As` to simplify type assertion on error chain once we get rid of go 1.12 build.
+		if obj, ok := err.(*TooManyRequestError); ok {
+			err = obj.Err
+		}
+		if obj, ok := err.(*SFXAPIError); ok {
+			status.status = obj.StatusCode
 		}
 	}
 	return status

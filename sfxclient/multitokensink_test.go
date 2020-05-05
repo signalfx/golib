@@ -104,6 +104,28 @@ func AddSpansGetSuccess(ctx context.Context, evs []*trace.Span) (err error) {
 	return
 }
 
+func TestGetHTTPStatusCode(t *testing.T) {
+	ts := &tokenStatus{}
+	Convey("should handle different type of errors", t, func() {
+		So(getHTTPStatusCode(ts, nil).status, ShouldEqual, http.StatusOK)
+
+		So(getHTTPStatusCode(ts, &SFXAPIError{
+			StatusCode:   http.StatusBadRequest,
+			ResponseBody: "",
+		}).status, ShouldEqual, http.StatusBadRequest)
+
+		err := &TooManyRequestError{
+			ThrottleType: "",
+			RetryAfter:   0,
+			Err: &SFXAPIError{
+				StatusCode:   http.StatusTooManyRequests,
+				ResponseBody: "",
+			},
+		}
+		So(getHTTPStatusCode(ts, err).status, ShouldEqual, http.StatusTooManyRequests)
+	})
+}
+
 func TestWorkerErrorHandlerDps(t *testing.T) {
 	Convey("An AsyncMultiTokeSink Worker Dps", t, func() {
 		Convey("should handle errors while emitting datapoints", func() {
