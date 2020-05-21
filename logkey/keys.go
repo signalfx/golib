@@ -59,4 +59,6 @@ var (
 	Time = log.Key("time")
 	// Caller is the file/line of the log statement
 	Caller = log.Key("caller")
+	// Message is the key for log message
+	Message = log.Key("message")
 )
