@@ -204,7 +204,7 @@ func (d *Disco) logInfoState(e *zk.Event) bool {
 }
 
 func (d *Disco) processZkEvent(e *zk.Event) error {
-	d.stateLog.Log(logkey.ZkEvent, e, logkey.Message, fmt.Sprintf("disco event for %s", e.Type.String()))
+	d.stateLog.Log(logkey.ZkEvent, e, log.Msg, fmt.Sprintf("disco event for %s", e.Type.String()))
 	d.logInfoState(e)
 	if e.State == zk.StateHasSession {
 		return d.refreshAll()
@@ -232,11 +232,11 @@ func (d *Disco) processZkEvent(e *zk.Event) error {
 		if err != nil {
 			d.stateLog.Log(logkey.ZkEvent, e, logkey.DiscoService, serviceName, log.Err, err, "Unable to find parent")
 		} else {
-			d.stateLog.Log(logkey.DiscoService, serviceName, logkey.Message, fmt.Sprintf("State before refresh: %s", service))
+			d.stateLog.Log(logkey.DiscoService, serviceName, log.Msg, fmt.Sprintf("State before refresh: %s", service))
 			if serviceRefreshErr := service.refresh(d.zkConn); serviceRefreshErr != nil {
 				return serviceRefreshErr
 			}
-			d.stateLog.Log(logkey.DiscoService, serviceName, logkey.Message, fmt.Sprintf("State after refresh: %s", service))
+			d.stateLog.Log(logkey.DiscoService, serviceName, log.Msg, fmt.Sprintf("State after refresh: %s", service))
 		}
 	}
 	return nil
@@ -559,7 +559,7 @@ func (s *Service) refresh(zkConn ZkConn) error {
 		s.stateLog.Log("refresh flag set.  Ignoring refresh")
 		return nil
 	}
-	s.stateLog.Log(logkey.Message, fmt.Sprintf("refresh called for %s service", s.name))
+	s.stateLog.Log(log.Msg, fmt.Sprintf("refresh called for %s service", s.name))
 	oldHash := s.byteHashes()
 	children, _, _, err := zkConn.ChildrenW(fmt.Sprintf("/%s", s.name))
 	if err != nil && errors.Tail(err) != zk.ErrNoNode {
