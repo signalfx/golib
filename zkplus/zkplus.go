@@ -112,7 +112,7 @@ func (z *ZkPlus) eventLoop() {
 	for {
 		select {
 		case eventToSend = <-whenI(!haveEventToSend && z.connectedChan != nil, z.connectedChan):
-			z.logger.Log(logkey.ZkEvent, eventToSend, logkey.ZkPrefix, z.pathPrefix, "ZkPlus event")
+			z.logger.Log(logkey.ZkEvent, eventToSend, logkey.ZkPrefix, z.pathPrefix, log.Msg, "ZK node modification event")
 			if strings.HasPrefix(eventToSend.Path, z.pathPrefix) {
 				eventToSend.Path = eventToSend.Path[len(z.pathPrefix):]
 				if eventToSend.Path == "" {
