@@ -204,7 +204,7 @@ func (d *Disco) logInfoState(e *zk.Event) bool {
 }
 
 func (d *Disco) processZkEvent(e *zk.Event) error {
-	d.stateLog.Log(logkey.ZkEvent, e, "disco event seen")
+	d.stateLog.Log(logkey.ZkEvent, e, fmt.Sprintf("disco event for %s", e.Type.String()))
 	d.logInfoState(e)
 	if e.State == zk.StateHasSession {
 		return d.refreshAll()
@@ -220,7 +220,6 @@ func (d *Disco) processZkEvent(e *zk.Event) error {
 		serviceName = parts[0]
 	}
 	if serviceName != "" {
-		d.stateLog.Log(logkey.DiscoService, serviceName, "refresh on service")
 		service, err := func() (*Service, error) {
 			d.watchedMutex.Lock()
 			defer d.watchedMutex.Unlock()
@@ -233,8 +232,12 @@ func (d *Disco) processZkEvent(e *zk.Event) error {
 		if err != nil {
 			d.stateLog.Log(logkey.ZkEvent, e, logkey.DiscoService, serviceName, log.Err, err, "Unable to find parent")
 		} else {
-			d.stateLog.Log(logkey.DiscoService, service, "refreshing")
-			return service.refresh(d.zkConn)
+			d.stateLog.Log(logkey.DiscoService, serviceName, fmt.Sprintf("disco refresh of %s service", serviceName))
+			d.stateLog.Log(logkey.DiscoService, serviceName, fmt.Sprintf("State before refresh: %s", service))
+			if serviceRefreshErr := service.refresh(d.zkConn); serviceRefreshErr != nil {
+				return serviceRefreshErr
+			}
+			d.stateLog.Log(logkey.DiscoService, serviceName, fmt.Sprintf("State after refresh: %s", service))
 		}
 	}
 	return nil
