@@ -18,7 +18,7 @@ type Exporter struct {
 func (e *Exporter) metricToDatapoints(dps []*datapoint.Datapoint, name string, i interface{}) []*datapoint.Datapoint {
 	switch metric := i.(type) {
 	case metrics.Counter:
-		dps = append(dps, sfxclient.Counter(name, e.dims, metric.Count()))
+		dps = append(dps, sfxclient.Cumulative(name, e.dims, metric.Count()))
 
 	case metrics.Gauge:
 		dps = append(dps, sfxclient.Gauge(name, e.dims, metric.Value()))
@@ -33,7 +33,7 @@ func (e *Exporter) metricToDatapoints(dps []*datapoint.Datapoint, name string, i
 	case metrics.Meter:
 		m := metric.Snapshot()
 		dps = append(dps,
-			sfxclient.Counter(name+".count", e.dims, m.Count()),
+			sfxclient.Cumulative(name+".count", e.dims, m.Count()),
 			sfxclient.GaugeF(name+".1m", e.dims, m.Rate1()),
 			sfxclient.GaugeF(name+".5m", e.dims, m.Rate5()),
 			sfxclient.GaugeF(name+".15m", e.dims, m.Rate15()),
@@ -62,7 +62,7 @@ type histoTypeThing interface {
 func (e *Exporter) harvestHistoTypeThing(dps []*datapoint.Datapoint, name string, h histoTypeThing) []*datapoint.Datapoint {
 	ps := h.Percentiles(defaultQuantiles)
 	dps = append(dps,
-		sfxclient.Counter(name+".count", e.dims, h.Count()),
+		sfxclient.Cumulative(name+".count", e.dims, h.Count()),
 		sfxclient.Gauge(name+".min", e.dims, h.Min()),
 		sfxclient.Gauge(name+".max", e.dims, h.Max()),
 		sfxclient.GaugeF(name+".mean", e.dims, h.Mean()),
@@ -82,6 +82,7 @@ func (e *Exporter) Datapoints() []*datapoint.Datapoint {
 		dps = e.metricToDatapoints(dps, name, i)
 	})
 	e.lastSize = len(dps)
+
 	return dps
 }
 
