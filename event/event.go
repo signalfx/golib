@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/signalfx/com_signalfx_metrics_protobuf"
+	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 )
 
-// Category define how to display the Category.  Category enumerations need to be in sync with com_signalfx_metrics_protobuf
+// Category define how to display the Category.  Category enumerations need to be in sync with sfxmodel
 type Category int32
 
 const (
@@ -64,13 +64,13 @@ func New(eventType string, category Category, dimensions map[string]string, time
 }
 
 // ToProtoEC - Converts a protbuf EventCategory to type event.Category
-func ToProtoEC(ec com_signalfx_metrics_protobuf.EventCategory) Category {
+func ToProtoEC(ec sfxmodel.EventCategory) Category {
 	var response = USERDEFINED
-	// Check if the event.Category does not have a corresponding com_signalfx_metrics_protobuf.EventCategory
-	if _, ok := com_signalfx_metrics_protobuf.EventCategory_name[int32(ec)]; ok {
-		response = Category(int32(ec))
+	// Check if the event.Category does not have a corresponding sfxmodel.EventCategory
+	if _, ok := sfxmodel.EventCategory_name[int32(ec)]; ok {
+		response = Category(ec)
 	}
-	// Return the com_signalfx_metrics_protobuf.EventCategory
+	// Return the sfxmodel.EventCategory
 	return response
 }
 

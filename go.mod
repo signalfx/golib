@@ -13,7 +13,7 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-stack/stack v1.8.0
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.2
 	github.com/jaegertracing/jaeger v1.15.1
 	github.com/juju/errors v0.0.0-20181012004132-a4583d0a56ea
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
@@ -24,12 +24,12 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20190810000440-0ceca61e4d75
 	github.com/shirou/gopsutil v2.18.10+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
-	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.0-20190222193949-1fb69526e884
+	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.1
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083
 	github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9
 	github.com/signalfx/sapm-proto v0.4.0
 	github.com/smartystreets/goconvey v1.6.4-0.20190306220146-200a235640ff
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.6.1
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 )
