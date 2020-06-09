@@ -49,6 +49,11 @@ func (s *Map) Add(errType string, id string) {
 	}
 }
 
+// AddValid is a short cut and much faster
+func (s *Map) AddValid(i int) {
+	s.Valid += i
+}
+
 // FromBytes returns a Map or an error
 func FromBytes(body []byte) *Map {
 	var spanFilter Map

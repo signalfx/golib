@@ -16,6 +16,8 @@ func Test(t *testing.T) {
 		So(sf.CheckInvalid(), ShouldBeFalse)
 		sf.Add("ok", "")
 		So(sf.Valid, ShouldEqual, 1)
+		sf.AddValid(4)
+		So(sf.Valid, ShouldEqual, 5)
 		So(ReturnInvalidOrError([]byte(sf.Error())), ShouldBeNil)
 		sf.Add("notok", "")
 		So(sf.CheckInvalid(), ShouldBeTrue)
