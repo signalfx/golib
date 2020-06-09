@@ -18,9 +18,10 @@ import (
 	"unicode"
 	"unsafe"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/mailru/easyjson"
-	"github.com/signalfx/com_signalfx_metrics_protobuf"
+	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/event"
@@ -240,16 +241,16 @@ func datapointAndEventResponseValidator(respBody []byte) error {
 	return nil
 }
 
-var toMTMap = map[datapoint.MetricType]com_signalfx_metrics_protobuf.MetricType{
-	datapoint.Counter:   com_signalfx_metrics_protobuf.MetricType_CUMULATIVE_COUNTER,
-	datapoint.Count:     com_signalfx_metrics_protobuf.MetricType_COUNTER,
-	datapoint.Enum:      com_signalfx_metrics_protobuf.MetricType_GAUGE,
-	datapoint.Gauge:     com_signalfx_metrics_protobuf.MetricType_GAUGE,
-	datapoint.Rate:      com_signalfx_metrics_protobuf.MetricType_GAUGE,
-	datapoint.Timestamp: com_signalfx_metrics_protobuf.MetricType_GAUGE,
+var toMTMap = map[datapoint.MetricType]sfxmodel.MetricType{
+	datapoint.Counter:   sfxmodel.MetricType_CUMULATIVE_COUNTER,
+	datapoint.Count:     sfxmodel.MetricType_COUNTER,
+	datapoint.Enum:      sfxmodel.MetricType_GAUGE,
+	datapoint.Gauge:     sfxmodel.MetricType_GAUGE,
+	datapoint.Rate:      sfxmodel.MetricType_GAUGE,
+	datapoint.Timestamp: sfxmodel.MetricType_GAUGE,
 }
 
-func toMT(mt datapoint.MetricType) com_signalfx_metrics_protobuf.MetricType {
+func toMT(mt datapoint.MetricType) sfxmodel.MetricType {
 	ret, exists := toMTMap[mt]
 	if exists {
 		return ret
@@ -257,42 +258,38 @@ func toMT(mt datapoint.MetricType) com_signalfx_metrics_protobuf.MetricType {
 	panic(fmt.Sprintf("Unknown metric type: %d\n", mt))
 }
 
-func toEC(ec event.Category) com_signalfx_metrics_protobuf.EventCategory {
-	// Check if the event.Category does not have a corresponding com_signalfx_metrics_protobuf.EventCategory
-	if _, ok := com_signalfx_metrics_protobuf.EventCategory_name[int32(ec)]; !ok {
+func toEC(ec event.Category) sfxmodel.EventCategory {
+	// Check if the event.Category does not have a corresponding sfxmodel.EventCategory
+	if _, ok := sfxmodel.EventCategory_name[int32(ec)]; !ok {
 		panic(fmt.Sprintf("Unknown event category: %v\n", ec))
 	}
-	// Return the com_signalfx_metrics_protobuf.EventCategory
-	return com_signalfx_metrics_protobuf.EventCategory(int32(ec))
+	// Return the sfxmodel.EventCategory
+	return sfxmodel.EventCategory(ec)
 }
 
-func datumForPoint(pv datapoint.Value) *com_signalfx_metrics_protobuf.Datum {
+func datumForPoint(pv datapoint.Value) sfxmodel.Datum {
 	switch t := pv.(type) {
 	case datapoint.IntValue:
 		x := t.Int()
-		return &com_signalfx_metrics_protobuf.Datum{IntValue: &x}
+		return sfxmodel.Datum{IntValue: &x}
 	case datapoint.FloatValue:
 		x := t.Float()
-		return &com_signalfx_metrics_protobuf.Datum{DoubleValue: &x}
+		return sfxmodel.Datum{DoubleValue: &x}
 	default:
 		x := t.String()
-		return &com_signalfx_metrics_protobuf.Datum{StrValue: &x}
+		return sfxmodel.Datum{StrValue: &x}
 	}
 }
 
-func mapToDimensions(dimensions map[string]string) []*com_signalfx_metrics_protobuf.Dimension {
-	ret := make([]*com_signalfx_metrics_protobuf.Dimension, 0, len(dimensions))
+func mapToDimensions(dimensions map[string]string) []*sfxmodel.Dimension {
+	ret := make([]*sfxmodel.Dimension, 0, len(dimensions))
 	for k, v := range dimensions {
 		if k == "" || v == "" {
 			continue
 		}
-		// If someone knows a better way to do this, let me know.  I can't just take the &
-		// of k and v because their content changes as the range iterates
-		copyOfK := filterSignalfxKey(string([]byte(k)))
-		copyOfV := string([]byte(v))
-		ret = append(ret, &com_signalfx_metrics_protobuf.Dimension{
-			Key:   &copyOfK,
-			Value: &copyOfV,
+		ret = append(ret, &sfxmodel.Dimension{
+			Key:   filterSignalfxKey(k),
+			Value: v,
 		})
 	}
 	return ret
@@ -309,33 +306,33 @@ func runeFilterMap(r rune) rune {
 	return '_'
 }
 
-func rawToProtobuf(raw interface{}) *com_signalfx_metrics_protobuf.PropertyValue {
+func rawToProtobuf(raw interface{}) *sfxmodel.PropertyValue {
 	switch t := raw.(type) {
 	case int64:
-		return &com_signalfx_metrics_protobuf.PropertyValue{
+		return &sfxmodel.PropertyValue{
 			IntValue: &t,
 		}
 	case int:
-		return &com_signalfx_metrics_protobuf.PropertyValue{
+		return &sfxmodel.PropertyValue{
 			IntValue: proto.Int64(int64(t)),
 		}
 	case float64:
-		return &com_signalfx_metrics_protobuf.PropertyValue{
+		return &sfxmodel.PropertyValue{
 			DoubleValue: &t,
 		}
 	case bool:
-		return &com_signalfx_metrics_protobuf.PropertyValue{
+		return &sfxmodel.PropertyValue{
 			BoolValue: &t,
 		}
 	case string:
-		return &com_signalfx_metrics_protobuf.PropertyValue{
+		return &sfxmodel.PropertyValue{
 			StrValue: &t,
 		}
 	}
 	return nil
 }
 
-func (h *HTTPSink) coreDatapointToProtobuf(point *datapoint.Datapoint) *com_signalfx_metrics_protobuf.DataPoint {
+func (h *HTTPSink) coreDatapointToProtobuf(point *datapoint.Datapoint) *sfxmodel.DataPoint {
 	m := point.Metric
 	var ts int64
 	if point.Timestamp.IsZero() {
@@ -344,9 +341,9 @@ func (h *HTTPSink) coreDatapointToProtobuf(point *datapoint.Datapoint) *com_sign
 		ts = point.Timestamp.UnixNano() / time.Millisecond.Nanoseconds()
 	}
 	mt := toMT(point.MetricType)
-	dp := &com_signalfx_metrics_protobuf.DataPoint{
-		Metric:     &m,
-		Timestamp:  &ts,
+	dp := &sfxmodel.DataPoint{
+		Metric:     m,
+		Timestamp:  ts,
 		Value:      datumForPoint(point.Value),
 		MetricType: &mt,
 		Dimensions: mapToDimensions(point.Dimensions),
@@ -374,11 +371,11 @@ func (h *HTTPSink) getReader(b []byte) (io.Reader, bool, error) {
 }
 
 func (h *HTTPSink) encodePostBodyProtobufV2(datapoints []*datapoint.Datapoint) (io.Reader, bool, error) {
-	dps := make([]*com_signalfx_metrics_protobuf.DataPoint, 0, len(datapoints))
+	dps := make([]*sfxmodel.DataPoint, 0, len(datapoints))
 	for _, dp := range datapoints {
 		dps = append(dps, h.coreDatapointToProtobuf(dp))
 	}
-	msg := &com_signalfx_metrics_protobuf.DataPointUploadMessage{
+	msg := &sfxmodel.DataPointUploadMessage{
 		Datapoints: dps,
 	}
 	body, err := h.protoMarshaler(msg)
@@ -399,11 +396,11 @@ func (h *HTTPSink) AddEvents(ctx context.Context, events []*event.Event) (err er
 }
 
 func (h *HTTPSink) encodePostBodyProtobufV2Events(events []*event.Event) (io.Reader, bool, error) {
-	evs := make([]*com_signalfx_metrics_protobuf.Event, 0, len(events))
+	evs := make([]*sfxmodel.Event, 0, len(events))
 	for _, ev := range events {
 		evs = append(evs, h.coreEventToProtobuf(ev))
 	}
-	msg := &com_signalfx_metrics_protobuf.EventUploadMessage{
+	msg := &sfxmodel.EventUploadMessage{
 		Events: evs,
 	}
 	body, err := h.protoMarshaler(msg)
@@ -413,7 +410,7 @@ func (h *HTTPSink) encodePostBodyProtobufV2Events(events []*event.Event) (io.Rea
 	return h.getReader(body)
 }
 
-func (h *HTTPSink) coreEventToProtobuf(event *event.Event) *com_signalfx_metrics_protobuf.Event {
+func (h *HTTPSink) coreEventToProtobuf(event *event.Event) *sfxmodel.Event {
 	var ts int64
 	if event.Timestamp.IsZero() {
 		ts = 0
@@ -422,25 +419,25 @@ func (h *HTTPSink) coreEventToProtobuf(event *event.Event) *com_signalfx_metrics
 	}
 	etype := event.EventType
 	ecat := toEC(event.Category)
-	ev := &com_signalfx_metrics_protobuf.Event{
-		EventType:  &etype,
+	ev := &sfxmodel.Event{
+		EventType:  etype,
 		Category:   &ecat,
 		Dimensions: mapToDimensions(event.Dimensions),
 		Properties: mapToProperties(event.Properties),
-		Timestamp:  &ts,
+		Timestamp:  ts,
 	}
 	return ev
 
 }
 
-func mapToProperties(properties map[string]interface{}) []*com_signalfx_metrics_protobuf.Property {
-	var response = make([]*com_signalfx_metrics_protobuf.Property, 0, len(properties))
+func mapToProperties(properties map[string]interface{}) []*sfxmodel.Property {
+	var response = make([]*sfxmodel.Property, 0, len(properties))
 	for k, v := range properties {
 		kv := k
 		pv := rawToProtobuf(v)
 		if pv != nil && k != "" {
-			response = append(response, &com_signalfx_metrics_protobuf.Property{
-				Key:   &kv,
+			response = append(response, &sfxmodel.Property{
+				Key:   kv,
 				Value: pv,
 			})
 		}

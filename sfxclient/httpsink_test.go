@@ -14,8 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/signalfx/com_signalfx_metrics_protobuf"
+	"github.com/gogo/protobuf/proto"
+
+	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/event"
@@ -168,7 +169,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			retHeaders := map[string]string{}
 			var blockResponse chan struct{}
 			var cancelCallback func()
-			seenBodyPoints := &com_signalfx_metrics_protobuf.DataPointUploadMessage{}
+			seenBodyPoints := &sfxmodel.DataPointUploadMessage{}
 			handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				bodyBytes := bytes.Buffer{}
 				_, err := io.Copy(&bodyBytes, req.Body)
@@ -218,7 +219,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 				now := time.Now()
 				dps[0].Timestamp = now
 				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
-				So(*seenBodyPoints.Datapoints[0].Timestamp, ShouldEqual, now.UnixNano()/time.Millisecond.Nanoseconds())
+				So(seenBodyPoints.Datapoints[0].Timestamp, ShouldEqual, now.UnixNano()/time.Millisecond.Nanoseconds())
 			})
 			Convey("Floats should work", func() {
 				dps[0].Value = datapoint.NewFloatValue(1.0)
@@ -244,7 +245,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 				dps[0].Dimensions = map[string]string{"hi.bob": "hi"}
 				dps = dps[0:1]
 				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
-				So(*seenBodyPoints.Datapoints[0].Dimensions[0].Key, ShouldEqual, "hi_bob")
+				So(seenBodyPoints.Datapoints[0].Dimensions[0].Key, ShouldEqual, "hi_bob")
 			})
 			Convey("Invalid datapoints should panic", func() {
 				dps[0].MetricType = datapoint.MetricType(1001)
@@ -403,7 +404,7 @@ func TestHTTPEventSink(t *testing.T) {
 			retCode := http.StatusOK
 			var blockResponse chan struct{}
 			var cancelCallback func()
-			seenBodyEvents := &com_signalfx_metrics_protobuf.EventUploadMessage{}
+			seenBodyEvents := &sfxmodel.EventUploadMessage{}
 			handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				bodyBytes := bytes.Buffer{}
 				_, err := io.Copy(&bodyBytes, req.Body)
@@ -446,14 +447,14 @@ func TestHTTPEventSink(t *testing.T) {
 				now := time.Now()
 				events[0].Timestamp = now
 				So(s.AddEvents(ctx, events), ShouldBeNil)
-				So(*seenBodyEvents.Events[0].Timestamp, ShouldEqual, now.UnixNano()/time.Millisecond.Nanoseconds())
+				So(seenBodyEvents.Events[0].Timestamp, ShouldEqual, now.UnixNano()/time.Millisecond.Nanoseconds())
 			})
 			Convey("Should send properties for event", func() {
 				events[0].Properties["name"] = "jack"
 				events = events[0:1]
 				So(s.AddEvents(ctx, events), ShouldBeNil)
 				So(len(seenBodyEvents.Events), ShouldEqual, 1)
-				So(*seenBodyEvents.Events[0].Properties[0].Key, ShouldEqual, "name")
+				So(seenBodyEvents.Events[0].Properties[0].Key, ShouldEqual, "name")
 			})
 			Convey("All property types should send", func() {
 				events[0].Properties["name"] = "jack"
@@ -477,7 +478,7 @@ func TestHTTPEventSink(t *testing.T) {
 				events[0].Dimensions = map[string]string{"hi.bob": "hi"}
 				events = events[0:1]
 				So(s.AddEvents(ctx, events), ShouldBeNil)
-				So(*seenBodyEvents.Events[0].Dimensions[0].Key, ShouldEqual, "hi_bob")
+				So(seenBodyEvents.Events[0].Dimensions[0].Key, ShouldEqual, "hi_bob")
 			})
 			Convey("Invalid events should panic", func() {
 				events[0].Category = event.Category(999999)
