@@ -122,57 +122,58 @@ func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) (span *jaegerpb.Span) {
 
 // SFXTagsToJaegerTags returns process tags and span tags from the SignalFx span tags, endpoint (remote), and kind
 func SFXTagsToJaegerTags(tags map[string]string, remoteEndpoint *trace.Endpoint, kind *string) ([]jaegerpb.KeyValue, []jaegerpb.KeyValue) {
-	processTags := make([]jaegerpb.KeyValue, 0, len(tags))
-	spanTags := make([]jaegerpb.KeyValue, 0, len(tags)+3)
+	maxNumTags := len(tags) + 4
+	jaegerTags := make([]jaegerpb.KeyValue, maxNumTags)
+	spanTagsIdx := 0
+	processTagsIdx := maxNumTags - 1
 
 	if remoteEndpoint != nil {
 		if remoteEndpoint.Ipv4 != nil {
-			spanTags = append(spanTags, jaegerpb.KeyValue{
-				Key:   peerHostIPv4,
-				VType: jaegerpb.ValueType_STRING,
-				VStr:  *remoteEndpoint.Ipv4,
-			})
+			fillStringJaegerTag(&jaegerTags[spanTagsIdx], peerHostIPv4, *remoteEndpoint.Ipv4)
+			spanTagsIdx++
 		}
-
 		if remoteEndpoint.Ipv6 != nil {
-			spanTags = append(spanTags, jaegerpb.KeyValue{
-				Key:   peerHostIPv6,
-				VType: jaegerpb.ValueType_STRING,
-				VStr:  *remoteEndpoint.Ipv6,
-			})
+			fillStringJaegerTag(&jaegerTags[spanTagsIdx], peerHostIPv6, *remoteEndpoint.Ipv6)
+			spanTagsIdx++
 		}
-
 		if remoteEndpoint.Port != nil {
-			spanTags = append(spanTags, jaegerpb.KeyValue{
-				Key:    peerPort,
-				VType:  jaegerpb.ValueType_INT64,
-				VInt64: int64(*remoteEndpoint.Port),
-			})
+			fillInt64JaegerTag(&jaegerTags[spanTagsIdx], peerPort, int64(*remoteEndpoint.Port))
+			spanTagsIdx++
 		}
 	}
 
 	if kind != nil {
 		kindTag, err := sfxKindToJaeger(*kind)
 		if err == nil {
-			spanTags = append(spanTags, kindTag)
+			fillStringJaegerTag(&jaegerTags[spanTagsIdx], spanKind, kindTag)
+			spanTagsIdx++
 		}
 	}
 
 	for k, v := range tags {
-		kv := jaegerpb.KeyValue{
-			Key:   k,
-			VType: jaegerpb.ValueType_STRING,
-			VStr:  v,
-		}
 		switch k {
 		case tagJaegerVersion, tagHostname, tagIP:
-			processTags = append(processTags, kv)
+			fillStringJaegerTag(&jaegerTags[processTagsIdx], k, v)
+			processTagsIdx--
 		default:
-			spanTags = append(spanTags, kv)
+			fillStringJaegerTag(&jaegerTags[spanTagsIdx], k, v)
+			spanTagsIdx++
 		}
 	}
 
-	return spanTags, processTags
+	return jaegerTags[:spanTagsIdx], jaegerTags[processTagsIdx+1:]
+}
+
+func fillStringJaegerTag(kv *jaegerpb.KeyValue, k string, v string) {
+	kv.Key = k
+	kv.VType = jaegerpb.ValueType_STRING
+	kv.VStr = v
+}
+
+func fillInt64JaegerTag(kv *jaegerpb.KeyValue, k string, v int64) {
+	kv.Key = k
+	kv.VType = jaegerpb.ValueType_INT64
+	kv.VInt64 = v
 }
 
 func sfxAnnotationsToJaegerLogs(annotations []*trace.Annotation) []jaegerpb.Log {
@@ -218,26 +219,21 @@ func FieldsFromJSONString(jStr string) ([]jaegerpb.KeyValue, error) {
 	return kv, nil
 }
 
-func sfxKindToJaeger(kind string) (jaegerpb.KeyValue, error) {
-	kv := jaegerpb.KeyValue{
-		Key: spanKind,
-	}
-
+func sfxKindToJaeger(kind string) (string, error) {
 	// Normalize to uppercase before checking against uppercase constant values
 	kind = strings.ToUpper(kind)
 	switch kind {
 	case clientKind:
-		kv.VStr = spanKindRPCClient
+		return spanKindRPCClient, nil
 	case serverKind:
-		kv.VStr = spanKindRPCServer
+		return spanKindRPCServer, nil
 	case producerKind:
-		kv.VStr = spanKindProducer
+		return spanKindProducer, nil
 	case consumerKind:
-		kv.VStr = spanKindConsumer
+		return spanKindConsumer, nil
 	default:
-		return kv, fmt.Errorf("unknown span kind %s", kind)
+		return "", fmt.Errorf("unknown span kind %s", kind)
 	}
-	return kv, nil
 }
 
 // DurationFromMicroseconds returns the number of microseconds as a duration

@@ -20,10 +20,11 @@ import (
 	"time"
 
 	jaegerpb "github.com/jaegertracing/jaeger/model"
-	"github.com/signalfx/golib/v3/pointer"
-	"github.com/signalfx/golib/v3/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/signalfx/golib/v3/pointer"
+	"github.com/signalfx/golib/v3/trace"
 
 	sapmpb "github.com/signalfx/sapm-proto/gen"
 )
@@ -68,6 +69,36 @@ func TestTranslator(t *testing.T) {
 		assertBatchesAreEqual(t, got.Batches[i], wantPostRequest.Batches[i])
 	}
 
+}
+
+func TestSFXTagsToJaegerTags(t *testing.T) {
+	tags := map[string]string{
+		"http.url":       "http://127.0.0.1:15598/client_transactions",
+		"someBool":       "true",
+		"someFalseBool":  "false",
+		"someDouble":     "129.8",
+		"hostname":       "api3-sjc1",
+		"jaeger.version": "Python-3.6.0",
+	}
+
+	remoteEndpoint := &trace.Endpoint{
+		Ipv4: pointer.String("10.0.0.1"),
+		Port: pointer.Int32(53931),
+	}
+
+	kind := "CLIENT"
+
+	spanTags, processTags := SFXTagsToJaegerTags(tags, remoteEndpoint, &kind)
+	assert.Equal(t, 2, len(processTags))
+	assert.Equal(t, 7, len(spanTags))
+
+	spanTags, processTags = SFXTagsToJaegerTags(tags, nil, nil)
+	assert.Equal(t, 2, len(processTags))
+	assert.Equal(t, 4, len(spanTags))
+
+	spanTags, processTags = SFXTagsToJaegerTags(map[string]string{"someBool": "true"}, nil, nil)
+	assert.Equal(t, 0, len(processTags))
+	assert.Equal(t, 1, len(spanTags))
 }
 
 func assertBatchesAreEqual(t *testing.T, got, want *jaegerpb.Batch) {
@@ -661,4 +692,39 @@ var sourceSpans = []*trace.Span{
 			"jaeger.version": "Python-3.6.0",
 		},
 	},
+}
+
+func BenchmarkSFXTagsToJaegerTags(b *testing.B) {
+	tags := map[string]string{
+		"someString1":    "string",
+		"someBool1":      "true",
+		"someFalseBool1": "false",
+		"someDouble1":    "129.8",
+		"someString2":    "string",
+		"someBool2":      "true",
+		"someFalseBool2": "false",
+		"someDouble2":    "129.8",
+		"someString3":    "string",
+		"someBool3":      "true",
+		"someFalseBool3": "false",
+		"someDouble3":    "129.8",
+		"hostname":       "api3-sjc1",
+		"jaeger.version": "Python-3.6.0",
+	}
+
+	remoteEndpoint := &trace.Endpoint{
+		Ipv4: pointer.String("10.0.0.1"),
+		Port: pointer.Int32(53931),
+	}
+
+	kind := "CLIENT"
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		spanTags, processTags := SFXTagsToJaegerTags(tags, remoteEndpoint, &kind)
+		if len(spanTags) != 15 || len(processTags) != 2 {
+			b.Fail()
+		}
+	}
 }
