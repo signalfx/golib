@@ -14,6 +14,7 @@ import (
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/trace"
 )
 
@@ -24,6 +25,12 @@ const (
 	// TokenCtxKey is a context key for tokens
 	TokenCtxKey ContextKey = TokenHeaderName
 )
+
+// DefaultAsyncErrorHandler is the default way to handle errors by the AsyncTokenSink. It simply prints them to stdout
+var DefaultAsyncErrorHandler = func(err error, token string, endpoint string) error {
+	log.DefaultLogger.Log(log.Err, err, fmt.Sprintf("Unable to handle error sending to %s endpoint", endpoint))
+	return nil
+}
 
 // dpMsg is the message object for datapoints
 type dpMsg struct {
@@ -165,14 +172,14 @@ func NewAsyncTokenStatusCounter(name string, buffer int, numWorkers int64, defau
 // worker manages a pipeline for emitting metrics
 type worker struct {
 	lock         *sync.Mutex       // lock to control concurrent access to the worker
-	errorHandler func(error) error // error handler for handling error emitting datapoints
+	errorHandler func(err error, token string, endpoint string) error // error handler for handling error emitting datapoints
 	sink         *HTTPSink         // sink is an HTTPSink for emitting datapoints to Signal Fx
 	closing      chan bool         // channel to signal that the worker is stopping
 	done         chan bool         // channel to signal that the worker is done
 }
 
 // returns a new instance of worker with an configured emission pipeline
-func newWorker(errorHandler func(error) error, closing chan bool, done chan bool) *worker {
+func newWorker(errorHandler func(error, string, string) error, closing chan bool, done chan bool) *worker {
 	w := &worker{
 		lock:         &sync.Mutex{},
 		sink:         NewHTTPSink(),
@@ -227,7 +234,7 @@ func (w *datapointWorker) handleError(err error, token string, datapoints []*dat
 	}
 	w.stats.TotalDatapointsByToken.Increment(status)
 	if errr != nil {
-		_ = w.errorHandler(errr)
+		_ = w.errorHandler(errr, token, "datapoint")
 	}
 }
 
@@ -286,7 +293,7 @@ func (w *datapointWorker) newBuffer() {
 	}
 }
 
-func newDatapointWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *dpMsg, maxRetry int) *datapointWorker {
+func newDatapointWorker(batchSize int, errorHandler func(error, string, string) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *dpMsg, maxRetry int) *datapointWorker {
 	w := &datapointWorker{
 		worker:    newWorker(errorHandler, closing, done),
 		input:     input,
@@ -342,7 +349,7 @@ func (w *eventWorker) handleError(err error, token string, events []*event.Event
 	}
 	w.stats.TotalEventsByToken.Increment(status)
 	if errr != nil {
-		_ = w.errorHandler(errr)
+		_ = w.errorHandler(errr, token, "event")
 	}
 }
 
@@ -402,7 +409,7 @@ func (w *eventWorker) newBuffer() {
 	}
 }
 
-func newEventWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *evMsg, maxRetry int) *eventWorker {
+func newEventWorker(batchSize int, errorHandler func(error, string, string) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *evMsg, maxRetry int) *eventWorker {
 	w := &eventWorker{
 		worker:    newWorker(errorHandler, closing, done),
 		input:     input,
@@ -458,7 +465,7 @@ func (w *spanWorker) handleError(err error, token string, traces []*trace.Span, 
 	}
 	w.stats.TotalSpansByToken.Increment(status)
 	if errr != nil {
-		_ = w.errorHandler(errr)
+		_ = w.errorHandler(errr, token, "span")
 	}
 }
 
@@ -518,7 +525,7 @@ func (w *spanWorker) newBuffer() {
 	}
 }
 
-func newSpanWorker(batchSize int, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *spanMsg, maxRetry int) *spanWorker {
+func newSpanWorker(batchSize int, errorHandler func(error, string, string) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, input chan *spanMsg, maxRetry int) *spanWorker {
 	w := &spanWorker{
 		worker:    newWorker(errorHandler, closing, done),
 		input:     input,
@@ -579,7 +586,7 @@ func newAsyncMultiTokenSinkStats(buffer int, numChannels int64, numDrainingThrea
 // AsyncMultiTokenSink asynchronously sends datapoints for multiple tokens
 type AsyncMultiTokenSink struct {
 	ShutdownTimeout time.Duration     // ShutdownTimeout is how long the sink should wait before timing out after Close() is called
-	errorHandler    func(error) error // error handler is a handler for errors encountered while emitting metrics
+	errorHandler    func(err error, token string, endpoint string) error // error handler is a handler for errors encountered while emitting metrics
 	Hasher          hash.Hash32       // Hasher is used to hash access tokens to a worker
 	lock            sync.RWMutex      // lock is a mutex preventing concurrent access to getWorker
 	// closing is channel to signal the workers that the sink is closing
@@ -831,7 +838,7 @@ type spanChannel struct {
 	workers []*spanWorker
 }
 
-func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, datapointEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (dpc *dpChannel) {
+func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, datapointEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error, string, string) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (dpc *dpChannel) {
 	dpc = &dpChannel{
 		input:   make(chan *dpMsg, int64(buffer)),
 		workers: make([]*datapointWorker, numDrainingThreads),
@@ -852,7 +859,7 @@ func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, datapoint
 	return
 }
 
-func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, eventEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (evc *evChannel) {
+func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, eventEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error, string, string) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (evc *evChannel) {
 	evc = &evChannel{
 		input:   make(chan *evMsg, int64(buffer)),
 		workers: make([]*eventWorker, numDrainingThreads),
@@ -873,7 +880,7 @@ func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, eventEndp
 	return
 }
 
-func newSpanChannel(numDrainingThreads int64, buffer int, batchSize int, traceEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (spc *spanChannel) {
+func newSpanChannel(numDrainingThreads int64, buffer int, batchSize int, traceEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error, string, string) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (spc *spanChannel) {
 	spc = &spanChannel{
 		input:   make(chan *spanMsg, int64(buffer)),
 		workers: make([]*spanWorker, numDrainingThreads),
@@ -895,10 +902,10 @@ func newSpanChannel(numDrainingThreads int64, buffer int, batchSize int, traceEn
 }
 
 // NewAsyncMultiTokenSink returns a sink that asynchronously emits datapoints with different tokens
-func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer int, batchSize int, datapointEndpoint, eventEndpoint, traceEndpoint, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, maxRetry int) *AsyncMultiTokenSink {
+func NewAsyncMultiTokenSink(numChannels int64, numDrainingThreads int64, buffer int, batchSize int, datapointEndpoint, eventEndpoint, traceEndpoint, userAgent string, httpClient func() *http.Client, errorHandler func(error, string, string) error, maxRetry int) *AsyncMultiTokenSink {
 	a := &AsyncMultiTokenSink{
 		ShutdownTimeout: time.Second * 5,
-		errorHandler:    DefaultErrorHandler,
+		errorHandler:    DefaultAsyncErrorHandler,
 		dpChannels:      make([]*dpChannel, numChannels),
 		evChannels:      make([]*evChannel, numChannels),
 		spanChannels:    make([]*spanChannel, numChannels),

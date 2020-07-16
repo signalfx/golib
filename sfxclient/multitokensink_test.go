@@ -18,7 +18,7 @@ import (
 
 func TestAsyncMultiTokenSinkStartup(t *testing.T) {
 	Convey("A default sink", t, func() {
-		So(NewAsyncMultiTokenSink(int64(1), int64(1), 5, 30, IngestEndpointV2, EventIngestEndpointV2, TraceIngestEndpointV1, DefaultUserAgent, newDefaultHTTPClient, DefaultErrorHandler, 0), ShouldNotBeNil)
+		So(NewAsyncMultiTokenSink(int64(1), int64(1), 5, 30, IngestEndpointV2, EventIngestEndpointV2, TraceIngestEndpointV1, DefaultUserAgent, newDefaultHTTPClient, DefaultAsyncErrorHandler, 0), ShouldNotBeNil)
 
 		Convey("should be able to startup successfully", func() {
 			So(NewAsyncMultiTokenSink(int64(1), int64(1), 5, 30, IngestEndpointV2, EventIngestEndpointV2, TraceIngestEndpointV1, DefaultUserAgent, newDefaultHTTPClient, nil, 0), ShouldNotBeNil)
@@ -265,7 +265,7 @@ func TestAsyncMultiTokenSinkShutdownDroppedDatapoints(t *testing.T) {
 				dps = append(dps, GoMetricsSource.Datapoints()...)
 			}
 			// intentionally slow down emission to test shutdown timeout
-			s.errorHandler = func(e error) error {
+			s.errorHandler = func(e error, token string, endpoint string) error {
 				time.Sleep(3 * time.Second)
 				return DefaultErrorHandler(e)
 			}
@@ -293,7 +293,7 @@ func TestAsyncMultiTokenSinkShutdownDroppedEvents(t *testing.T) {
 				evs = append(evs, GoEventSource.Events()...)
 			}
 			// intentionally slow down emission to test shutdown timeout
-			s.errorHandler = func(e error) error {
+			s.errorHandler = func(e error, token string, endpoint string) error {
 				time.Sleep(3 * time.Second)
 				return DefaultErrorHandler(e)
 			}
@@ -321,7 +321,7 @@ func TestAsyncMultiTokenSinkShutdownDroppedSpans(t *testing.T) {
 				evs = append(evs, GoSpanSource.Spans()...)
 			}
 			// intentionally slow down emission to test shutdown timeout
-			s.errorHandler = func(e error) error {
+			s.errorHandler = func(e error, token string, endpoint string) error {
 				time.Sleep(3 * time.Second)
 				return DefaultErrorHandler(e)
 			}
