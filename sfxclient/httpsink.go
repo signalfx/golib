@@ -82,6 +82,7 @@ type HTTPSink struct {
 type SFXAPIError struct {
 	StatusCode   int
 	ResponseBody string
+	Endpoint     string
 }
 
 func (se SFXAPIError) Error() string {
@@ -126,6 +127,7 @@ func (h *HTTPSink) handleResponse(resp *http.Response, respValidator responseVal
 		baseErr := &SFXAPIError{
 			StatusCode:   resp.StatusCode,
 			ResponseBody: string(respBody),
+			Endpoint:     resp.Request.URL.Path,
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
