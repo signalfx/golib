@@ -1,10 +1,9 @@
 module github.com/signalfx/golib/v3
 
-go 1.13
+go 1.14
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/boltdb/bolt v1.3.1
 	github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/stackerr v0.0.0-20150612192056-c2fcf88613f4
@@ -13,7 +12,6 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-stack/stack v1.8.0
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.4.2
 	github.com/jaegertracing/jaeger v1.15.1
 	github.com/juju/errors v0.0.0-20181012004132-a4583d0a56ea
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
@@ -31,5 +29,6 @@ require (
 	github.com/smartystreets/goconvey v1.6.4-0.20190306220146-200a235640ff
 	github.com/stretchr/testify v1.6.1
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
+	go.etcd.io/bbolt v1.3.4
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 )
