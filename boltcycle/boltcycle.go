@@ -3,15 +3,13 @@ package boltcycle
 import (
 	"bytes"
 	"container/heap"
+	"context"
 	"encoding/binary"
 	"sync"
 	"sync/atomic"
 
 	"github.com/signalfx/golib/v3/errors"
-
-	"context"
-
-	"github.com/boltdb/bolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 // CycleDB allows you to use a bolt.DB as a pseudo-LRU using a cycle of buckets

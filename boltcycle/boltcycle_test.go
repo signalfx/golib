@@ -1,6 +1,8 @@
 package boltcycle
 
 import (
+	"bytes"
+	"context"
 	"encoding/binary"
 	"io/ioutil"
 	"os"
@@ -9,15 +11,10 @@ import (
 	"time"
 
 	"github.com/signalfx/golib/v3/errors"
-
-	"bytes"
-
-	"context"
-
-	"github.com/boltdb/bolt"
 	"github.com/signalfx/golib/v3/log"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 type testSetup struct {
