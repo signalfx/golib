@@ -18,7 +18,7 @@ func NewMultiCollector(collectors ...Collector) Collector {
 
 // Datapoints returns the datapoints from every collector.
 func (m MultiCollector) Datapoints() []*datapoint.Datapoint {
-	var ret []*datapoint.Datapoint
+	ret := make([]*datapoint.Datapoint, len(m))
 	for _, col := range m {
 		ret = append(ret, col.Datapoints()...)
 	}

@@ -1,6 +1,7 @@
 package ec2metadata
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -83,10 +84,16 @@ func requestAWSInfo(url string) (metadata *EC2Metadata, err error) {
 	httpClient := &http.Client{Timeout: 200 * time.Millisecond}
 
 	// make the request
-	var res *http.Response
-	if res, err = httpClient.Get(url); err == nil {
-		err = json.NewDecoder(res.Body).Decode(metadata)
-		_ = res.Body.Close()
+	var (
+		res *http.Response
+		req *http.Request
+	)
+
+	if req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil); err == nil {
+		if res, err = httpClient.Do(req); err == nil {
+			err = json.NewDecoder(res.Body).Decode(metadata)
+			_ = res.Body.Close()
+		}
 	}
 
 	return metadata, err

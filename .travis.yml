@@ -8,7 +8,7 @@ go:
   - "1.14.x"
 
 before_install:
-  - "curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.21.0"
+  - "curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.30.0"
 
 install:
   - echo -e "Host heroku.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
@@ -18,8 +18,8 @@ script:
   - export PATH=$(go env GOPATH)/bin:$PATH
   - export GO111MODULE=on
   - go mod download
-  - golangci-lint run
-  - go test -v -covermode atomic -race -timeout 70s -cpu 4 -parallel 8 -coverprofile ./coverage.out $(go list ./...)
+  - golangci-lint run -c .golangci.yml -v
+  - go test -v -covermode atomic -race -timeout 120s -cpu 4 -parallel 8 -coverprofile ./coverage.out $(go list ./...)
   - "! go tool cover -func coverage.out | grep -v 100.0%"
 
 after_script:

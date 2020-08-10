@@ -2,26 +2,21 @@
 package disco
 
 import (
+	"bytes"
 	"crypto/rand"
-	"io"
-
+	"encoding/binary"
 	"encoding/json"
+	"expvar"
 	"fmt"
+	"io"
+	"sort"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	"expvar"
-
-	"strings"
-	"sync"
-
-	"bytes"
-	"encoding/binary"
-	"sort"
-
-	"github.com/signalfx/golib/v3/errors"
-
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/logkey"
 	"github.com/signalfx/golib/v3/pointer"

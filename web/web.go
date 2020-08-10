@@ -1,10 +1,9 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"sync"
-
-	"context"
 )
 
 // Note: Borrowed greatly from goji, but I would rather use context as the middleware context than
@@ -138,7 +137,7 @@ func (h *Handler) ServeHTTPC(ctx context.Context, rw http.ResponseWriter, r *htt
 	h.Pool.Put(stack)
 }
 
-//NewHandler creates a new handler with no middleware layers
+// NewHandler creates a new handler with no middleware layers
 func NewHandler(startingContext context.Context, ending ContextHandler) *Handler {
 	h := &Handler{
 		Ending:          ending,

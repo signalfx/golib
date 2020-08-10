@@ -30,7 +30,7 @@ func (ec *ErrChecker) SetErrorCheck(errCheck ErrCheck) {
 }
 
 // CheckForError check to see if an error should be thrown based
-//on the existence ErrCheck and whether it returns an error
+// on the existence ErrCheck and whether it returns an error
 func (ec *ErrChecker) CheckForError(s string) error {
 	ec.errMutex.Lock()
 	defer ec.errMutex.Unlock()

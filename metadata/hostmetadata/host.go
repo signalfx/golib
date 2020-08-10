@@ -30,10 +30,12 @@ const cpuTimeout = 10 * time.Second
 
 // Map library functions to unexported package variables for testing purposes.
 // It would be great if we could patch this somehow
-var cpuInfo = cpu.InfoWithContext
-var cpuCounts = cpu.CountsWithContext
-var memVirtualMemory = mem.VirtualMemory
-var hostInfo = host.Info
+var (
+	cpuInfo          = cpu.InfoWithContext
+	cpuCounts        = cpu.CountsWithContext
+	memVirtualMemory = mem.VirtualMemory
+	hostInfo         = host.Info
+)
 
 // CPU information about the host
 type CPU struct {
@@ -122,9 +124,11 @@ func int8ArrayToByteArray(in []int8) []byte {
 }
 
 // GetOS returns a struct with information about the host os
-func GetOS() (info *OS, err error) {
-	info = &OS{}
-	hInfo, err := hostInfo()
+func GetOS() (*OS, error) {
+	var (
+		info       = &OS{}
+		hInfo, err = hostInfo()
+	)
 
 	if err != nil {
 		return info, err
@@ -183,9 +187,12 @@ func GetMemory() (*Memory, error) {
 }
 
 func getStringFromFile(pattern string, path string) (string, error) {
-	var err error
-	var file []byte
-	var reg = regexp.MustCompile(pattern)
+	var (
+		err  error
+		file []byte
+		reg  = regexp.MustCompile(pattern)
+	)
+
 	if file, err = ioutil.ReadFile(path); err == nil {
 		if match := reg.FindSubmatch(file); len(match) > 1 {
 			return string(match[1]), nil

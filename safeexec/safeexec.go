@@ -3,7 +3,6 @@ package safeexec
 import (
 	"bytes"
 	"os/exec"
-
 	"strings"
 
 	"github.com/signalfx/golib/v3/errors"

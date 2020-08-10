@@ -1,10 +1,9 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"time"
-
-	"context"
 )
 
 // AddRequestTime is a web context that adds the current time to the request's context

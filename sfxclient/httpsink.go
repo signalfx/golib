@@ -429,11 +429,10 @@ func (h *HTTPSink) coreEventToProtobuf(event *event.Event) *sfxmodel.Event {
 		Timestamp:  ts,
 	}
 	return ev
-
 }
 
 func mapToProperties(properties map[string]interface{}) []*sfxmodel.Property {
-	var response = make([]*sfxmodel.Property, 0, len(properties))
+	response := make([]*sfxmodel.Property, 0, len(properties))
 	for k, v := range properties {
 		kv := k
 		pv := rawToProtobuf(v)
@@ -469,7 +468,6 @@ func (h *HTTPSink) AddSpans(ctx context.Context, traces []*trace.Span) (err erro
 		}
 		return h.getReader(b)
 	}, h.contentTypeHeader, h.TraceEndpoint, spanResponseValidator)
-
 }
 
 func jsonMarshal(v []*trace.Span) ([]byte, error) {

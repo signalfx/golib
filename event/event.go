@@ -65,7 +65,7 @@ func New(eventType string, category Category, dimensions map[string]string, time
 
 // ToProtoEC - Converts a protbuf EventCategory to type event.Category
 func ToProtoEC(ec sfxmodel.EventCategory) Category {
-	var response = USERDEFINED
+	response := USERDEFINED
 	// Check if the event.Category does not have a corresponding sfxmodel.EventCategory
 	if _, ok := sfxmodel.EventCategory_name[int32(ec)]; ok {
 		response = Category(ec)

@@ -80,17 +80,23 @@ linters:
   enable-all: true
   disable:
     - lll
-    - prealloc
-    - gochecknoinits
     - gochecknoglobals
     - errcheck
     - unparam
     - gosec
     - interfacer
     - dupl
-    # TODO: need to enable this two for better coding guidelines in terms of space between condition
+    - exhaustive
     - whitespace
     - wsl
+    - gci
+    - godot
+    - gomnd
+    - nestif
+    - nlreturn
+    # TODO: enable this linters later
+    - goerr113
+    - gochecknoinits
   fast: true
 
 # output configuration options

@@ -1,6 +1,7 @@
 package sfxclient
 
 import (
+	"context"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -9,8 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
@@ -248,7 +247,7 @@ func (w *datapointWorker) processMsg(msg *dpMsg) {
 
 // bufferDatapoints is responsible for batching incoming datapoints into a buffer
 func (w *datapointWorker) bufferFunc(msg *dpMsg) (stop bool) {
-	var lastTokenSeen = msg.token
+	lastTokenSeen := msg.token
 	w.processMsg(msg)
 outer:
 	for len(w.buffer) < w.batchSize {
@@ -363,7 +362,7 @@ func (w *eventWorker) processMsg(msg *evMsg) {
 
 // bufferDatapoints is responsible for batching incoming datapoints into a buffer
 func (w *eventWorker) bufferFunc(msg *evMsg) (stop bool) {
-	var lastTokenSeen = msg.token
+	lastTokenSeen := msg.token
 	w.processMsg(msg)
 outer:
 	for len(w.buffer) < w.batchSize {
@@ -479,7 +478,7 @@ func (w *spanWorker) processMsg(msg *spanMsg) {
 
 // bufferDatapoints is responsible for batching incoming datapoints into a buffer
 func (w *spanWorker) bufferFunc(msg *spanMsg) (stop bool) {
-	var lastTokenSeen = msg.token
+	lastTokenSeen := msg.token
 	w.processMsg(msg)
 outer:
 	for len(w.buffer) < w.batchSize {
@@ -531,7 +530,7 @@ func newSpanWorker(batchSize int, errorHandler func(error) error, stats *asyncMu
 	return w
 }
 
-//asyncMultiTokenSinkStats - holds stats about the sink
+// asyncMultiTokenSinkStats - holds stats about the sink
 type asyncMultiTokenSinkStats struct {
 	DefaultDimensions      map[string]string
 	TotalDatapointsByToken *AsyncTokenStatusCounter
@@ -598,7 +597,7 @@ type AsyncMultiTokenSink struct {
 	evBuffered    int64                     // number of events in the sink that haven't been emitted
 	spansBuffered int64                     // number of spans in the sink that haven't been emitted
 	NewHTTPClient func() *http.Client       // function used to create an http client for the underlying sinks
-	stats         *asyncMultiTokenSinkStats //stats are stats about that sink that can be collected from the Datapoitns() method
+	stats         *asyncMultiTokenSinkStats // stats are stats about that sink that can be collected from the Datapoitns() method
 	maxRetry      int                       // maximum number of times to retry sending a set of datapoints or events
 }
 
@@ -641,9 +640,9 @@ func (a *AsyncMultiTokenSink) getChannel(input string, size int) (workerID int64
 func (a *AsyncMultiTokenSink) AddDatapointsWithToken(token string, datapoints []*datapoint.Datapoint) (err error) {
 	var channelID int64
 	if channelID, err = a.getChannel(token, len(a.dpChannels)); err == nil {
-		var worker = a.dpChannels[channelID]
+		worker := a.dpChannels[channelID]
 		_ = atomic.AddInt64(&a.dpBuffered, int64(len(datapoints)))
-		var m = &dpMsg{
+		m := &dpMsg{
 			token: token,
 			data:  datapoints,
 		}
@@ -681,9 +680,9 @@ func (a *AsyncMultiTokenSink) AddDatapoints(ctx context.Context, datapoints []*d
 func (a *AsyncMultiTokenSink) AddEventsWithToken(token string, events []*event.Event) (err error) {
 	var channelID int64
 	if channelID, err = a.getChannel(token, len(a.evChannels)); err == nil {
-		var worker = a.evChannels[channelID]
+		worker := a.evChannels[channelID]
 		_ = atomic.AddInt64(&a.evBuffered, int64(len(events)))
-		var m = &evMsg{
+		m := &evMsg{
 			token: token,
 			data:  events,
 		}
@@ -722,9 +721,9 @@ func (a *AsyncMultiTokenSink) AddEvents(ctx context.Context, events []*event.Eve
 func (a *AsyncMultiTokenSink) AddSpansWithToken(token string, spans []*trace.Span) (err error) {
 	var channelID int64
 	if channelID, err = a.getChannel(token, len(a.evChannels)); err == nil {
-		var worker = a.spanChannels[channelID]
+		worker := a.spanChannels[channelID]
 		_ = atomic.AddInt64(&a.spansBuffered, int64(len(spans)))
-		var m = &spanMsg{
+		m := &spanMsg{
 			token: token,
 			data:  spans,
 		}

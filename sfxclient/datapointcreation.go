@@ -1,9 +1,8 @@
 package sfxclient
 
 import (
-	"time"
-
 	"sync/atomic"
+	"time"
 
 	"github.com/signalfx/golib/v3/datapoint"
 )
