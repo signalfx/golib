@@ -2,6 +2,7 @@ package sfxclient
 
 import (
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/signalfx/golib/v3/datapoint"
@@ -12,14 +13,39 @@ var startTime = time.Now()
 // GoMetricsSource is a singleton Collector that collects basic go system stats.  It currently
 // collects from runtime.ReadMemStats and adds a few extra metrics like uptime of the process
 // and other runtime package functions.
-var GoMetricsSource Collector = &goMetrics{}
+var GoMetricsSource MemCallback = &goMetrics{}
 
-type goMetrics struct{}
+// MemCallback interface implements the necessary api's for goMetric
+type MemCallback interface {
+	Collector
+	AddCallback(func(stats *runtime.MemStats))
+}
+
+// goMetrics stores process runtime memory stats
+type goMetrics struct {
+	mu sync.RWMutex
+	cb []func(stats *runtime.MemStats)
+}
+
+// AddCallback register func which needs to be called everytime stats are collected
+func (g *goMetrics) AddCallback(f func(stats *runtime.MemStats)) {
+	g.mu.Lock()
+	g.cb = append(g.cb, f)
+	g.mu.Unlock()
+}
 
 // Datapoints will report current runtime stats of the process
 func (g *goMetrics) Datapoints() []*datapoint.Datapoint {
 	mstat := runtime.MemStats{}
 	runtime.ReadMemStats(&mstat)
+
+	// inform the cb routine that you have new stats to work on
+	g.mu.RLock()
+	for _, cb := range g.cb {
+		cb(&mstat)
+	}
+	g.mu.RUnlock()
+
 	dims := map[string]string{
 		"instance": "global_stats",
 		"stattype": "golang_sys",

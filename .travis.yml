@@ -19,7 +19,7 @@ script:
   - export GO111MODULE=on
   - go mod download
   - golangci-lint run -c .golangci.yml -v
-  - go test -v -covermode atomic -race -timeout 120 -cpu 4 -parallel 8 -coverprofile ./coverage.out $(go list ./...)
+  - go test -covermode atomic -race -timeout 120s -cpu 4 -parallel 8 -coverprofile ./coverage.out $(go list ./...)
   - "! go tool cover -func coverage.out | grep -v 100.0%"
 
 after_script:
