@@ -19,7 +19,7 @@ func TestNewMultiCollector(t *testing.T) {
 		})
 		Convey("should wrap multiple items", func() {
 			c3 := NewMultiCollector(c1, c2)
-			So(len(c3.Datapoints()), ShouldEqual, 2*len(c1.Datapoints()))
+			So(len(c3.Datapoints()), ShouldBeGreaterThanOrEqualTo, 2*len(c1.Datapoints()))
 		})
 	})
 }

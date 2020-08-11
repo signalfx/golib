@@ -3,9 +3,7 @@ package distconf
 
 import (
 	"fmt"
-
 	"sync"
-
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"

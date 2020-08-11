@@ -17,9 +17,11 @@ type hasMessage interface {
 	Message() string
 }
 
-var _ causableError = &ErrorChain{}
-var _ hasUnderline = &ErrorChain{}
-var _ hasMessage = &ErrorChain{}
+var (
+	_ causableError = &ErrorChain{}
+	_ hasUnderline  = &ErrorChain{}
+	_ hasMessage    = &ErrorChain{}
+)
 
 // Cause lets me simulate errgo
 func (e *ErrorChain) Cause() error {

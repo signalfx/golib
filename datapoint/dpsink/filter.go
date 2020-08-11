@@ -1,9 +1,8 @@
 package dpsink
 
 import (
-	"sync/atomic"
-
 	"context"
+	"sync/atomic"
 
 	"github.com/signalfx/golib/v3/datapoint"
 )

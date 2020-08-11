@@ -1,10 +1,9 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"sync/atomic"
-
-	"context"
 )
 
 // CloseHeader is used to control when connections should signal they should be closed

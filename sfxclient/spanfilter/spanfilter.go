@@ -22,7 +22,7 @@ const (
 	OK = "ok"
 )
 
-//CheckInvalid is a nil safe check if this SpanFilter contains invalid keys
+// CheckInvalid is a nil safe check if this SpanFilter contains invalid keys
 func (s *Map) CheckInvalid() bool {
 	return s != nil && len(s.Invalid) > 0
 }

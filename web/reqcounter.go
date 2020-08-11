@@ -16,8 +16,10 @@ type RequestCounter struct {
 	TotalProcessingTimeNs int64
 }
 
-var _ HTTPConstructor = (&RequestCounter{}).Wrap
-var _ NextHTTP = (&RequestCounter{}).ServeHTTP
+var (
+	_ HTTPConstructor = (&RequestCounter{}).Wrap
+	_ NextHTTP        = (&RequestCounter{}).ServeHTTP
+)
 
 // Wrap returns a handler that forwards calls to next and counts the calls forwarded
 func (m *RequestCounter) Wrap(next http.Handler) http.Handler {

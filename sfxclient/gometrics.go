@@ -16,6 +16,7 @@ var GoMetricsSource Collector = &goMetrics{}
 
 type goMetrics struct{}
 
+// Datapoints will report current runtime stats of the process
 func (g *goMetrics) Datapoints() []*datapoint.Datapoint {
 	mstat := runtime.MemStats{}
 	runtime.ReadMemStats(&mstat)

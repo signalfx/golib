@@ -75,11 +75,13 @@ func (s *Stats) AtomicClone() Stats {
 	}
 }
 
-var errUnableToFindRootBucket = errors.New("unable to find root bucket")
-var errUnexpectedBucketBytes = errors.New("bucket bytes not in uint64 form")
-var errUnexpectedNonBucket = errors.New("unexpected non bucket")
-var errNoLastBucket = errors.New("unable to find a last bucket")
-var errOrderingWrong = errors.New("ordering wrong")
+var (
+	errUnableToFindRootBucket = errors.New("unable to find root bucket")
+	errUnexpectedBucketBytes  = errors.New("bucket bytes not in uint64 form")
+	errUnexpectedNonBucket    = errors.New("unexpected non bucket")
+	errNoLastBucket           = errors.New("unable to find a last bucket")
+	errOrderingWrong          = errors.New("ordering wrong")
+)
 
 // KvPair is a pair of key/value that you want to write during a write call
 type KvPair struct {

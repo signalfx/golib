@@ -1,14 +1,11 @@
 package zktest
 
 import (
-	"strings"
-	"time"
-
 	"errors"
-
+	"strings"
 	"sync"
-
 	"sync/atomic"
+	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/v3/log"
@@ -248,8 +245,10 @@ type ZkConnSupported interface {
 	Close()
 }
 
-var _ ZkConnSupported = &zk.Conn{}
-var _ ZkConnSupported = &ZkConn{}
+var (
+	_ ZkConnSupported = &zk.Conn{}
+	_ ZkConnSupported = &ZkConn{}
+)
 
 // Close sends disconnected to all waiting events and deregisteres this
 // conn with the parent server

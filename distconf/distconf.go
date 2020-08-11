@@ -1,14 +1,11 @@
 package distconf
 
 import (
-	"sync"
-
-	"time"
-
-	"math"
-
 	"expvar"
+	"math"
 	"runtime"
+	"sync"
+	"time"
 
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/logkey"

@@ -15,8 +15,10 @@ type BucketRequestCounter struct {
 	Bucket            *sfxclient.RollingBucket
 }
 
-var _ HTTPConstructor = (&BucketRequestCounter{}).Wrap
-var _ NextHTTP = (&BucketRequestCounter{}).ServeHTTP
+var (
+	_ HTTPConstructor = (&BucketRequestCounter{}).Wrap
+	_ NextHTTP        = (&BucketRequestCounter{}).ServeHTTP
+)
 
 // Wrap returns a handler that forwards calls to next and counts the calls forwarded
 func (m *BucketRequestCounter) Wrap(next http.Handler) http.Handler {

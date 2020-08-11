@@ -1,9 +1,8 @@
 package dptest
 
 import (
-	"sync"
-
 	"context"
+	"sync"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"

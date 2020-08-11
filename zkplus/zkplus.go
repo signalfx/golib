@@ -3,7 +3,6 @@ package zkplus
 import (
 	"fmt"
 	"strings"
-
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
@@ -52,8 +51,10 @@ type ZkPlus struct {
 	exposedChan chan zk.Event
 }
 
-var errInvalidPathPrefix = errors.New("invalid prefix path: Must being with /")
-var errInvalidPathSuffix = errors.New("invalid prefix path: Must not end with /")
+var (
+	errInvalidPathPrefix = errors.New("invalid prefix path: Must being with /")
+	errInvalidPathSuffix = errors.New("invalid prefix path: Must not end with /")
+)
 
 // EventChan that will see zookeeper events whose path is changed to this zk connection's
 // namespace

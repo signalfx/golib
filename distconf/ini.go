@@ -29,7 +29,6 @@ func Ini(filename string) (Reader, error) {
 		filename: filename,
 		file:     file,
 	}, nil
-
 }
 
 // IniLoader is a helper for loading from Ini files

@@ -33,10 +33,8 @@ var DefaultConfig = &Config{
 	WriteTimeout: pointer.Duration(time.Duration(0)),
 }
 
-var (
-	// LogKeyHTTPClass is appended as a key to subloggers of the debug server
-	LogKeyHTTPClass = log.Key("http_class")
-)
+// LogKeyHTTPClass is appended as a key to subloggers of the debug server
+var LogKeyHTTPClass = log.Key("http_class")
 
 // New creates a new debug server
 func New(conf *Config) *Server {
