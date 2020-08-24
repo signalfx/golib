@@ -1,9 +1,6 @@
 language: go
 
-sudo: false
-
 go:
-  - "1.12.x"
   - "1.13.x"
   - "1.14.x"
 
@@ -19,7 +16,7 @@ script:
   - export GO111MODULE=on
   - go mod download
   - golangci-lint run -c .golangci.yml -v
-  - go test -covermode atomic -race -timeout 120s -cpu 4 -parallel 8 -coverprofile ./coverage.out $(go list ./...)
+  - go test -covermode atomic -race -timeout 160s -cpu 4 -parallel 8 -coverprofile ./coverage.out $(go list ./...)
   - "! go tool cover -func coverage.out | grep -v 100.0%"
 
 after_script:
