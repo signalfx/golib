@@ -17,6 +17,7 @@ package translator
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -48,7 +49,9 @@ func SFXToSAPMPostRequest(spans []*trace.Span) *gen.PostSpansRequest {
 
 	for _, sfxSpan := range spans {
 		span := SAPMSpanFromSFXSpan(sfxSpan)
-		batcher.Add(span)
+		if span != nil {
+			batcher.Add(span)
+		}
 	}
 
 	sr.Batches = batcher.Batches()
@@ -71,52 +74,59 @@ func GetLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
 	}
 }
 
-// SAPMSpanFromSFXSpan converts an individual SignalFx format span to a SAPM span
+// SAPMSpanFromSFXSpan converts an individual SignalFx format span to a SAPM
+// span.  Can return nil if input span is invalid in some way.
 func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) (span *jaegerpb.Span) {
 	spanID, err := jaegerpb.SpanIDFromString(sfxSpan.ID)
-	if err == nil {
-		traceID, err := jaegerpb.TraceIDFromString(sfxSpan.TraceID)
+	if err != nil {
+		log.Printf("Failed to parse span id %q: %v", sfxSpan.ID, err)
+		return
+	}
+
+	traceID, err := jaegerpb.TraceIDFromString(sfxSpan.TraceID)
+	if err != nil {
+		log.Printf("Failed to parse trace id %q: %v", sfxSpan.TraceID, err)
+		return
+	}
+
+	span = &jaegerpb.Span{
+		SpanID:  spanID,
+		TraceID: traceID,
+		Process: &jaegerpb.Process{},
+	}
+
+	if sfxSpan.Name != nil {
+		span.OperationName = *sfxSpan.Name
+	}
+
+	if sfxSpan.Duration != nil {
+		span.Duration = DurationFromMicroseconds(*sfxSpan.Duration)
+	}
+
+	if sfxSpan.Timestamp != nil {
+		span.StartTime = TimeFromMicrosecondsSinceEpoch(*sfxSpan.Timestamp)
+	}
+
+	if sfxSpan.Debug != nil && *sfxSpan.Debug {
+		span.Flags.SetDebug()
+	}
+
+	span.Tags, span.Process.Tags = SFXTagsToJaegerTags(sfxSpan.Tags, sfxSpan.RemoteEndpoint, sfxSpan.Kind)
+
+	GetLocalEndpointInfo(sfxSpan, span)
+
+	if sfxSpan.ParentID != nil {
+		parentID, err := jaegerpb.SpanIDFromString(*sfxSpan.ParentID)
 		if err == nil {
-			span = &jaegerpb.Span{
-				SpanID:  spanID,
+			span.References = append(span.References, jaegerpb.SpanRef{
 				TraceID: traceID,
-				Process: &jaegerpb.Process{},
-			}
-
-			if sfxSpan.Name != nil {
-				span.OperationName = *sfxSpan.Name
-			}
-
-			if sfxSpan.Duration != nil {
-				span.Duration = DurationFromMicroseconds(*sfxSpan.Duration)
-			}
-
-			if sfxSpan.Timestamp != nil {
-				span.StartTime = TimeFromMicrosecondsSinceEpoch(*sfxSpan.Timestamp)
-			}
-
-			if sfxSpan.Debug != nil && *sfxSpan.Debug {
-				span.Flags.SetDebug()
-			}
-
-			span.Tags, span.Process.Tags = SFXTagsToJaegerTags(sfxSpan.Tags, sfxSpan.RemoteEndpoint, sfxSpan.Kind)
-
-			GetLocalEndpointInfo(sfxSpan, span)
-
-			if sfxSpan.ParentID != nil {
-				parentID, err := jaegerpb.SpanIDFromString(*sfxSpan.ParentID)
-				if err == nil {
-					span.References = append(span.References, jaegerpb.SpanRef{
-						TraceID: traceID,
-						SpanID:  parentID,
-						RefType: jaegerpb.SpanRefType_CHILD_OF,
-					})
-				}
-			}
-
-			span.Logs = sfxAnnotationsToJaegerLogs(sfxSpan.Annotations)
+				SpanID:  parentID,
+				RefType: jaegerpb.SpanRefType_CHILD_OF,
+			})
 		}
 	}
+
+	span.Logs = sfxAnnotationsToJaegerLogs(sfxSpan.Annotations)
 	return span
 }
 

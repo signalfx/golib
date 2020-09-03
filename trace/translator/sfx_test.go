@@ -101,6 +101,41 @@ func TestSFXTagsToJaegerTags(t *testing.T) {
 	assert.Equal(t, 1, len(spanTags))
 }
 
+func TestBadSpans(t *testing.T) {
+	var sfxSpans = []*trace.Span{
+		{
+			TraceID:  "a2969a8955571a3f,abcdef0123456789",
+			ParentID: pointer.String("000000000068c4e3,abcdef0123456789"),
+			ID:       "0000000000147d98",
+			Name:     pointer.String("get"),
+			Kind:     &ServerKind,
+			LocalEndpoint: &trace.Endpoint{
+				ServiceName: pointer.String("api1"),
+				Ipv4:        pointer.String("10.53.69.61"),
+			},
+			Timestamp: pointer.Int64(1485467191639875),
+			Duration:  pointer.Int64(22938),
+		},
+		{
+			TraceID:  "0000000000147d98",
+			ParentID: pointer.String("000000000068c4e3"),
+			ID:       "a2969a8955571a3f,abcdef0123456789",
+			Name:     pointer.String("get"),
+			Kind:     &ServerKind,
+			LocalEndpoint: &trace.Endpoint{
+				ServiceName: pointer.String("api1"),
+				Ipv4:        pointer.String("10.53.69.61"),
+			},
+			Timestamp: pointer.Int64(1485467191639875),
+			Duration:  pointer.Int64(22938),
+		},
+	}
+
+	for i := range sfxSpans {
+		require.Nil(t, SAPMSpanFromSFXSpan(sfxSpans[i]))
+	}
+}
+
 func assertBatchesAreEqual(t *testing.T, got, want *jaegerpb.Batch) {
 	require.Equal(t, len(got.Spans), len(want.Spans))
 	assertProcessesAreEqual(t, got.Process, want.Process)
