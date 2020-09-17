@@ -44,7 +44,7 @@ func ExampleNewMultiCollector() {
 	var a Collector
 	var b Collector
 	c := NewMultiCollector(a, b)
-	c.Datapoints()
+	So(len(c.Datapoints()), ShouldEqual, 0)
 }
 
 func ExampleCumulativeP() {
