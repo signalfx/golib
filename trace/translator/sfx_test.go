@@ -20,13 +20,12 @@ import (
 	"time"
 
 	jaegerpb "github.com/jaegertracing/jaeger/model"
+	"github.com/signalfx/golib/v3/pointer"
+	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
+	"github.com/signalfx/golib/v3/trace"
+	sapmpb "github.com/signalfx/sapm-proto/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/signalfx/golib/v3/pointer"
-	"github.com/signalfx/golib/v3/trace"
-
-	sapmpb "github.com/signalfx/sapm-proto/gen"
 )
 
 var (
@@ -60,7 +59,7 @@ func TestDurationTranslator(t *testing.T) {
 }
 
 func TestTranslator(t *testing.T) {
-	got := SFXToSAPMPostRequest(sourceSpans)
+	got, sm := SFXToSAPMPostRequest(sourceSpans)
 	require.Equal(t, len(wantPostRequest.Batches), len(got.Batches))
 	sortBatches(wantPostRequest.Batches)
 	sortBatches(got.Batches)
@@ -68,7 +67,7 @@ func TestTranslator(t *testing.T) {
 	for i := 0; i < len(got.Batches); i++ {
 		assertBatchesAreEqual(t, got.Batches[i], wantPostRequest.Batches[i])
 	}
-
+	require.Equal(t, len(sm.Invalid), 0)
 }
 
 func TestSFXTagsToJaegerTags(t *testing.T) {
@@ -131,9 +130,11 @@ func TestBadSpans(t *testing.T) {
 		},
 	}
 
+	sm := &spanfilter.Map{}
 	for i := range sfxSpans {
-		require.Nil(t, SAPMSpanFromSFXSpan(sfxSpans[i]))
+		require.Nil(t, SAPMSpanFromSFXSpan(sfxSpans[i], sm))
 	}
+	require.Equal(t, len(sm.Invalid), len(sfxSpans))
 }
 
 func assertBatchesAreEqual(t *testing.T, got, want *jaegerpb.Batch) {
