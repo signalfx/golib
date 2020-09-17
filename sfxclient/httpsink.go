@@ -463,7 +463,7 @@ func (h *HTTPSink) AddSpans(ctx context.Context, traces []*trace.Span) (err erro
 
 	return h.doBottom(ctx, func() (io.Reader, bool, error) {
 		b, err := h.traceMarshal(traces)
-		if err != nil {
+		if spanfilter.IsInvalid(err) {
 			return nil, false, errors.Annotate(err, "cannot encode traces")
 		}
 		return h.getReader(b)
@@ -477,8 +477,12 @@ func jsonMarshal(v []*trace.Span) ([]byte, error) {
 }
 
 func sapmMarshal(v []*trace.Span) ([]byte, error) {
-	msg := translator.SFXToSAPMPostRequest(v)
-	return proto.Marshal(msg)
+	msg, sm := translator.SFXToSAPMPostRequest(v)
+	bb, err := proto.Marshal(msg)
+	if err == nil {
+		err = sm
+	}
+	return bb, err
 }
 
 func parseRetryAfterHeader(v string) (time.Duration, error) {

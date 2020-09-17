@@ -15,13 +15,13 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-
 	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/pointer"
+	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
 	sapmpb "github.com/signalfx/sapm-proto/gen"
 	. "github.com/smartystreets/goconvey/convey"
@@ -566,7 +566,7 @@ func TestHTTPTraceSink(t *testing.T) {
 			retString := `{"invalid":{}, "valid":1}`
 			var blockResponse chan struct{}
 			var cancelCallback func()
-			seenSpans := []*trace.Span{}
+			var seenSpans []*trace.Span
 			handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				bodyBytes := bytes.Buffer{}
 				_, err := io.Copy(&bodyBytes, req.Body)
@@ -656,7 +656,7 @@ func TestSAPMMarshal(t *testing.T) {
 		}
 		marshalled, err := sapmMarshal(traces)
 		Convey("should marshal traces", func() {
-			So(err, ShouldBeNil)
+			So(spanfilter.IsInvalid(err), ShouldBeFalse)
 			psr := sapmpb.PostSpansRequest{}
 			err = proto.Unmarshal(marshalled, &psr)
 			Convey("which should unmarshal to SAPM PostSpansRequest", func() {

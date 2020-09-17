@@ -15,6 +15,23 @@ type Map struct {
 	Invalid map[string][]string `json:"invalid,omitempty"`
 }
 
+const (
+	// InvalidSpanID has either the wrong length, or does not contain hex digits
+	InvalidSpanID = "invalidSpanID"
+	// InvalidTraceID has either the wrong length, or does not contain hex digits
+	InvalidTraceID = "invalidTraceID"
+	// ZipkinV2BinaryAnnotations are not allowed
+	ZipkinV2BinaryAnnotations
+	// NilServiceName when no localendpoint.name is provided
+	NilServiceName = "nilServiceName"
+	// ZeroTraceID when the traceid bytes are all zero
+	ZeroTraceID = "zeroTraceID"
+	// ZeroStartTime when the star time of the span is 0
+	ZeroStartTime = "zeroStartTime"
+	// TooManySpansInTrace when we find an abusive number of spans for a given traceID
+	TooManySpansInTrace = "tooManySpansInTrace"
+)
+
 var emptySpanFilter = &Map{}
 
 const (
@@ -81,7 +98,7 @@ const (
 )
 
 // WithSpanFilterContext gives you a request with the Map set
-func WithSpanFilterContext(ctx context.Context, sf *Map) context.Context {
+func WithSpanFilterContext(ctx context.Context, sf interface{}) context.Context {
 	return context.WithValue(ctx, spanFailures, sf)
 }
 

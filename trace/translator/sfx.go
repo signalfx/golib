@@ -17,14 +17,13 @@ package translator
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"time"
 
 	jaegerpb "github.com/jaegertracing/jaeger/model"
+	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
-
 	gen "github.com/signalfx/sapm-proto/gen"
 )
 
@@ -42,20 +41,22 @@ const (
 )
 
 // SFXToSAPMPostRequest takes a slice spans in the SignalFx format and converts it to a SAPM PostSpansRequest
-func SFXToSAPMPostRequest(spans []*trace.Span) *gen.PostSpansRequest {
+func SFXToSAPMPostRequest(spans []*trace.Span) (*gen.PostSpansRequest, *spanfilter.Map) {
 	sr := &gen.PostSpansRequest{}
 
 	batcher := SpanBatcher{}
 
+	sm := &spanfilter.Map{}
+
 	for _, sfxSpan := range spans {
-		span := SAPMSpanFromSFXSpan(sfxSpan)
+		span := SAPMSpanFromSFXSpan(sfxSpan, sm)
 		if span != nil {
 			batcher.Add(span)
 		}
 	}
 
 	sr.Batches = batcher.Batches()
-	return sr
+	return sr, sm
 }
 
 // GetLocalEndpointInfo sets the jaeger span's local endpoint extracted from the SignalFx span
@@ -76,16 +77,16 @@ func GetLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
 
 // SAPMSpanFromSFXSpan converts an individual SignalFx format span to a SAPM
 // span.  Can return nil if input span is invalid in some way.
-func SAPMSpanFromSFXSpan(sfxSpan *trace.Span) (span *jaegerpb.Span) {
+func SAPMSpanFromSFXSpan(sfxSpan *trace.Span, sm *spanfilter.Map) (span *jaegerpb.Span) {
 	spanID, err := jaegerpb.SpanIDFromString(sfxSpan.ID)
 	if err != nil {
-		log.Printf("Failed to parse span id %q: %v", sfxSpan.ID, err)
+		sm.Add(spanfilter.InvalidSpanID, sfxSpan.ID)
 		return
 	}
 
 	traceID, err := jaegerpb.TraceIDFromString(sfxSpan.TraceID)
 	if err != nil {
-		log.Printf("Failed to parse trace id %q: %v", sfxSpan.TraceID, err)
+		sm.Add(spanfilter.InvalidTraceID, sfxSpan.ID)
 		return
 	}
 
