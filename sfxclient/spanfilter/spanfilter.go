@@ -21,7 +21,7 @@ const (
 	// InvalidTraceID has either the wrong length, or does not contain hex digits
 	InvalidTraceID = "invalidTraceID"
 	// ZipkinV2BinaryAnnotations are not allowed
-	ZipkinV2BinaryAnnotations
+	ZipkinV2BinaryAnnotations = "zipkinV2BinaryAnnotations"
 	// NilServiceName when no localendpoint.name is provided
 	NilServiceName = "nilServiceName"
 	// ZeroTraceID when the traceid bytes are all zero
