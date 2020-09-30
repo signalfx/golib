@@ -195,11 +195,7 @@ func sfxAnnotationsToJaegerLogs(annotations []*trace.Annotation) []jaegerpb.Log 
 			if ann.Timestamp != nil {
 				log.Timestamp = TimeFromMicrosecondsSinceEpoch(*ann.Timestamp)
 			}
-			var err error
-			log.Fields, err = FieldsFromJSONString(*ann.Value)
-			if err != nil {
-				continue
-			}
+			log.Fields = FieldsFromJSONString(*ann.Value)
 			logs = append(logs, log)
 		}
 	}
@@ -207,19 +203,21 @@ func sfxAnnotationsToJaegerLogs(annotations []*trace.Annotation) []jaegerpb.Log 
 }
 
 // FieldsFromJSONString returns an array of jaeger KeyValues from a json string
-func FieldsFromJSONString(jStr string) ([]jaegerpb.KeyValue, error) {
+func FieldsFromJSONString(jStr string) []jaegerpb.KeyValue {
 	fields := make(map[string]string)
-	kv := make([]jaegerpb.KeyValue, 0, len(fields))
 	err := json.Unmarshal([]byte(jStr), &fields)
 	if err != nil {
-		kv = append(kv, jaegerpb.KeyValue{
-			Key:   "event",
-			VType: jaegerpb.ValueType_STRING,
-			VStr:  jStr,
-		})
-		return kv, err
+		// Do our best
+		return []jaegerpb.KeyValue{
+			{
+				Key:   "annotation",
+				VType: jaegerpb.ValueType_STRING,
+				VStr:  jStr,
+			},
+		}
 	}
 
+	kv := make([]jaegerpb.KeyValue, 0, len(fields))
 	for k, v := range fields {
 		kv = append(kv, jaegerpb.KeyValue{
 			Key:   k,
@@ -227,7 +225,7 @@ func FieldsFromJSONString(jStr string) ([]jaegerpb.KeyValue, error) {
 			VStr:  v,
 		})
 	}
-	return kv, nil
+	return kv
 }
 
 func sfxKindToJaeger(kind string) (string, error) {
