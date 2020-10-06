@@ -22,7 +22,7 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20190810000440-0ceca61e4d75
 	github.com/shirou/gopsutil v2.18.10+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
-	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.1
+	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083
 	github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9
 	github.com/signalfx/sapm-proto v0.4.0
