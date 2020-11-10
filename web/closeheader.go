@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 )
 
+// Note: CloseHeader is deprecated with advance handling provided by ServiceState
+
 // CloseHeader is used to control when connections should signal they should be closed
 type CloseHeader struct {
 	SetCloseHeader int32
