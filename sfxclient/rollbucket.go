@@ -44,6 +44,8 @@ type RollingBucket struct {
 	MaxFlushBufferSize int
 	// Timer is used to track time.Now() during default value add calls
 	Timer timekeeper.TimeKeeper
+	// IncludeSum turns on Sum and SumOfSquares
+	IncludeSum bool
 
 	// Inclusive
 	bucketStartTime time.Time
@@ -73,6 +75,7 @@ func NewRollingBucket(metricName string, dimensions map[string]string) *RollingB
 		Hist:               gohistogram.NewHistogram(DefaultHistogramSize),
 		MaxFlushBufferSize: DefaultMaxBufferSize,
 		Timer:              &timekeeper.RealTime{},
+		IncludeSum:         true,
 	}
 }
 
@@ -131,12 +134,15 @@ func (r *RollingBucket) Datapoints() []*datapoint.Datapoint {
 	defer r.mu.Unlock()
 	r.updateTime(r.Timer.Now())
 	ret := make([]*datapoint.Datapoint, 0, 3+len(r.Quantiles))
+	// Note: No need for CumulativeP because I'm in a mutex
 	ret = append(ret,
-		// Note: No need for CumulativeP because I'm in a mutex
 		Cumulative(r.MetricName+".count", r.Dimensions, r.count),
-		CumulativeF(r.MetricName+".sum", r.Dimensions, r.sum),
-		CumulativeF(r.MetricName+".sumsquare", r.Dimensions, r.sumOfSquares),
 	)
+	if r.IncludeSum {
+		ret = append(ret,
+			CumulativeF(r.MetricName+".sum", r.Dimensions, r.sum),
+			CumulativeF(r.MetricName+".sumsquare", r.Dimensions, r.sumOfSquares))
+	}
 	if r.pointsToFlush == nil {
 		return ret
 	}
