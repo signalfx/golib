@@ -29,6 +29,6 @@ require (
 	github.com/smartystreets/goconvey v1.6.4-0.20190306220146-200a235640ff
 	github.com/stretchr/testify v1.6.1
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
-	go.etcd.io/bbolt v1.3.4
+	go.etcd.io/bbolt v1.3.5
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 )
