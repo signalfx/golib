@@ -41,7 +41,7 @@ func SendHelloWorld() {
     client.AddDatapoints(ctx, []*datapoint.Datapoint{
         GaugeF("hello.world", nil, 1.0),
     })
-    dims = make(map[string]string)
+    dims := make(map[string]string)
     client.AddEvents(ctx, []*event.Event{
         event.New("hello.world", event.USERDEFINED, dims, time.Time{}),
     })
