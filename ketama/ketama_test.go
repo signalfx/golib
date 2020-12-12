@@ -27,7 +27,7 @@ func randStr(r *rand.Rand) string {
 	s := ""
 	for i := 0; i < 10; i++ {
 		c := 'a' + r.Intn(26)
-		s += string(c)
+		s += string(rune(c))
 	}
 	return s
 }
