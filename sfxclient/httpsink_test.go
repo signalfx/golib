@@ -123,6 +123,11 @@ func ExampleHTTPSink() {
 	}
 }
 
+const (
+	sinkEndpoint = "%gh&%ij"
+)
+
+// nolint:gocognit
 func TestHTTPDatapointSink(t *testing.T) {
 	Convey("A default sink", t, func() {
 		s := NewHTTPSink()
@@ -139,12 +144,11 @@ func TestHTTPDatapointSink(t *testing.T) {
 			So(s.AddDatapoints(ctx, dps), ShouldNotBeNil)
 		})
 		Convey("should not try dead contexts", func() {
-			var ctx = context.Background()
-			ctx, can := context.WithCancel(ctx)
+			ctx1, can := context.WithCancel(context.Background())
 			can()
-			So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "context already closed")
+			So(errors.Details(s.AddDatapoints(ctx1, dps)), ShouldContainSubstring, "context already closed")
 			Convey("but empty points should always work", func() {
-				So(s.AddDatapoints(ctx, []*datapoint.Datapoint{}), ShouldBeNil)
+				So(s.AddDatapoints(ctx1, []*datapoint.Datapoint{}), ShouldBeNil)
 			})
 		})
 		Convey("should check failure to encode", func() {
@@ -154,7 +158,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "failure to encode")
 		})
 		Convey("should check invalid endpoints", func() {
-			s.DatapointEndpoint = "%gh&%ij"
+			s.DatapointEndpoint = sinkEndpoint
 			So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "cannot parse new HTTP request to")
 		})
 		Convey("reading the full body should be checked", func() {
@@ -164,7 +168,7 @@ func TestHTTPDatapointSink(t *testing.T) {
 			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)).Error(), ShouldEqual, "cannot fully read response body: read bad: map[]")
 		})
 		Convey("with a test endpoint", func() {
-			retString := `"OK"`
+			retString := respBodyStrOk
 			retCode := http.StatusOK
 			retHeaders := map[string]string{}
 			var blockResponse chan struct{}
@@ -325,7 +329,7 @@ func BenchmarkHTTPSinkAddIndividualDatapoints(b *testing.B) {
 	l := len(points)
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < l; j++ {
-			var dp = make([]*datapoint.Datapoint, 0)
+			dp := make([]*datapoint.Datapoint, 0)
 			dp = append(dp, points[j])
 			_ = sink.AddDatapoints(ctx, dp)
 		}
@@ -348,7 +352,7 @@ func BenchmarkHTTPSinkAddIndividualEvents(b *testing.B) {
 	l := len(events)
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < l; j++ {
-			var ev = make([]*event.Event, 0)
+			ev := make([]*event.Event, 0)
 			ev = append(ev, events[j])
 			_ = sink.AddEvents(ctx, ev)
 		}
@@ -375,12 +379,11 @@ func TestHTTPEventSink(t *testing.T) {
 			So(s.AddEvents(ctx, events), ShouldNotBeNil)
 		})
 		Convey("should not try dead contexts", func() {
-			var ctx = context.Background()
-			ctx, can := context.WithCancel(ctx)
+			ctx1, can := context.WithCancel(context.Background())
 			can()
-			So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "context already closed")
+			So(errors.Details(s.AddEvents(ctx1, events)), ShouldContainSubstring, "context already closed")
 			Convey("but empty events should always work", func() {
-				So(s.AddEvents(ctx, []*event.Event{}), ShouldBeNil)
+				So(s.AddEvents(ctx1, []*event.Event{}), ShouldBeNil)
 			})
 		})
 		Convey("should check failure to encode", func() {
@@ -390,7 +393,7 @@ func TestHTTPEventSink(t *testing.T) {
 			So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "failure to encode")
 		})
 		Convey("should check invalid endpoints", func() {
-			s.EventEndpoint = "%gh&%ij"
+			s.EventEndpoint = sinkEndpoint
 			So(errors.Details(s.AddEvents(ctx, events)), ShouldContainSubstring, "cannot parse new HTTP request to")
 		})
 		Convey("reading the full body should be checked", func() {
@@ -400,7 +403,7 @@ func TestHTTPEventSink(t *testing.T) {
 			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)).Error(), ShouldEqual, "cannot fully read response body: read bad: map[]")
 		})
 		Convey("with a test endpoint", func() {
-			retString := `"OK"`
+			retString := respBodyStrOk
 			retCode := http.StatusOK
 			var blockResponse chan struct{}
 			var cancelCallback func()
@@ -535,12 +538,11 @@ func TestHTTPTraceSink(t *testing.T) {
 			So(s.AddSpans(ctx, traces), ShouldNotBeNil)
 		})
 		Convey("should not try dead contexts", func() {
-			var ctx = context.Background()
-			ctx, can := context.WithCancel(ctx)
+			ctx1, can := context.WithCancel(context.Background())
 			can()
-			So(errors.Details(s.AddSpans(ctx, traces)), ShouldContainSubstring, "context already closed")
+			So(errors.Details(s.AddSpans(ctx1, traces)), ShouldContainSubstring, "context already closed")
 			Convey("but empty traces should always work", func() {
-				So(s.AddSpans(ctx, []*trace.Span{}), ShouldBeNil)
+				So(s.AddSpans(ctx1, []*trace.Span{}), ShouldBeNil)
 			})
 		})
 		Convey("should check failure to encode", func() {
@@ -550,7 +552,7 @@ func TestHTTPTraceSink(t *testing.T) {
 			So(errors.Details(s.AddSpans(ctx, traces)), ShouldContainSubstring, "failure to encode")
 		})
 		Convey("should check invalid endpoints", func() {
-			s.TraceEndpoint = "%gh&%ij"
+			s.TraceEndpoint = sinkEndpoint
 			err := s.AddSpans(ctx, traces)
 			fmt.Println(err)
 			So(errors.Details(err), ShouldContainSubstring, "cannot parse new HTTP request to")
@@ -580,8 +582,8 @@ func TestHTTPTraceSink(t *testing.T) {
 						cancelCallback()
 					}
 					select {
-					case <-req.Cancel:
 					case <-blockResponse:
+					default:
 					}
 				}
 			})
@@ -610,7 +612,7 @@ func TestHTTPTraceSink(t *testing.T) {
 				So(errors.Details(err), ShouldContainSubstring, `"invalidSpanID":["abcdef1234567890"]`)
 			})
 			Convey("should error on invalid json response", func() {
-				retString = `"OK"`
+				retString = respBodyStrOk
 				err := s.AddSpans(ctx, traces)
 				So(err, ShouldBeNil)
 			})
@@ -672,7 +674,6 @@ func TestSAPMMarshal(t *testing.T) {
 				})
 			})
 		})
-
 	})
 }
 
@@ -702,8 +703,6 @@ func (g *goSpans) Spans() []*trace.Span {
 	return tt
 }
 
-type contextPut string
-
 func TestSetHeaders(t *testing.T) {
 	Convey("test headers", t, func() {
 		h := &HTTPSink{AuthToken: "foo", UserAgent: "agent"}
@@ -718,10 +717,10 @@ func TestSetHeaders(t *testing.T) {
 	})
 	Convey("test setTokenHeader", t, func() {
 		h := &HTTPSink{AuthToken: "foo", UserAgent: "agent"}
-		req := httptest.NewRequest("post", "/v2/datapoint", nil)
-		// nolint: golint
+		req := httptest.NewRequest(http.MethodPost, "/v2/datapoint", nil)
+		// nolint:golint,staticcheck
 		ctx := context.WithValue(context.Background(), TokenHeaderName, "bar")
 		h.setTokenHeader(ctx, req)
-		So(req.Header.Get(string(TokenHeaderName)), ShouldEqual, "bar")
+		So(req.Header.Get(TokenHeaderName), ShouldEqual, "bar")
 	})
 }

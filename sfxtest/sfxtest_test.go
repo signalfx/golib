@@ -28,29 +28,29 @@ type errCheckerTest struct {
 	name string
 }
 
-func (ect *errCheckerTest) GetName() (string, error) {
-	if err := ect.CheckForError("GetName"); err != nil {
+func (e *errCheckerTest) GetName() (string, error) {
+	if err := e.CheckForError("GetName"); err != nil {
 		return "", err
 	}
-	return ect.name, nil
+	return e.name, nil
 }
 
-func (ect *errCheckerTest) SetName(name string) error {
-	if err := ect.CheckForError("SetName"); err != nil {
+func (e *errCheckerTest) SetName(name string) error {
+	if err := e.CheckForError("SetName"); err != nil {
 		return err
 	}
-	ect.name = name
+	e.name = name
 	return nil
 }
 
 func TestSetErrorCheck(t *testing.T) {
 	Convey("Given a struct using ErrChecker and an ErrCheck", t, func() {
-		ect := &errCheckerTest{name: "hi"}
-		error := errors.New("my error")
-		errCheck := ForcedError(error, "GetName")
+		e := &errCheckerTest{name: "hi"}
+		err := errors.New("my error")
+		errCheck := ForcedError(err, "GetName")
 		Convey("SetErrorCheck(ErrCheck) will make struct use ErrCheck", func() {
-			ect.SetErrorCheck(errCheck)
-			_, err := ect.GetName()
+			e.SetErrorCheck(errCheck)
+			_, err := e.GetName()
 			So(err, ShouldEqual, err)
 		})
 	})
@@ -58,18 +58,18 @@ func TestSetErrorCheck(t *testing.T) {
 
 func TestCheckForError(t *testing.T) {
 	Convey("Given a struct using ErrChecker and an ErrCheck", t, func() {
-		ect := &errCheckerTest{name: "hi"}
-		error := errors.New("my error")
+		e := &errCheckerTest{name: "hi"}
+		err := errors.New("my error")
 		Convey("With ErrCheck set CheckForErrors uses the ErrCheck", func() {
-			ect.SetErrorCheck(ForcedError(error, "GetName"))
-			_, err := ect.GetName()
+			e.SetErrorCheck(ForcedError(err, "GetName"))
+			_, err := e.GetName()
 			So(err, ShouldEqual, err)
-			So(ect.SetName("new name"), ShouldBeNil)
+			So(e.SetName("new name"), ShouldBeNil)
 		})
 		Convey("Without ErrCheck set CheckForErrors returns nil", func() {
-			_, err := ect.GetName()
+			_, err := e.GetName()
 			So(err, ShouldBeNil)
-			So(ect.SetName("new name"), ShouldBeNil)
+			So(e.SetName("new name"), ShouldBeNil)
 		})
 	})
 }

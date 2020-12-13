@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"testing"
-
 	"time"
 
 	"github.com/signalfx/golib/v3/datapoint"

@@ -15,7 +15,6 @@ func TestBadIniLoad(t *testing.T) {
 }
 
 func TestIniConf(t *testing.T) {
-
 	file, err := ioutil.TempFile("", "TestIniConf")
 	assert.NoError(t, err)
 	defer func() {

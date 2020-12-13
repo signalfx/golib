@@ -1,10 +1,9 @@
 package nettest
 
 import (
+	"fmt"
 	"net"
 	"testing"
-
-	"fmt"
 
 	"github.com/signalfx/golib/v3/log"
 	"github.com/stretchr/testify/assert"

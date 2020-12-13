@@ -27,5 +27,4 @@ func TestTimeCounter(t *testing.T) {
 		So(dp1.Metric, ShouldEqual, "mname")
 		So(dp1.Value.String(), ShouldEqual, "1")
 	})
-
 }

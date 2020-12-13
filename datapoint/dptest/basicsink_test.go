@@ -1,10 +1,9 @@
 package dptest
 
 import (
+	"context"
 	"errors"
 	"testing"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
@@ -26,6 +25,7 @@ func TestBasicSinkEvent(t *testing.T) {
 	assert.NoError(t, b.AddEvents(context.Background(), []*event.Event{}))
 	assert.Equal(t, 1, len(b.EventsChan))
 }
+
 func TestBasicSinkTrace(t *testing.T) {
 	b := NewBasicSink()
 	b.TracesChan = make(chan []*trace.Span, 2)

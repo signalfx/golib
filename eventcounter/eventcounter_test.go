@@ -1,11 +1,10 @@
 package eventcounter
 
 import (
-	"testing"
-	"time"
-
 	"runtime"
 	"sync"
+	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )

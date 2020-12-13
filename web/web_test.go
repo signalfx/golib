@@ -1,16 +1,14 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
-
-	"sync/atomic"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/errors"
 	. "github.com/smartystreets/goconvey/convey"
@@ -43,7 +41,7 @@ func (i *IncrHandler) makeHTTP(next http.Handler) http.Handler {
 func TestInvalidContentType(t *testing.T) {
 	Convey("Invalid content type should work", t, func() {
 		rec := httptest.NewRecorder()
-		req, err := http.NewRequest("", "", nil)
+		req, err := http.NewRequestWithContext(context.Background(), "", "", nil)
 		So(err, ShouldBeNil)
 		req.Header.Add("Content-Type", "bob")
 		InvalidContentType(rec, req)
@@ -69,7 +67,7 @@ func TestHandler(t *testing.T) {
 
 	h.Add(ConstructorFunc(v1.Generate), HTTPConstructor(i.makeHTTP), NextHTTP(i.ServeHTTP))
 	rw := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/", nil)
 	h.ServeHTTP(rw, req)
 	assert.EqualValues(t, 2, i.after)
 
@@ -104,7 +102,7 @@ func TestMany(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	h := NewHandler(ctx, HandlerFunc(destination)).Add(NextConstructor(addTowrite), HTTPConstructor(incrHandler.makeHTTP))
+	h := NewHandler(ctx, destination).Add(NextConstructor(addTowrite), HTTPConstructor(incrHandler.makeHTTP))
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
@@ -116,7 +114,7 @@ func TestMany(t *testing.T) {
 					time.Sleep(time.Nanosecond)
 				}
 				rw := httptest.NewRecorder()
-				req, _ := http.NewRequest("POST", "/", nil)
+				req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/", nil)
 				req.Header.Add("towrite", fmt.Sprintf("%d", j))
 				h.ServeHTTP(rw, req)
 				assert.Equal(t, fmt.Sprintf("%d", j), rw.Body.String())
@@ -132,9 +130,9 @@ func TestNoMiddleware(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	h := NewHandler(ctx, HandlerFunc(destination))
+	h := NewHandler(ctx, destination)
 	rw := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/", nil)
 	h.ServeHTTP(rw, req)
 	assert.Equal(t, "Hello", rw.Body.String())
 }
@@ -148,9 +146,9 @@ func TestPanicCheck(t *testing.T) {
 		return next
 	})
 	middle := hcreate.CreateMiddleware(destination)
-	hand = ToHTTP(nil, middle)
 	ctx := context.Background()
-	req, _ := http.NewRequest("POST", "/", nil)
+	hand = ToHTTP(ctx, middle)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "/", nil)
 	rw := httptest.NewRecorder()
 	assert.Panics(t, func() {
 		middle.ServeHTTPC(ctx, rw, req)
@@ -167,14 +165,14 @@ func BenchmarkSendWithContext(b *testing.B) {
 	})
 
 	ctx := context.Background()
-	h := NewHandler(ctx, HandlerFunc(destination)).Add(NextConstructor(addTowrite), HTTPConstructor(incrHandler.makeHTTP))
+	h := NewHandler(ctx, destination).Add(NextConstructor(addTowrite), HTTPConstructor(incrHandler.makeHTTP))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.StopTimer()
 	for j := 0; j < b.N; j++ {
 		rw := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/", nil)
 		req.Header.Add("towrite", fmt.Sprintf("%d", j))
 		b.StartTimer()
 		h.ServeHTTP(rw, req)
@@ -188,14 +186,14 @@ func BenchmarkMinimal(b *testing.B) {
 	})
 
 	ctx := context.Background()
-	h := NewHandler(ctx, HandlerFunc(destination))
+	h := NewHandler(ctx, destination)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.StopTimer()
 	for j := 0; j < b.N; j++ {
 		rw := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/", nil)
 		b.StartTimer()
 		h.ServeHTTP(rw, req)
 		b.StopTimer()
@@ -208,14 +206,14 @@ func BenchmarkSingle(b *testing.B) {
 	})
 
 	ctx := context.Background()
-	h := NewHandler(ctx, HandlerFunc(destination)).Add(NextConstructor(incrHandler.ServeHTTPCN))
+	h := NewHandler(ctx, destination).Add(NextConstructor(incrHandler.ServeHTTPCN))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.StopTimer()
 	for j := 0; j < b.N; j++ {
 		rw := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/", nil)
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "/", nil)
 		b.StartTimer()
 		h.ServeHTTP(rw, req)
 		b.StopTimer()

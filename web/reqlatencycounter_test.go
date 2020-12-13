@@ -1,10 +1,9 @@
 package web
 
 import (
+	"context"
 	"testing"
 	"time"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/timekeeper/timekeepertest"
 	. "github.com/smartystreets/goconvey/convey"
@@ -61,5 +60,4 @@ func TestReqLatencyCounter(t *testing.T) {
 			So(len(stats), ShouldEqual, 2)
 		})
 	})
-
 }

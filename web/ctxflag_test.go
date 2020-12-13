@@ -53,7 +53,7 @@ func TestCtxWithFlag(t *testing.T) {
 		}
 		chain := NewHandler(ctx, r.AsHandler()).Add(&c)
 		rw := httptest.NewRecorder()
-		req, err := http.NewRequest("POST", "", nil)
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "", nil)
 		So(err, ShouldBeNil)
 		chain.ServeHTTPC(ctx, rw, req)
 		So(rw.Header().Get("X-Test"), ShouldNotEqual, "")
@@ -87,7 +87,7 @@ func TestHeaderCtxFlag(t *testing.T) {
 		hs := handleStack([]handleCall{})
 		ctx := context.Background()
 		Convey("should not setup by default,", func() {
-			req, err := http.NewRequest("", "", nil)
+			req, err := http.NewRequestWithContext(context.Background(), "", "", nil)
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
 			h.CreateMiddleware(&hs).ServeHTTPC(ctx, rw, req)
@@ -99,7 +99,7 @@ func TestHeaderCtxFlag(t *testing.T) {
 			Convey("And flag set,", func() {
 				h.SetFlagStr("enabled")
 				Convey("should fail when not set correctly,", func() {
-					req, err := http.NewRequest("", "", nil)
+					req, err := http.NewRequestWithContext(context.Background(), "", "", nil)
 					So(err, ShouldBeNil)
 					req.Header.Add(h.HeaderName, "not-enabled")
 					rw := httptest.NewRecorder()
@@ -108,7 +108,7 @@ func TestHeaderCtxFlag(t *testing.T) {
 					So(h.HasFlag(hs[0].ctx), ShouldBeFalse)
 				})
 				Convey("should check headers,", func() {
-					req, err := http.NewRequest("", "", nil)
+					req, err := http.NewRequestWithContext(context.Background(), "", "", nil)
 					So(err, ShouldBeNil)
 					req.Header.Add(h.HeaderName, "enabled")
 					rw := httptest.NewRecorder()
@@ -117,7 +117,7 @@ func TestHeaderCtxFlag(t *testing.T) {
 					So(h.HasFlag(hs[0].ctx), ShouldBeTrue)
 				})
 				Convey("should check query params,", func() {
-					req, err := http.NewRequest("GET", "http://localhost?X-Debug=enabled", nil)
+					req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost?X-Debug=enabled", nil)
 					So(err, ShouldBeNil)
 					rw := httptest.NewRecorder()
 					h.ServeHTTPC(ctx, rw, req, &hs)
@@ -125,8 +125,6 @@ func TestHeaderCtxFlag(t *testing.T) {
 					So(h.HasFlag(hs[0].ctx), ShouldBeTrue)
 				})
 			})
-
 		})
 	})
-
 }

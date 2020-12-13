@@ -1,12 +1,11 @@
 package zktest
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
-
-	"errors"
 
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/v3/log"
@@ -21,9 +20,13 @@ func TestAfterClose(t *testing.T) {
 	z.offerEvent(zk.Event{})
 }
 
-func ensureCreate(s string, err error) {
+func ensureCreate(_ string, err error) {
 	log.IfErr(log.Panic, err)
 }
+
+const (
+	deleteStr = "delete"
+)
 
 func TestEnsureDelete(t *testing.T) {
 	assert.Equal(t, ErrDeleteOnRoot, EnsureDelete(nil, "/"))
@@ -34,7 +37,7 @@ func TestEnsureDelete(t *testing.T) {
 	ensureCreate(z.Create("/bob/bob2", []byte(""), 0, nil))
 	i := 0
 	z.SetErrorCheck(func(s string) error {
-		if s == "delete" {
+		if s == deleteStr {
 			return errors.New("delete fails")
 		}
 		i++
@@ -45,7 +48,7 @@ func TestEnsureDelete(t *testing.T) {
 	})
 	assert.Error(t, EnsureDelete(z, "/bob"))
 	s.SetErrorCheck(func(s string) error {
-		if s == "delete" {
+		if s == deleteStr {
 			return errors.New("delete fails")
 		}
 		return nil
@@ -61,14 +64,14 @@ func TestForcedErrorCheck(t *testing.T) {
 	s := New()
 	s.ChanTimeout = time.Millisecond * 250
 	s.SetErrorCheck(func(s string) error {
-		if s == "delete" {
+		if s == deleteStr {
 			return errors.New("delete fails")
 		}
 		return nil
 	})
 	z1, _, _ := s.Connect()
-	err := z1.Delete("/", 0)
-	assert.Error(t, err)
+	err1 := z1.Delete("/", 0)
+	assert.Error(t, err1)
 	s.SetErrorCheck(nil)
 	z1.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
@@ -102,8 +105,8 @@ func TestForcedErrorCheck(t *testing.T) {
 	f(z2)
 
 	s.SetErrorCheck(nil)
-	_, _, ch, err := z2.ChildrenW("/")
-	assert.NoError(t, err)
+	_, _, ch, err2 := z2.ChildrenW("/")
+	assert.NoError(t, err2)
 	b := make(chan struct{})
 	go func() {
 		<-ch
@@ -297,7 +300,8 @@ out1:
 		}
 	}
 
-	_, _, _, err := z.GetW(prefix)
+	_, zkStat, _, err := z.GetW(prefix)
+	assert.Nil(t, zkStat)
 	assert.Error(t, err)
 	p, err := z.Create(prefix, []byte(""), 0, zk.WorldACL(zk.PermAll))
 	assert.NoError(t, err)
@@ -306,7 +310,7 @@ out1:
 	_, st, ch, err := z.GetW(prefix)
 	assert.NoError(t, err)
 
-	st, err = z.Set(prefix, []byte("new"), st.Version)
+	_, err = z.Set(prefix, []byte("new"), st.Version)
 	assert.NoError(t, err)
 
 	select {
@@ -344,7 +348,8 @@ func testChildrenW(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e <-chan
 	_, err := z.Create(prefix, []byte(""), 0, zk.WorldACL(zk.PermAll))
 	assert.NoError(t, err)
 
-	_, _, _, err = z.ChildrenW(prefix + "/bob/bob")
+	_, st, _, err := z.ChildrenW(prefix + "/bob/bob")
+	assert.Nil(t, st)
 	assert.Error(t, err)
 
 	c, _, ch, err := z.ChildrenW(prefix)
@@ -388,7 +393,7 @@ func TestChildrenWNotHere(t *testing.T) {
 	testChildrenWNotHere(t, z1, z2, e)
 }
 
-func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e <-chan zk.Event) {
+func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e1 <-chan zk.Event) {
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testChildrenWNotHere", []byte(""), 0, zk.WorldACL(zk.PermAll)))
@@ -398,7 +403,8 @@ func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e
 		go EnsureDeleteTesting(t, z, prefix)
 	}()
 
-	_, _, e, err := z.ChildrenW(prefix)
+	_, st, e, err := z.ChildrenW(prefix)
+	assert.Nil(t, st)
 	assert.Equal(t, zk.ErrNoNode, err)
 	ensureCreate(z2.Create(prefix, []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z2.Create(prefix+"/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))

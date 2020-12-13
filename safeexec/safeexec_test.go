@@ -1,14 +1,11 @@
 package safeexec
 
 import (
-	"testing"
-
 	"runtime"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-var Bob = "abc"
 
 func TestEchoExec(t *testing.T) {
 	if runtime.GOOS != "windows" {
