@@ -393,7 +393,7 @@ func TestChildrenWNotHere(t *testing.T) {
 	testChildrenWNotHere(t, z1, z2, e)
 }
 
-func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e1 <-chan zk.Event) {
+func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, _ <-chan zk.Event) {
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testChildrenWNotHere", []byte(""), 0, zk.WorldACL(zk.PermAll)))

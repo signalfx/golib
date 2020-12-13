@@ -232,7 +232,7 @@ type getData struct {
 	ChangeIndex  int64
 }
 
-func (f *FilterChangeHandler) servePost(rw http.ResponseWriter, req *http.Request) error {
+func (f *FilterChangeHandler) servePost(_ http.ResponseWriter, req *http.Request) error {
 	if err := req.ParseForm(); err != nil {
 		return errors.Annotate(err, "cannot parse POST form")
 	}
@@ -266,7 +266,7 @@ func FiltersFromString(newRegex string) (map[string]*regexp.Regexp, error) {
 	return newFilters, nil
 }
 
-func (f *FilterChangeHandler) serveGet(rw http.ResponseWriter, req *http.Request, postErr error) {
+func (f *FilterChangeHandler) serveGet(rw http.ResponseWriter, _ *http.Request, postErr error) {
 	allFilters := f.Filter.GetFilters()
 	currentData := make([]string, 0, len(allFilters))
 	for key, filter := range allFilters {

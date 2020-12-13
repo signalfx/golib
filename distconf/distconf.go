@@ -275,7 +275,7 @@ func (c *Distconf) refresh(key string, configVar configVariable) bool {
 	return dynamicReadersOnPath
 }
 
-func (c *Distconf) watch(key string, configVar configVariable) {
+func (c *Distconf) watch(key string, _ configVariable) {
 	for _, backing := range c.readers {
 		d, ok := backing.(Dynamic)
 		if ok {
