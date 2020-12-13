@@ -83,7 +83,6 @@ linters:
     - gochecknoglobals
     - errcheck
     - gosec
-    - interfacer
     - dupl
     - exhaustive
     - whitespace

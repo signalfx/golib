@@ -19,7 +19,7 @@ func TestPrefix(t *testing.T) {
 	testPrefix(t, zkp)
 }
 
-func testPrefix(t *testing.T, zkp *ZkPlus) {
+func testPrefix(t *testing.T, zkp zktest.ZkConnSupported) {
 	defer func() {
 		log.IfErr(log.Panic, zktest.EnsureDelete(zkp, "modifyNode"))
 	}()
