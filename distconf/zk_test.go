@@ -2,6 +2,7 @@ package distconf
 
 import (
 	"errors"
+	"runtime"
 	"testing"
 	"time"
 
@@ -17,8 +18,8 @@ func TestZkNewlyCreated(t *testing.T) {
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
 	}), &ZkConfig{})
-	defer z.Close()
 	assert.NoError(t, err)
+	defer z.Close()
 	seenCallbacks := make(chan string, 2)
 	callback := func(s string) {
 		seenCallbacks <- s
@@ -36,8 +37,8 @@ func TestZkConf(t *testing.T) {
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
 	}), &ZkConfig{})
-	defer z.Close()
 	assert.NoError(t, err)
+	defer z.Close()
 
 	b, err := z.Get("TestZkConf")
 	assert.NoError(t, err)
@@ -120,7 +121,6 @@ func TestErrorReregister(t *testing.T) {
 	assert.NoError(t, err)
 	defer z.Close()
 	log.IfErr(log.Panic, z.(Dynamic).Watch("hello", func(string) {
-
 	}))
 	zkServer.SetErrorCheck(func(s string) error {
 		return errors.New("nope")
@@ -161,8 +161,8 @@ func TestZkConfErrors(t *testing.T) {
 	z, err := Zk(ZkConnectorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return zkServer.Connect()
 	}), nil)
-	defer z.Close()
 	assert.NoError(t, err)
+	defer z.Close()
 
 	_, err = z.Get("TestZkConfErrors")
 	assert.Error(t, err)
@@ -172,13 +172,10 @@ func TestZkConfErrors(t *testing.T) {
 	assert.Error(t, z.(*zkConfig).reregisterWatch("TestZkConfErrors", DefaultLogger))
 
 	z.(*zkConfig).conn.Close()
-
-	//	zkp.GlobalChan <- zk.Event{
-	//		State: zk.StateDisconnected,
-	//	}
-	//	// Let the thread switch back to get code coverage
+	runtime.Gosched()
+	// Let the thread switch back to get code coverage
 	time.Sleep(10 * time.Millisecond)
-	//	zkp.Close()
+	runtime.Gosched()
 }
 
 func TestErrorLoader(t *testing.T) {

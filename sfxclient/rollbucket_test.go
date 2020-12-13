@@ -80,7 +80,6 @@ func TestRollingBucket(t *testing.T) {
 				So(len(dps), ShouldEqual, 3+len(r.Quantiles)+2)
 			})
 			Convey("Max flush size should be respected", func() {
-				r.Quantiles = append(r.Quantiles)
 				r.MaxFlushBufferSize = 1
 				tk.Incr(r.BucketWidth)
 				dps := r.Datapoints()

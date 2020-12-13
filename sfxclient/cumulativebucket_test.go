@@ -1,11 +1,10 @@
 package sfxclient
 
 import (
+	"context"
 	"math/rand"
 	"sync"
 	"testing"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/log"

@@ -1,12 +1,12 @@
 package explorable
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
-
-	"net/http"
-	"net/http/httptest"
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
@@ -28,16 +28,9 @@ func (p *Person) Name() string {
 	return p.name
 }
 
-type Classroom struct {
-	subject  string
-	teacher  Person
-	students []Person
-}
-
 type ClassPtr struct {
 	teacher  *Person
 	students []interface{}
-	subject  string
 	remap    map[string]*Person
 }
 
@@ -85,17 +78,20 @@ func TestPtr(t *testing.T) {
 }
 
 func TestInterface(t *testing.T) {
-	p := &ClassPtr{
-		teacher: &Person{
-			name: "hello",
-		},
-		students: make([]interface{}, 3),
-	}
+	var (
+		q  Nameable
+		q2 *Nameable
+		p  = &ClassPtr{
+			teacher: &Person{
+				name: "hello",
+			},
+			students: make([]interface{}, 3),
+		}
+	)
 	p.students[0] = 123
 	p.students[1] = &Person{
 		name: "hello2",
 	}
-	var q Nameable
 	q = &Person{}
 	p.students[2] = q
 	assert.Equal(t, "Person", getObj(p.teacher).Desc)
@@ -106,8 +102,6 @@ func TestInterface(t *testing.T) {
 	assert.Equal(t, "slice-len(3 of 3)", getObj(p.students).Desc)
 	assert.Equal(t, 3, len(getObj(p.students).Children))
 	verify(t, reflect.ValueOf(p), "hello", []string{"teacher", "name"})
-
-	var q2 *Nameable
 
 	exploreInterface(reflect.ValueOf(q2), []string{})
 }
@@ -239,7 +233,7 @@ func TestHandler(t *testing.T) {
 		BasePath: "/test/",
 	}
 	rw := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test/0/", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/test/0/", nil)
 	h.ServeHTTP(rw, req)
 	assert.Equal(t, http.StatusOK, rw.Code)
 }
@@ -260,7 +254,6 @@ func TestKeyMapType(t *testing.T) {
 
 	m4 := map[*int]struct{}{}
 	assert.False(t, keyMapType(reflect.ValueOf(m4).Type().Key().Kind(), "abc").IsValid())
-
 }
 
 func TestSlice(t *testing.T) {

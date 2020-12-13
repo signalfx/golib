@@ -16,7 +16,6 @@ func TestEvent(t *testing.T) {
 }
 
 func TestToProtoEC(t *testing.T) {
-
 	Convey("Invalid event categories should default to USERDEFINED", t, func() {
 		resp := ToProtoEC(sfxmodel.EventCategory(9999999))
 		So(resp, ShouldEqual, USERDEFINED)

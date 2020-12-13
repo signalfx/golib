@@ -1,13 +1,11 @@
 package dpsink
 
 import (
+	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
-
-	"sync/atomic"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dptest"

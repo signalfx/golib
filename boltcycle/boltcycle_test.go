@@ -1,7 +1,6 @@
 package boltcycle
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"io/ioutil"
@@ -22,10 +21,9 @@ type testSetup struct {
 	cdb                  *CycleDB
 	cycleLen             int
 	readMovementsBacklog int
-	log                  bytes.Buffer
 	t                    *testing.T
-	failedDelete         bool
 	asyncErrors          chan error
+	failedDelete         bool
 	readOnly             bool
 }
 

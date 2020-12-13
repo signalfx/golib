@@ -1,13 +1,12 @@
 package expvar2
 
 import (
+	"context"
 	"expvar"
-	"net/http/httptest"
-	"testing"
-
-	"os"
-
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
 
 	"github.com/signalfx/golib/v3/log"
 	. "github.com/smartystreets/goconvey/convey"
@@ -35,18 +34,18 @@ func TestExpvarHandler(t *testing.T) {
 				So(w.Body.String(), ShouldContainSubstring, "world")
 			})
 			Convey("Should not see world in output if filtered", func() {
-				reqWithFilter, _ := http.NewRequest("GET", "/bob?filter=NOT", nil)
+				reqWithFilter, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/bob?filter=NOT", nil)
 				e.ServeHTTP(w, reqWithFilter)
 				So(w.Body.String(), ShouldNotContainSubstring, "world")
 			})
 			Convey("Should still see world in output if filter allows", func() {
-				reqWithFilter, _ := http.NewRequest("GET", "/bob?filter=hello", nil)
+				reqWithFilter, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/bob?filter=hello", nil)
 				e.ServeHTTP(w, reqWithFilter)
 				So(w.Body.String(), ShouldContainSubstring, "world")
 			})
 		})
 		Convey("Pretty printing should be larger", func() {
-			reqWithPretty, _ := http.NewRequest("GET", "/bob?pretty=true", nil)
+			reqWithPretty, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "/bob?pretty=true", nil)
 			e.ServeHTTP(w, req)
 			w2 := httptest.NewRecorder()
 			e.ServeHTTP(w2, reqWithPretty)

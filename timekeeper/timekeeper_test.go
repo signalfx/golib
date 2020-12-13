@@ -29,7 +29,6 @@ func TestAfterClose(t *testing.T) {
 		panic("NOPE")
 	case <-time.After(time.Millisecond * 200):
 	}
-
 }
 
 func TestRealTime(t *testing.T) {
@@ -39,5 +38,4 @@ func TestRealTime(t *testing.T) {
 	<-r.After(time.Millisecond)
 	<-r.NewTimer(time.Millisecond).Chan()
 	assert.True(t, time.Now().After(now))
-
 }

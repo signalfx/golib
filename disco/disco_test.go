@@ -2,16 +2,14 @@ package disco
 
 import (
 	"bytes"
+	"fmt"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
-	"github.com/signalfx/golib/v3/errors"
-
-	"fmt"
-	"sort"
-
 	"github.com/samuel/go-zookeeper/zk"
+	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/zkplus"
 	"github.com/signalfx/golib/v3/zkplus/zktest"
@@ -64,7 +62,6 @@ func TestDupAdvertise(t *testing.T) {
 	s := zktest.New()
 	z, ch, _ := s.Connect()
 	testDupAdvertise(t, z, ch)
-
 }
 
 func testDupAdvertise(t *testing.T, z zktest.ZkConnSupported, ch <-chan zk.Event) {
@@ -171,8 +168,8 @@ func TestBadRefresh(t *testing.T) {
 	}
 	for {
 		runtime.Gosched()
-		err := errors.Tail(s.refresh(z))
-		if err == badForce {
+		err1 := errors.Tail(s.refresh(z))
+		if err1 == badForce {
 			break
 		}
 	}
@@ -194,7 +191,7 @@ func TestBadRefresh(t *testing.T) {
 
 	// Verifying that .Services() doesn't cache a bad result
 	delete(d1.watchedServices, "TestAdvertiseService2")
-	s, err = d1.Services("TestAdvertiseService2")
+	_, err = d1.Services("TestAdvertiseService2")
 	require.Error(t, err)
 	_, exists := d1.watchedServices["TestAdvertiseService2"]
 	require.False(t, exists)
@@ -257,7 +254,6 @@ func TestInvalidServiceJson(t *testing.T) {
 
 	_, err = d1.Services("badservice")
 	require.Error(t, err)
-
 }
 
 func TestSort(t *testing.T) {
@@ -376,7 +372,6 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	<-onWatchChan
 	require.Nil(t, s.refresh(nil))
 	<-doneForce
-
 }
 
 func TestDisco_CreatePersistentEphemeralNode(t *testing.T) {

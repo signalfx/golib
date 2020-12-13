@@ -1,6 +1,6 @@
 run:
   timeout: 1m
-  tests: false
+  tests: true
   skip-dirs:
   skip-files:
     - ".*\\.pb\\.go"
@@ -94,9 +94,9 @@ linters:
     - gomnd
     - nestif
     - nlreturn
+    - gochecknoinits
     # TODO: enable this linters later
     - goerr113
-    - gochecknoinits
   fast: true
 
 # output configuration options
