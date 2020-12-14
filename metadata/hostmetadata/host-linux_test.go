@@ -10,6 +10,7 @@ import (
 	"testing"
 )
 
+// nolint:gofumpt
 func TestFillOSSpecificData(t *testing.T) {
 	type args struct {
 		syscallUname func(*syscall.Utsname) error
@@ -53,6 +54,7 @@ func TestFillOSSpecificData(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			syscallUname = tt.args.syscallUname
 			if err := os.Setenv("HOST_ETC", tt.args.etc); err != nil {
@@ -111,6 +113,7 @@ func TestFillPlatformSpecificCPUData(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			syscallUname = tt.args.syscallUname
 			in := &CPU{}
