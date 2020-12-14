@@ -2,10 +2,8 @@ package gojavahash
 
 import (
 	"errors"
-	"math/rand"
 	"net"
 	"testing"
-	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -90,18 +88,4 @@ func TestGoJavaHash(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(a.String(), ShouldEqual, "192.168.10.1:11211")
 	})
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func RandStringRunes(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
 }

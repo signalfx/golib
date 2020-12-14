@@ -9,7 +9,6 @@ import (
 )
 
 func TestEnvConf(t *testing.T) {
-
 	e, err := EnvLoader().Get()
 	assert.NoError(t, err)
 	b, err := e.Get("not_in_env_i_hope_SDFSDFSDFSDFSDF")

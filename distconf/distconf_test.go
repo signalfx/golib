@@ -1,11 +1,9 @@
 package distconf
 
 import (
-	"testing"
-
-	"time"
-
 	"encoding/json"
+	"testing"
+	"time"
 
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/log"
@@ -35,15 +33,18 @@ func (m *allErrorBacking) Close() {
 type allErrorconfigVariable struct {
 }
 
-func (a *allErrorconfigVariable) Update(newValue []byte) error {
+func (a *allErrorconfigVariable) Update(_ []byte) error {
 	return errNope
 }
+
 func (a *allErrorconfigVariable) GenericGet() interface{} {
 	return errNope
 }
+
 func (a *allErrorconfigVariable) GenericGetDefault() interface{} {
 	return errNope
 }
+
 func (a *allErrorconfigVariable) Type() DistType {
 	return IntType
 }
@@ -151,21 +152,18 @@ func TestDistconfStr(t *testing.T) {
 	// check callback
 	assert.Equal(t, 2, totalWatches)
 	assert.Contains(t, conf.Var().String(), "testval_other")
-
 }
 
 func TestDistconfDuration(t *testing.T) {
 	memConf, conf := makeConf()
 	defer conf.Close()
-
-	//default
-
+	// default
 	val := conf.Duration("testval", time.Second)
 	assert.Equal(t, time.Second, val.Get())
 	totalWatches := 0
-	val.Watch(DurationWatch(func(*Duration, time.Duration) {
+	val.Watch(func(*Duration, time.Duration) {
 		totalWatches++
-	}))
+	})
 
 	// update valid
 	log.IfErr(log.Panic, memConf.Write("testval", []byte("10ms")))
@@ -191,15 +189,13 @@ func TestDistconfDuration(t *testing.T) {
 func TestDistconfBool(t *testing.T) {
 	memConf, conf := makeConf()
 	defer conf.Close()
-
-	//default
-
+	// default
 	val := conf.Bool("testval", false)
 	assert.False(t, val.Get())
 	totalWatches := 0
-	val.Watch(BoolWatch(func(*Bool, bool) {
+	val.Watch(func(*Bool, bool) {
 		totalWatches++
-	}))
+	})
 
 	// update valid
 	log.IfErr(log.Panic, memConf.Write("testval", []byte("true")))
@@ -239,7 +235,6 @@ func TestDistconfErrorBackings(t *testing.T) {
 	assert.NotPanics(t, func() {
 		conf.refresh("testval2", &allErrorconfigVariable{})
 	})
-
 }
 
 func testInfo(t *testing.T, dat map[string]DistInfo, key string, val interface{}, dtype DistType) {

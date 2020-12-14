@@ -1,11 +1,10 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 )

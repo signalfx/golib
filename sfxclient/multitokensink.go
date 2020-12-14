@@ -666,7 +666,7 @@ func (a *AsyncMultiTokenSink) AddDatapointsWithToken(token string, datapoints []
 	return
 }
 
-// AddDatapoints add datepoints to the multitoken sync using a context that has the TokenCtxKey
+// AddDatapoints add datapoints to the multi token sync using a context that has the TokenCtxKey
 func (a *AsyncMultiTokenSink) AddDatapoints(ctx context.Context, datapoints []*datapoint.Datapoint) (err error) {
 	if token := ctx.Value(TokenCtxKey); token != nil {
 		err = a.AddDatapointsWithToken(token.(string), datapoints)
@@ -707,7 +707,7 @@ func (a *AsyncMultiTokenSink) AddEventsWithToken(token string, events []*event.E
 	return
 }
 
-// AddEvents add datepoints to the multitoken sync using a context that has the TokenCtxKey
+// AddEvents add datapoints to the multi token sync using a context that has the TokenCtxKey
 func (a *AsyncMultiTokenSink) AddEvents(ctx context.Context, events []*event.Event) (err error) {
 	if token := ctx.Value(TokenCtxKey); token != nil {
 		err = a.AddEventsWithToken(token.(string), events)

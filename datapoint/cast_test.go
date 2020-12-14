@@ -112,6 +112,7 @@ var castMetricValueTests = []CastMetricValueTest{
 
 func TestCastMetricValue(t *testing.T) {
 	for _, tt := range castMetricValueTests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotMetricValue, err := CastMetricValue(tt.args.value)
 			if (err != nil) != tt.wantErr {
@@ -144,6 +145,7 @@ var castMetricValueWithBoolTests = append(castMetricValueTests,
 
 func TestCastMetricValueWithBool(t *testing.T) {
 	for _, tt := range castMetricValueWithBoolTests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotMetricValue, err := CastMetricValueWithBool(tt.args.value)
 			if (err != nil) != tt.wantErr {
@@ -176,6 +178,7 @@ func TestCastFloatValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotMetricValue, err := CastFloatValue(tt.args.value)
 			if (err != nil) != tt.wantErr {
@@ -208,6 +211,7 @@ func TestCastUIntegerValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotMetricValue, err := CastUIntegerValue(tt.args.value)
 			if (err != nil) != tt.wantErr {
@@ -240,6 +244,7 @@ func TestCastIntegerValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotMetricValue, err := CastIntegerValue(tt.args.value)
 			if (err != nil) != tt.wantErr {

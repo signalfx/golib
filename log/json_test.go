@@ -35,7 +35,6 @@ func TestJSONLoggerInternal(t *testing.T) {
 			So(func() {
 				l.Log("err", &panicError{})
 			}, ShouldPanicWith, "failure?")
-
 		})
 		Convey("should forward errors", func() {
 			c := NewChannelLogger(1, Panic)

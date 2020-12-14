@@ -1,7 +1,6 @@
 package boltcycle
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"io/ioutil"
@@ -22,10 +21,9 @@ type testSetup struct {
 	cdb                  *CycleDB
 	cycleLen             int
 	readMovementsBacklog int
-	log                  bytes.Buffer
 	t                    *testing.T
-	failedDelete         bool
 	asyncErrors          chan error
+	failedDelete         bool
 	readOnly             bool
 }
 
@@ -131,7 +129,7 @@ func TestCursorHeap(t *testing.T) {
 }
 
 func TestErrUnexpectedNonBucket(t *testing.T) {
-	testRun := setupCdb(t, 5)
+	testRun := setupCdb(t, 6)
 	defer func() {
 		log.IfErr(log.Panic, testRun.Close())
 	}()
@@ -164,7 +162,7 @@ func TestVerifyCompressed(t *testing.T) {
 		log.IfErr(log.Panic, testRun.Close())
 	}()
 	testRun.canWrite("hello", "world")
-	testRun.canWrite("hello2", "world")
+	testRun.canWrite("hello2", "world2")
 	testRun.canCycle()
 	testRun.canWrite("hello", "world")
 
@@ -207,12 +205,12 @@ func TestMoveRecentReads(t *testing.T) {
 	defer func() {
 		log.IfErr(log.Panic, testRun.Close())
 	}()
-	testRun.canWrite("hello", "world")
+	testRun.canWrite("hello4", "world4")
 	testRun.canCycle()
 	testRun.canClose()
 	testRun.readOnly = true
 	testRun.canOpen()
-	testRun.equals("hello", "world")
+	testRun.equals("hello4", "world4")
 }
 
 func TestAsyncWriteEventuallyHappens(t *testing.T) {
@@ -414,9 +412,9 @@ func TestReadDelete(t *testing.T) {
 		log.IfErr(log.Panic, testRun.Close())
 	}()
 
-	testRun.isEmpty("hello")
-	testRun.canDelete("hello", false)
-	testRun.isEmpty("hello")
+	testRun.isEmpty("hello1")
+	testRun.canDelete("hello1", false)
+	testRun.isEmpty("hello1")
 
 	testRun.canWrite("hello", "world")
 	testRun.equals("hello", "world")

@@ -1,6 +1,7 @@
 package httpdebug
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -39,17 +40,23 @@ func TestDebugServer(t *testing.T) {
 		}()
 		serverURL := fmt.Sprintf("http://127.0.0.1:%d", listenPort)
 		Convey("and find commandline", func() {
-			resp, err := http.Get(serverURL + "/debug/pprof/cmdline")
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, serverURL+"/debug/pprof/cmdline", nil)
+			So(err, ShouldBeNil)
+			resp, err := http.DefaultClient.Do(req)
 			So(err, ShouldBeNil)
 			So(resp.StatusCode, ShouldEqual, http.StatusOK)
+			resp.Body.Close()
 		})
 		Convey("and find explorable", func() {
-			resp, err := http.Get(serverURL + "/debug/explorer/name")
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, serverURL+"/debug/explorer/name", nil)
+			So(err, ShouldBeNil)
+			resp, err := http.DefaultClient.Do(req)
 			So(err, ShouldBeNil)
 			So(resp.StatusCode, ShouldEqual, http.StatusOK)
 			s, err := ioutil.ReadAll(resp.Body)
 			So(err, ShouldBeNil)
 			So(string(s), ShouldContainSubstring, "bob123")
+			resp.Body.Close()
 		})
 
 		Reset(func() {

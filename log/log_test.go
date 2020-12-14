@@ -187,6 +187,7 @@ func BenchmarkContextWithWithLog(b *testing.B) {
 		c.With("type", "dog").Log("name", "bob")
 	}
 }
+
 func BenchmarkDiscard(b *testing.B) {
 	logger := Discard
 	b.ReportAllocs()
@@ -455,7 +456,6 @@ func fullyVerifyLogger(t *testing.T, factory func() (Logger, *bytes.Buffer)) {
 			}
 		})
 	})
-
 }
 
 func raceCheckerIter(l Logger, deep int, iter int) {

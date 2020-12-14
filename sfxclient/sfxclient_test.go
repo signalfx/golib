@@ -1,6 +1,8 @@
 package sfxclient
 
 import (
+	"context"
+	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
@@ -8,10 +10,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"fmt"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/errors"
@@ -29,9 +27,7 @@ func (t *testSink) AddDatapoints(ctx context.Context, points []*datapoint.Datapo
 	return t.retErr
 }
 
-var (
-	collectors []Collector
-)
+var collectors []Collector
 
 func addBucketValues(bucket *RollingBucket, wg *sync.WaitGroup) {
 	rangeInt := 10
@@ -66,24 +62,25 @@ func setupCollectors(collectorsCount int) {
 }
 
 func TestScheduler_ReportOnce(t *testing.T) {
-	var handleErrors []error
-	var handleErrRet error
-	s := &Scheduler{
-		Sink: &testSink{
-			lastDatapoints: make(chan []*datapoint.Datapoint, 1),
-		},
-		Timer: timekeepertest.NewStubClock(time.Now()),
-		ErrorHandler: func(e error) error {
-			handleErrors = append(handleErrors, e)
-			return errors.Wrap(handleErrRet, e)
-		},
-		ReportingDelayNs: time.Second.Nanoseconds(),
-		callbackMap:      make(map[string]*callbackPair),
-	}
+	var (
+		handleErrors []error
+		handleErrRet error
+		s            = &Scheduler{
+			Sink: &testSink{
+				lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+			},
+			Timer: timekeepertest.NewStubClock(time.Now()),
+			ErrorHandler: func(e error) error {
+				handleErrors = append(handleErrors, e)
+				return errors.Wrap(handleErrRet, e)
+			},
+			ReportingDelayNs: time.Second.Nanoseconds(),
+			callbackMap:      make(map[string]*callbackPair),
+		}
+		ctx = context.Background()
+	)
 
 	setupCollectors(25)
-
-	ctx := context.Background()
 	for _, collector := range collectors {
 		s.AddCallback(collector)
 	}

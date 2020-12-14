@@ -1,13 +1,13 @@
 package sfxclient
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
-
-	"context"
 
 	"github.com/juju/errors"
 	"github.com/signalfx/golib/v3/datapoint"
@@ -60,7 +60,6 @@ func TestAddDataToAsyncMultitokenSink(t *testing.T) {
 
 func TestAsyncMultiTokenSinkClose(t *testing.T) {
 	Convey("An AsyncMultiTokenSink", t, func() {
-
 		Convey("should be able to close successfully when no data has been added to it", func() {
 			s := NewAsyncMultiTokenSink(int64(2), int64(2), 5, 25, "", "", "", "", newDefaultHTTPClient, nil, 0)
 			So(s, ShouldNotBeNil)
@@ -73,7 +72,7 @@ func TestAsyncMultiTokenSinkClose(t *testing.T) {
 func AddDatapointsGetError(ctx context.Context, dps []*datapoint.Datapoint) (err error) {
 	err = &SFXAPIError{
 		StatusCode:   http.StatusRequestTimeout,
-		ResponseBody: string("HELLO"),
+		ResponseBody: "HELLO",
 	}
 	return
 }
@@ -85,10 +84,11 @@ func AddDatapointsGetSuccess(ctx context.Context, dps []*datapoint.Datapoint) (e
 func AddEventsGetError(ctx context.Context, evs []*event.Event) (err error) {
 	err = &SFXAPIError{
 		StatusCode:   http.StatusRequestTimeout,
-		ResponseBody: string("HELLO"),
+		ResponseBody: "HELLO",
 	}
 	return
 }
+
 func AddEventsGetSuccess(ctx context.Context, evs []*event.Event) (err error) {
 	return
 }
@@ -96,10 +96,11 @@ func AddEventsGetSuccess(ctx context.Context, evs []*event.Event) (err error) {
 func AddSpansGetError(ctx context.Context, evs []*trace.Span) (err error) {
 	err = &SFXAPIError{
 		StatusCode:   http.StatusRequestTimeout,
-		ResponseBody: string("HELLO"),
+		ResponseBody: "HELLO",
 	}
 	return
 }
+
 func AddSpansGetSuccess(ctx context.Context, evs []*trace.Span) (err error) {
 	return
 }
@@ -132,22 +133,24 @@ func TestWorkerErrorHandlerDps(t *testing.T) {
 			s := NewAsyncMultiTokenSink(int64(1), int64(1), 5, 7, "", "", "", "", newDefaultHTTPClient, nil, 0)
 			s.ShutdownTimeout = time.Second * 5
 			s.dpChannels[0].workers[0].handleError(fmt.Errorf("this is an error"), "HELLOOOOO", []*datapoint.Datapoint{Cumulative("metricname", nil, 64)}, AddDatapointsGetSuccess)
+			runtime.Gosched()
 			time.Sleep(1 * time.Second) // wait for counts to be processed
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var dpDropped, _, _, _, _, _ = ProcessDatapoints(data)
+			dpDropped, _, _, _, _, _ := ProcessDatapoints(data)
 			So(dpDropped, ShouldEqual, 1)
 		})
 		Convey("should handle nil errors while emitting datapoints", func() {
 			s := NewAsyncMultiTokenSink(int64(1), int64(1), 5, 7, "", "", "", "", newDefaultHTTPClient, nil, 3)
 			s.ShutdownTimeout = time.Second * 5
 			s.dpChannels[0].workers[0].handleError(nil, "HELLOOOOO", []*datapoint.Datapoint{Cumulative("metricname", nil, 64)}, AddDatapointsGetSuccess)
+			runtime.Gosched()
 			time.Sleep(1 * time.Second) // wait for counts to be processed
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var dpDropped, _, _, _, _, _ = ProcessDatapoints(data)
+			dpDropped, _, _, _, _, _ := ProcessDatapoints(data)
 			So(dpDropped, ShouldEqual, 0)
 		})
 		Convey("should handle errors and retry while emitting datapoints", func() {
@@ -158,11 +161,12 @@ func TestWorkerErrorHandlerDps(t *testing.T) {
 				ResponseBody: string("HELLO"),
 			}
 			s.dpChannels[0].workers[0].handleError(err, "HELLOOOOO", []*datapoint.Datapoint{Cumulative("metricname", nil, 64)}, AddDatapointsGetError)
+			runtime.Gosched()
 			time.Sleep(1 * time.Second) // wait for counts to be processed
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var dpDropped, _, _, _, _, _ = ProcessDatapoints(data)
+			dpDropped, _, _, _, _, _ := ProcessDatapoints(data)
 			So(dpDropped, ShouldEqual, 1)
 		})
 	})
@@ -178,7 +182,7 @@ func TestWorkerErrorHandlerEvents(t *testing.T) {
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var _, evDropped, _, _, _, _ = ProcessDatapoints(data)
+			_, evDropped, _, _, _, _ := ProcessDatapoints(data)
 			So(evDropped, ShouldEqual, 1)
 		})
 		Convey("should handle nil errors while emitting events", func() {
@@ -189,7 +193,7 @@ func TestWorkerErrorHandlerEvents(t *testing.T) {
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var _, evDropped, _, _, _, _ = ProcessDatapoints(data)
+			_, evDropped, _, _, _, _ := ProcessDatapoints(data)
 			So(evDropped, ShouldEqual, 0)
 		})
 		Convey("should handle errors and retry while emitting events", func() {
@@ -197,14 +201,14 @@ func TestWorkerErrorHandlerEvents(t *testing.T) {
 			s.ShutdownTimeout = time.Second * 5
 			err := &SFXAPIError{
 				StatusCode:   http.StatusRequestTimeout,
-				ResponseBody: string("HELLO"),
+				ResponseBody: "HELLO",
 			}
 			s.evChannels[0].workers[0].handleError(err, "HELLOOOOO", []*event.Event{event.New("TotalAlloc", event.COLLECTD, nil, time.Time{})}, AddEventsGetError)
 			time.Sleep(1 * time.Second) // wait for counts to be processed
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var _, evDropped, _, _, _, _ = ProcessDatapoints(data)
+			_, evDropped, _, _, _, _ := ProcessDatapoints(data)
 			So(evDropped, ShouldEqual, 1)
 		})
 	})
@@ -222,7 +226,7 @@ func TestWorkerErrorHandlerSpans(t *testing.T) {
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var _, _, spanDropped, _, _, _ = ProcessDatapoints(data)
+			_, _, spanDropped, _, _, _ := ProcessDatapoints(data)
 			So(spanDropped, ShouldEqual, 1)
 		})
 		Convey("should handle nil errors while emitting traces", func() {
@@ -233,7 +237,7 @@ func TestWorkerErrorHandlerSpans(t *testing.T) {
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var _, _, spanDropped, _, _, _ = ProcessDatapoints(data)
+			_, _, spanDropped, _, _, _ := ProcessDatapoints(data)
 			So(spanDropped, ShouldEqual, 0)
 		})
 		Convey("should handle errors and retry while emitting traces", func() {
@@ -248,7 +252,7 @@ func TestWorkerErrorHandlerSpans(t *testing.T) {
 			data := s.Datapoints()
 			So(data, ShouldNotBeEmpty)
 			t.Log(data)
-			var _, _, spanDropped, _, _, _ = ProcessDatapoints(data)
+			_, _, spanDropped, _, _, _ := ProcessDatapoints(data)
 			So(spanDropped, ShouldEqual, 1)
 		})
 	})
@@ -454,11 +458,9 @@ func TestAsyncMultiTokenSinkCleanCloseDatapointsAndEvents(t *testing.T) {
 
 func TestAsyncMultiTokenSinkHasherError(t *testing.T) {
 	Convey("An AsyncMultiTokenSink", t, func() {
-
 		dps := GoMetricsSource.Datapoints()
 		evs := GoEventSource.Events()
 		spans := GoSpanSource.Spans()
-
 		Convey("should not be able to add datapoints or events if the hasher is nil", func() {
 			s := NewAsyncMultiTokenSink(int64(1), int64(3), 5, 30, "", "", "", "", newDefaultHTTPClient, nil, 0)
 			s.Hasher = nil
@@ -561,7 +563,7 @@ func BenchmarkAsyncMultiTokenSinkAddIndividualDatapoints(b *testing.B) {
 	l := len(points)
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < l; j++ {
-			var dp = make([]*datapoint.Datapoint, 0)
+			dp := make([]*datapoint.Datapoint, 0)
 			dp = append(dp, points[j])
 			_ = sink.AddDatapoints(ctx, dp)
 		}
@@ -584,7 +586,7 @@ func BenchmarkAsyncMultiTokenSinkAddIndividualEvents(b *testing.B) {
 	l := len(events)
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < l; j++ {
-			var ev = make([]*event.Event, 0)
+			ev := make([]*event.Event, 0)
 			ev = append(ev, events[j])
 			_ = sink.AddEvents(ctx, ev)
 		}
@@ -607,7 +609,7 @@ func BenchmarkAsyncMultiTokenSinkWithBufferAddIndividualDatapoints(b *testing.B)
 	l := len(points)
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < l; j++ {
-			var dp = make([]*datapoint.Datapoint, 0)
+			dp := make([]*datapoint.Datapoint, 0)
 			dp = append(dp, points[j])
 			_ = sink.AddDatapoints(ctx, dp)
 		}
@@ -630,7 +632,7 @@ func BenchmarkAsyncMultiTokenSinkWithBufferAddIndividualEvents(b *testing.B) {
 	l := len(events)
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < l; j++ {
-			var ev = make([]*event.Event, 0)
+			ev := make([]*event.Event, 0)
 			ev = append(ev, events[j])
 			_ = sink.AddEvents(ctx, ev)
 		}

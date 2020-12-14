@@ -464,7 +464,7 @@ func (z *ZkConn) Delete(path string, version int32) error {
 	return z.connectedTo.delete(path, version)
 }
 
-func (z *MemoryZkServer) create(path string, data []byte, flags int32, acl []zk.ACL) (string, error) {
+func (z *MemoryZkServer) create(path string, data []byte, _ int32, _ []zk.ACL) (string, error) {
 	z.rootLock.Lock()
 	defer z.rootLock.Unlock()
 	path = fixPath(path)

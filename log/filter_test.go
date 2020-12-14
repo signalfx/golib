@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -110,7 +111,7 @@ func TestFilterChangeHandler(t *testing.T) {
 		}
 		Convey("Should get as Empty", func() {
 			rw := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", "", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "", nil)
 			So(err, ShouldBeNil)
 			handler.ServeHTTP(rw, req)
 			So(rw.Code, ShouldEqual, http.StatusOK)
@@ -119,14 +120,14 @@ func TestFilterChangeHandler(t *testing.T) {
 		})
 		Convey("Should 404 on non GET/POST", func() {
 			rw := httptest.NewRecorder()
-			req, err := http.NewRequest("PUT", "", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "", nil)
 			So(err, ShouldBeNil)
 			handler.ServeHTTP(rw, req)
 			So(rw.Code, ShouldEqual, http.StatusNotFound)
 		})
 		Convey("Should error if cannot write template", func() {
 			rw := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", "", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "", nil)
 			So(err, ShouldBeNil)
 			handler.ServeHTTP(&errResponseWriter{rw}, req)
 			So(rw.Code, ShouldEqual, http.StatusInternalServerError)
@@ -134,7 +135,7 @@ func TestFilterChangeHandler(t *testing.T) {
 
 		Convey("Should be updatable", func() {
 			rw := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", "", strings.NewReader(""))
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "", strings.NewReader(""))
 			So(err, ShouldBeNil)
 			So(req.ParseForm(), ShouldBeNil)
 			req.Form.Add("newregex", "id:1")
@@ -144,7 +145,7 @@ func TestFilterChangeHandler(t *testing.T) {
 			So(len(logger.GetFilters()), ShouldEqual, 1)
 			Convey("Does nothing on invalid updates", func() {
 				rw := httptest.NewRecorder()
-				req, err := http.NewRequest("POST", "", strings.NewReader(""))
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "", strings.NewReader(""))
 				So(err, ShouldBeNil)
 				So(req.ParseForm(), ShouldBeNil)
 				req.Form.Add("newregex", "id")
@@ -155,7 +156,7 @@ func TestFilterChangeHandler(t *testing.T) {
 			})
 			Convey("Does nothing on invalid regex", func() {
 				rw := httptest.NewRecorder()
-				req, err := http.NewRequest("POST", "", strings.NewReader(""))
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "", strings.NewReader(""))
 				So(err, ShouldBeNil)
 				So(req.ParseForm(), ShouldBeNil)
 				req.Form.Add("newregex", "id:[123")
@@ -167,7 +168,7 @@ func TestFilterChangeHandler(t *testing.T) {
 
 			Convey("Does nothing on invalid POST", func() {
 				rw := httptest.NewRecorder()
-				req, err := http.NewRequest("POST", "", nil)
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "", nil)
 				So(err, ShouldBeNil)
 				handler.ServeHTTP(rw, req)
 				So(rw.Code, ShouldEqual, http.StatusOK)
@@ -177,7 +178,7 @@ func TestFilterChangeHandler(t *testing.T) {
 
 			Convey("and can change back", func() {
 				rw := httptest.NewRecorder()
-				req, err := http.NewRequest("POST", "", strings.NewReader(""))
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "", strings.NewReader(""))
 				So(err, ShouldBeNil)
 				So(req.ParseForm(), ShouldBeNil)
 				req.Form.Add("newregex", "")

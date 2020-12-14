@@ -1,9 +1,8 @@
 package maestro
 
 import (
-	"testing"
-
 	"fmt"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -84,5 +83,4 @@ func TestMaestro(t *testing.T) {
 	e["BADSERVICE_INST3_HOST"] = "host3"
 
 	assert.Equal(t, []string{"host3"}, m.GetNodeList("BADSERVICE", []string{"badclient"}))
-
 }

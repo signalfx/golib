@@ -446,9 +446,13 @@ func mapToProperties(properties map[string]interface{}) []*sfxmodel.Property {
 	return response
 }
 
+const (
+	respBodyStrOk = `"OK"`
+)
+
 func spanResponseValidator(respBody []byte) error {
 	body := string(respBody)
-	if body != `"OK"` && body != "" {
+	if body != respBodyStrOk && body != "" {
 		return spanfilter.ReturnInvalidOrError(respBody)
 	}
 

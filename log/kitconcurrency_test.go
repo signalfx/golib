@@ -10,7 +10,7 @@ import (
 
 // These test are designed to be run with the race detector.
 
-func testConcurrency(t *testing.T, logger log.Logger) {
+func testConcurrency(_ *testing.T, logger log.Logger) {
 	for _, n := range []int{10, 100, 500} {
 		wg := sync.WaitGroup{}
 		wg.Add(n)

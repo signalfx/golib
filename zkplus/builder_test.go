@@ -1,10 +1,9 @@
 package zkplus
 
 import (
+	"net"
 	"testing"
 	"time"
-
-	"net"
 
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/log"

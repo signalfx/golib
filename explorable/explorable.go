@@ -130,7 +130,7 @@ func exploreArray(t reflect.Value, path []string) *Result {
 	return ExploreObject(t.Index(int(index)), path[1:])
 }
 
-func exploreFunc(t reflect.Value, path []string) *Result {
+func exploreFunc(t reflect.Value, _ []string) *Result {
 	ret := &Result{}
 	if t.IsNil() {
 		ret.Desc = "<NIL function>"
@@ -216,7 +216,7 @@ func exploreStruct(t reflect.Value, path []string) *Result {
 	return ExploreObject(val, path[1:])
 }
 
-func exploreChan(t reflect.Value, path []string) *Result {
+func exploreChan(t reflect.Value, _ []string) *Result {
 	ret := &Result{}
 	if t.IsNil() {
 		ret.Desc = nilDesc

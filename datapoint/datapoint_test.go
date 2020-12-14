@@ -16,7 +16,6 @@ func TestDatapointHelperFunctions(t *testing.T) {
 }
 
 func TestDatapointJSONDecode(t *testing.T) {
-
 	datapointInOut := func(dpIn *Datapoint) Datapoint {
 		var dpOut Datapoint
 		b, err := json.Marshal(dpIn)

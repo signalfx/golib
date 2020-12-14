@@ -1,11 +1,10 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -13,7 +12,7 @@ import (
 func TestCloseHeader(t *testing.T) {
 	h := CloseHeader{}
 	rw := httptest.NewRecorder()
-	r, _ := http.NewRequest("", "", nil)
+	r, _ := http.NewRequestWithContext(context.Background(), "", "", nil)
 	ctx := context.Background()
 	next := HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	})

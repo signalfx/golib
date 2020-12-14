@@ -1,11 +1,10 @@
 package clientcfg
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"testing"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/datapoint/dptest"
 	"github.com/signalfx/golib/v3/distconf"

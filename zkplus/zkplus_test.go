@@ -1,9 +1,8 @@
 package zkplus
 
 import (
-	"testing"
-
 	"errors"
+	"testing"
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
@@ -15,12 +14,12 @@ import (
 func TestPrefix(t *testing.T) {
 	z, ch, _ := zktest.New().Connect()
 	zkp, err := NewBuilder().PathPrefix("/test").Connector(&StaticConnector{C: z, Ch: ch}).Build()
-	defer zkp.Close()
 	assert.NoError(t, err)
+	defer zkp.Close()
 	testPrefix(t, zkp)
 }
 
-func testPrefix(t *testing.T, zkp *ZkPlus) {
+func testPrefix(t *testing.T, zkp zktest.ZkConnSupported) {
 	defer func() {
 		log.IfErr(log.Panic, zktest.EnsureDelete(zkp, "modifyNode"))
 	}()
@@ -85,8 +84,8 @@ func TestErrorEnsureRoot(t *testing.T) {
 func TestWatches(t *testing.T) {
 	z, ch, _ := zktest.New().Connect()
 	zkp, err := NewBuilder().PathPrefix("/test").Connector(&StaticConnector{C: z, Ch: ch}).Build()
-	defer zkp.Close()
 	assert.NoError(t, err)
+	defer zkp.Close()
 	testWatches(t, zkp)
 }
 
