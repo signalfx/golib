@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"runtime"
 	"testing"
 	"time"
 
@@ -62,7 +63,7 @@ func TestFixPath(t *testing.T) {
 
 func TestForcedErrorCheck(t *testing.T) {
 	s := New()
-	s.ChanTimeout = time.Millisecond * 250
+	s.ChanTimeout = time.Millisecond * 1
 	s.SetErrorCheck(func(s string) error {
 		if s == deleteStr {
 			return errors.New("delete fails")
@@ -132,8 +133,8 @@ func testBasics(t *testing.T, z ZkConnSupported) {
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testBasics", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	prefix := fmt.Sprintf("/test/testBasics/%d", rand.Intn(10000))
+	runtime.Gosched()
 	EnsureDeleteTesting(t, z, prefix)
-	time.Sleep(time.Millisecond * 100)
 	b, _, err := z.Exists(prefix)
 	assert.NoError(t, err)
 	assert.False(t, b)
@@ -370,20 +371,23 @@ out1:
 	assert.NoError(t, err)
 	assert.Equal(t, prefix+"/testChildrenW", p)
 
-	select {
-	case ev := <-ch:
-		assert.Equal(t, prefix, ev.Path)
-	case <-time.After(time.Second * 2):
-		t.Error("Time out waiting for event")
+	var ev zk.Event
+	waitForEvent := func(ch <-chan zk.Event) {
+		for ev.Path != prefix {
+			select {
+			case ev = <-ch:
+			default:
+				runtime.Gosched()
+			}
+		}
 	}
 
-	select {
-	case ev := <-e:
-		assert.Equal(t, zk.EventNodeChildrenChanged, ev.Type)
-		assert.Equal(t, prefix, ev.Path)
-	case <-time.After(time.Second * 2):
-		t.Error("Time out waiting for event")
-	}
+	waitForEvent(ch)
+	assert.Equal(t, prefix, ev.Path)
+
+	waitForEvent(e)
+	assert.Equal(t, zk.EventNodeChildrenChanged, ev.Type)
+	assert.Equal(t, prefix, ev.Path)
 }
 
 func TestChildrenWNotHere(t *testing.T) {
@@ -411,6 +415,6 @@ func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, _
 	select {
 	case <-e:
 		panic("Should never see event!")
-	case <-time.After(time.Second):
+	case <-time.After(time.Microsecond):
 	}
 }

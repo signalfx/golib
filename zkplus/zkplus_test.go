@@ -2,6 +2,7 @@ package zkplus
 
 import (
 	"errors"
+	"runtime"
 	"testing"
 	"time"
 
@@ -194,7 +195,7 @@ func TestBadConnection(t *testing.T) {
 	go func() {
 		conn = z.blockOnConn()
 	}()
-	time.Sleep(200 * time.Millisecond)
+	runtime.Gosched()
 	assert.Nil(t, conn)
 	z.Close()
 }
