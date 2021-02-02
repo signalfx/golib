@@ -31,7 +31,7 @@ const (
 	// TooManySpansInTrace when we find an abusive number of spans for a given traceID
 	TooManySpansInTrace = "tooManySpansInTrace"
 	// NilOperationName when no localendpoint.name is provided
-	NilOperationName = "nilServiceName"
+	NilOperationName = "nilOperationName"
 )
 
 var emptySpanFilter = &Map{}
