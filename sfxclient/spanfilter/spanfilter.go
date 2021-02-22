@@ -32,6 +32,8 @@ const (
 	TooManySpansInTrace = "tooManySpansInTrace"
 	// NilOperationName when no localendpoint.name is provided
 	NilOperationName = "nilOperationName"
+	// RequiredTagMissing means the span was missing a required tag
+	RequiredTagMissing = "requiredTagMissing"
 )
 
 var emptySpanFilter = &Map{}
