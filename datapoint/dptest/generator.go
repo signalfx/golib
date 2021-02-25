@@ -39,11 +39,19 @@ func init() {
 	globalSpanSource.Name = "test-span"
 }
 
+func copyMap(in map[string]string) map[string]string {
+	ret := make(map[string]string, len(in))
+	for k, v := range in {
+		ret[k] = v
+	}
+	return ret
+}
+
 // Next returns a unique datapoint
 func (d *DatapointSource) Next() *datapoint.Datapoint {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	return datapoint.New(d.Metric+":"+strconv.FormatInt(atomic.AddInt64(&d.CurrentIndex, 1), 10), d.Dims, datapoint.NewIntValue(0), d.Dptype, d.TimeSource())
+	return datapoint.New(d.Metric+":"+strconv.FormatInt(atomic.AddInt64(&d.CurrentIndex, 1), 10), copyMap(d.Dims), datapoint.NewIntValue(0), d.Dptype, d.TimeSource())
 }
 
 // DP generates and returns a unique datapoint to use for testing purposes
