@@ -80,13 +80,13 @@ func GetLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
 func SAPMSpanFromSFXSpan(sfxSpan *trace.Span, sm *spanfilter.Map) (span *jaegerpb.Span) {
 	spanID, err := jaegerpb.SpanIDFromString(sfxSpan.ID)
 	if err != nil {
-		sm.Add(spanfilter.InvalidSpanID, sfxSpan.ID)
+		sm.Add(spanfilter.InvalidSpanID, spanFilterValue(sfxSpan))
 		return
 	}
 
 	traceID, err := jaegerpb.TraceIDFromString(sfxSpan.TraceID)
 	if err != nil {
-		sm.Add(spanfilter.InvalidTraceID, sfxSpan.ID)
+		sm.Add(spanfilter.InvalidTraceID, spanFilterValue(sfxSpan))
 		return
 	}
 
@@ -129,6 +129,10 @@ func SAPMSpanFromSFXSpan(sfxSpan *trace.Span, sm *spanfilter.Map) (span *jaegerp
 
 	span.Logs = sfxAnnotationsToJaegerLogs(sfxSpan.Annotations)
 	return span
+}
+
+func spanFilterValue(span *trace.Span) string {
+	return fmt.Sprintf("%s:%s", span.TraceID, span.ID)
 }
 
 // SFXTagsToJaegerTags returns process tags and span tags from the SignalFx span tags, endpoint (remote), and kind
