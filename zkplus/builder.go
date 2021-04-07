@@ -19,6 +19,7 @@ type Builder struct {
 	pathPrefix  string
 	zkConnector ZkConnector
 	logger      log.Logger
+	createRoot  bool
 }
 
 // NewBuilder creates a new builder for making ZkPlus connections
@@ -26,6 +27,7 @@ func NewBuilder() *Builder {
 	return &Builder{
 		pathPrefix: "",
 		logger:     DefaultLogger,
+		createRoot: true,
 	}
 }
 
@@ -55,6 +57,14 @@ func (b *Builder) PathPrefix(pathPrefix string) *Builder {
 // Logger sets where messages are logged by zkplus
 func (b *Builder) Logger(logger log.Logger) *Builder {
 	b.logger = logger
+	return b
+}
+
+// CreateRootNode determines whether the root zk node is created if it doesn't
+// exist already in ZK.  If this is false, but the root node does not exist in
+// ZK, the connection will error out.
+func (b *Builder) CreateRootNode(createRoot bool) *Builder {
+	b.createRoot = createRoot
 	return b
 }
 
@@ -95,6 +105,7 @@ func (b *Builder) Build() (*ZkPlus, error) {
 	ret := &ZkPlus{
 		pathPrefix: prefix,
 		logger:     b.logger,
+		createRoot: b.createRoot,
 
 		zkConnector: b.zkConnector,
 		exposedChan: make(chan zk.Event),

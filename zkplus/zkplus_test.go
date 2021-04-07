@@ -2,6 +2,7 @@ package zkplus
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -61,6 +62,7 @@ func testPrefix(t *testing.T, zkp zktest.ZkConnSupported) {
 func TestErrorEnsureRoot(t *testing.T) {
 	zkp := &ZkPlus{
 		pathPrefix: "/a/b/c",
+		createRoot: true,
 	}
 	z, ch, _ := zktest.New().Connect()
 	createError := make(chan struct{}, 3)
@@ -78,6 +80,43 @@ func TestErrorEnsureRoot(t *testing.T) {
 
 	assert.NoError(t, err)
 	<-createError
+	zkp.Close()
+}
+
+func TestErrorEnsureRootNoCreate(t *testing.T) {
+	zkp := &ZkPlus{
+		pathPrefix: "/a/b/c",
+		createRoot: false,
+	}
+	z, ch, _ := zktest.New().Connect()
+	existsError := make(chan struct{}, 3)
+	z.SetErrorCheck(func(s string) error {
+		fmt.Printf("func(%s)\n", s)
+		if s == "exists" {
+			existsError <- struct{}{}
+			return errors.New("i don't allow exists")
+		}
+		return nil
+	})
+	assert.Error(t, zkp.ensureRootPath(z))
+	<-existsError
+
+	z.SetErrorCheck(func(s string) error {
+		return nil
+	})
+	assert.Error(t, zkp.ensureRootPath(z))
+
+	_, err := z.Create("/a", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	assert.NoError(t, err)
+	_, err = z.Create("/a/b", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	assert.NoError(t, err)
+	_, err = z.Create("/a/b/c", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	assert.NoError(t, err)
+
+	assert.NoError(t, zkp.ensureRootPath(z))
+
+	zkp, err = NewBuilder().PathPrefix("/test").CreateRootNode(false).Connector(&StaticConnector{C: z, Ch: ch}).Build()
+	assert.NoError(t, err)
 	zkp.Close()
 }
 
