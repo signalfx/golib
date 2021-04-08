@@ -42,6 +42,7 @@ type ZkPlus struct {
 	pathPrefix  string
 	zkConnector ZkConnector
 	logger      log.Logger
+	createRoot  bool
 
 	connectedConn zktest.ZkConnSupported
 	connectedChan <-chan zk.Event
@@ -98,9 +99,21 @@ func (z *ZkPlus) ensureRootPath(conn zktest.ZkConnSupported) error {
 			continue
 		}
 		totalPath = totalPath + "/" + p
-		_, err := conn.Create(totalPath, []byte(""), 0, zk.WorldACL(zk.PermAll))
-		if err != nil && err != zk.ErrNodeExists {
-			return errors.Annotatef(err, "cannot create path %s", totalPath)
+
+		if z.createRoot {
+			_, err := conn.Create(totalPath, []byte(""), 0, zk.WorldACL(zk.PermAll))
+			if err != nil && err != zk.ErrNodeExists {
+				return errors.Annotatef(err, "cannot create path %s", totalPath)
+			}
+		} else {
+			exists, _, err := conn.Exists(totalPath)
+			if err != nil {
+				return errors.Annotatef(err, "cannot verify that node %q exists", totalPath)
+			}
+
+			if !exists {
+				return fmt.Errorf("root node %q does not exist", totalPath)
+			}
 		}
 	}
 	return nil

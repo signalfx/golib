@@ -25,6 +25,7 @@ func TestInnerBuilder(t *testing.T) {
 
 	q := NewBuilder().ZkPlus(zkp)
 	assert.Equal(t, "/a/b", q.pathPrefix)
+	assert.Equal(t, true, q.createRoot)
 
 	zkp2, _, err := q.BuildDirect()
 	assert.NoError(t, err)
