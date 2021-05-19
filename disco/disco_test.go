@@ -125,7 +125,7 @@ func TestErrorNoRootCreate(t *testing.T) {
 	c := 0
 	z.SetErrorCheck(func(s string) error {
 		c++
-		if c < 2 {
+		if c < 3 {
 			return nil
 		}
 		return zk.ErrNoNode
