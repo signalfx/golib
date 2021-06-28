@@ -106,7 +106,7 @@ func TestScheduler_ReportingTimeout(t *testing.T) {
 	tk := timekeepertest.NewStubClock(time.Now())
 	s.Timer = tk
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	Convey("testing longer processing time for ReportOnce", t, func() {
 		s.ReportingTimeout(time.Nanosecond)
 		setupCollectors(250 * 10)
@@ -118,6 +118,7 @@ func TestScheduler_ReportingTimeout(t *testing.T) {
 			tk.Incr(time.Duration(s.ReportingDelayNs))
 			runtime.Gosched()
 		}
+		cancel()
 		So(atomic.LoadInt64(&s.stats.reportingTimeoutCounts), ShouldEqual, int64(1))
 	})
 }
@@ -140,18 +141,26 @@ func TestCollectDatapointDebug(t *testing.T) {
 	tk := timekeepertest.NewStubClock(time.Now())
 	s.Timer = tk
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	Convey("testing collect datapoints with debug mode enabled", t, func() {
 		s.Debug(true)
 		s.AddCallback(GoMetricsSource)
 		s.AddGroupedCallback("goMetrics", GoMetricsSource)
 		go s.Schedule(ctx)
-		for atomic.LoadInt64(&s.stats.scheduledSleepCounts) == 0 {
-			runtime.Gosched()
-			tk.Incr(time.Duration(s.ReportingDelayNs))
-			runtime.Gosched()
-		}
+		go func() {
+			for {
+				runtime.Gosched()
+				tk.Incr(time.Duration(s.ReportingDelayNs))
+				runtime.Gosched()
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+			}
+		}()
 		dps := <-sink.lastDatapoints
+		cancel()
 		So(len(dps), ShouldEqual, 60)
 	})
 }
