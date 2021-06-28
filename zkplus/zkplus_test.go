@@ -117,6 +117,8 @@ func TestErrorEnsureRootNoCreate(t *testing.T) {
 
 	zkp, err = NewBuilder().PathPrefix("/test").CreateRootNode(false).Connector(&StaticConnector{C: z, Ch: ch}).Build()
 	assert.NoError(t, err)
+	err = zkp.ensureRootPath(z)
+	assert.Equal(t, err, errors.New("root node \"/test\" does not exist"))
 	zkp.Close()
 }
 

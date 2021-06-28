@@ -100,18 +100,20 @@ func (z *ZkPlus) ensureRootPath(conn zktest.ZkConnSupported) error {
 		}
 		totalPath = totalPath + "/" + p
 
-		if z.createRoot {
-			_, err := conn.Create(totalPath, []byte(""), 0, zk.WorldACL(zk.PermAll))
-			if err != nil && err != zk.ErrNodeExists {
-				return errors.Annotatef(err, "cannot create path %s", totalPath)
-			}
-		} else {
-			exists, _, err := conn.Exists(totalPath)
-			if err != nil {
-				return errors.Annotatef(err, "cannot verify that node %q exists", totalPath)
-			}
+		exists, _, err := conn.Exists(totalPath)
+		if err != nil {
+			return errors.Annotatef(err, "cannot verify that node %q exists", totalPath)
+		}
 
-			if !exists {
+		if !exists {
+			if z.createRoot {
+				_, err := conn.Create(totalPath, []byte(""), 0, zk.WorldACL(zk.PermAll))
+				// There could be a race where the root is created in the
+				// meantime since the Exists check above, so ignore ErrNodeExists.
+				if err != nil && err != zk.ErrNodeExists {
+					return errors.Annotatef(err, "cannot create path %s", totalPath)
+				}
+			} else {
 				return fmt.Errorf("root node %q does not exist", totalPath)
 			}
 		}
