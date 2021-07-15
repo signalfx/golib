@@ -119,7 +119,7 @@ func (h *HTTPSink) handleResponse(resp *http.Response, respValidator responseVal
 	atomic.AddInt64(&h.stats.readingBody, 1)
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("cannot fully read response body: %s: %v", err, resp.Header)
+		return fmt.Errorf("cannot fully read response body: %w: %v", err, resp.Header)
 	}
 
 	// all 2XXs
@@ -176,7 +176,7 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 	if err != nil {
 		// According to docs, resp can be ignored since err is non-nil, so we
 		// don't have to close body.
-		return fmt.Errorf("failed to send/receive http request: %s: %v", err, req.Header)
+		return fmt.Errorf("failed to send/receive http request: %w: %v", err, req.Header)
 	}
 
 	return h.handleResponse(resp, respValidator)
