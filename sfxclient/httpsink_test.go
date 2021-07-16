@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	goerrors "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -165,7 +166,9 @@ func TestHTTPDatapointSink(t *testing.T) {
 			resp := &http.Response{
 				Body: ioutil.NopCloser(&errReader{}),
 			}
-			So(errors.Tail(s.handleResponse(resp, datapointAndEventResponseValidator)).Error(), ShouldEqual, "cannot fully read response body: read bad: map[]")
+			responseError := s.handleResponse(resp, datapointAndEventResponseValidator)
+			So(errors.Tail(responseError).Error(), ShouldEqual, "cannot fully read response body: read bad: map[]")
+			So(goerrors.Unwrap(responseError), ShouldNotBeNil)
 		})
 		Convey("with a test endpoint", func() {
 			retString := respBodyStrOk
@@ -302,7 +305,9 @@ func TestHTTPDatapointSink(t *testing.T) {
 			Convey("timeouts should work", func() {
 				blockResponse = make(chan struct{})
 				s.Client.Timeout = time.Millisecond * 10
-				So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "Client.Timeout")
+				timeoutError := s.AddDatapoints(ctx, dps)
+				So(errors.Details(timeoutError), ShouldContainSubstring, "Client.Timeout")
+				So(goerrors.Unwrap(timeoutError), ShouldNotBeNil)
 			})
 			Reset(func() {
 				if blockResponse != nil {
