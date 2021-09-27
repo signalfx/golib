@@ -15,8 +15,7 @@ import (
 // DefaultLogger is used by zktest if no logger is set
 var DefaultLogger = log.Logger(log.DefaultLogger.CreateChild())
 
-type event struct {
-}
+type event struct{}
 
 // ErrDeleteOnRoot is returned when EnsureDelete is called with a root path
 var ErrDeleteOnRoot = errors.New("cannot delete on root path")

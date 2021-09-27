@@ -22,20 +22,22 @@ func TestStop(t *testing.T) {
 }
 
 func TestAfterClose(t *testing.T) {
-	x := time.NewTimer(time.Millisecond * 100)
+	timer := time.Millisecond * 10
+	x := time.NewTimer(timer)
 	x.Stop()
 	select {
 	case <-x.C:
 		panic("NOPE")
-	case <-time.After(time.Millisecond * 200):
+	case <-time.After(timer * 2):
 	}
 }
 
 func TestRealTime(t *testing.T) {
 	r := RealTime{}
 	now := r.Now()
-	r.Sleep(time.Millisecond)
-	<-r.After(time.Millisecond)
-	<-r.NewTimer(time.Millisecond).Chan()
+	timer := time.Microsecond * 10
+	r.Sleep(timer)
+	<-r.After(timer)
+	<-r.NewTimer(timer).Chan()
 	assert.True(t, time.Now().After(now))
 }

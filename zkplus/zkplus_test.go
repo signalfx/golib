@@ -3,6 +3,7 @@ package zkplus
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"testing"
 	"time"
 
@@ -91,7 +92,7 @@ func TestErrorEnsureRootNoCreate(t *testing.T) {
 	z, ch, _ := zktest.New().Connect()
 	existsError := make(chan struct{}, 3)
 	z.SetErrorCheck(func(s string) error {
-		fmt.Printf("func(%s)\n", s)
+		log.DefaultLogger.Log(fmt.Sprintf("func(%s)\n", s))
 		if s == "exists" {
 			existsError <- struct{}{}
 			return errors.New("i don't allow exists")
@@ -235,7 +236,7 @@ func TestBadConnection(t *testing.T) {
 	go func() {
 		conn = z.blockOnConn()
 	}()
-	time.Sleep(200 * time.Millisecond)
+	runtime.Gosched()
 	assert.Nil(t, conn)
 	z.Close()
 }

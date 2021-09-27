@@ -74,9 +74,12 @@ func TestZkConf(t *testing.T) {
 
 	DefaultLogger.Log("Doing write 3")
 	assert.NoError(t, z.Write("TestZkConf", nil))
-	select {
-	case res = <-signalChan:
-	case <-time.After(time.Second * 3):
+	for res != "TestZkConf" {
+		select {
+		case res = <-signalChan:
+		default:
+			runtime.Gosched()
+		}
 	}
 	assert.Equal(t, "TestZkConf", res)
 }
