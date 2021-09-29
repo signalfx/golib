@@ -36,16 +36,17 @@ const (
 	ClientVersion = "1.0"
 
 	// IngestEndpointV2 is the v2 version of the signalfx ingest endpoint
-	IngestEndpointV2 = "https://ingest.signalfx.com/v2/datapoint"
+	IngestEndpointV2 = "https://ingest.us0.signalfx.com/v2/datapoint"
 
 	// EventIngestEndpointV2 is the v2 version of the signalfx event endpoint
-	EventIngestEndpointV2 = "https://ingest.signalfx.com/v2/event"
+	EventIngestEndpointV2 = "https://ingest.us0.signalfx.com/v2/event"
 
-	// TraceIngestEndpointV1 is the v1 version of the signalfx trace endpoint
-	TraceIngestEndpointV1 = "https://ingest.signalfx.com/v1/trace"
+	// TraceIngestEndpointV1 is migrated to splunk o11y apm product endpoint
+	// @Deprecated
+	TraceIngestEndpointV1 = "https://ingest.us0.signalfx.com/v2/trace"
 
 	// TraceIngestSAPMEndpointV2 is the of the sapm trace endpoint
-	TraceIngestSAPMEndpointV2 = "https://ingest.signalfx.com/v2/trace"
+	TraceIngestSAPMEndpointV2 = "https://ingest.us0.signalfx.com/v2/trace"
 
 	// DefaultTimeout is the default time to fail signalfx datapoint requests if they don't succeed
 	DefaultTimeout = time.Second * 5
