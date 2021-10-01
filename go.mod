@@ -18,7 +18,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
-	github.com/shirou/gopsutil v3.21.5+incompatible
+	github.com/shirou/gopsutil/v3 v3.21.9
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083
 	github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9
