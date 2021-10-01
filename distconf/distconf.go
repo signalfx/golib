@@ -49,8 +49,7 @@ type configVariable interface {
 	Type() DistType
 }
 
-type noopCloser struct {
-}
+type noopCloser struct{}
 
 func (n *noopCloser) Close() {
 	//nolint

@@ -112,10 +112,10 @@ func (s *ClientConfigChangerSink) AddEvents(ctx context.Context, events []*event
 	return s.Destination.AddEvents(ctx, events)
 }
 
-func (s *ClientConfigChangerSink) disableCompressionWatch(new *distconf.Bool, old bool) {
+func (s *ClientConfigChangerSink) disableCompressionWatch(newValue *distconf.Bool, old bool) {
 	s.logger.Log("disableCompression watch")
 	s.mu.Lock()
-	s.Destination.DisableCompression = new.Get()
+	s.Destination.DisableCompression = newValue.Get()
 	s.mu.Unlock()
 }
 

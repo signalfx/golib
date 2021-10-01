@@ -54,7 +54,8 @@ func TestClient(t *testing.T) {
 		})
 		Convey("HTTPSink should wrap", func() {
 			hsink := sfxclient.NewHTTPSink()
-			sink := WatchSinkChanges(hsink, conf, logger).(*ClientConfigChangerSink)
+			sink, ok := WatchSinkChanges(hsink, conf, logger).(*ClientConfigChangerSink)
+			So(ok, ShouldBeTrue)
 			So(sink, ShouldNotEqual, hsink)
 			hsink.DatapointEndpoint = ""
 			So(sink.AddDatapoints(ctx, nil), ShouldBeNil)

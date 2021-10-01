@@ -1,13 +1,12 @@
 package go_metrics
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/signalfx/golib/v3/datapoint/dptest"
-
 	"github.com/rcrowley/go-metrics"
+	"github.com/signalfx/golib/v3/datapoint/dptest"
+	"github.com/signalfx/golib/v3/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -25,7 +24,7 @@ func Test(t *testing.T) {
 		dps := e.Datapoints()
 		So(len(dps), ShouldEqual, 26)
 		for _, d := range dps {
-			fmt.Println(d.Metric, d.Dimensions)
+			log.DefaultLogger.Log(d.Metric, d.Dimensions)
 		}
 		dp := dptest.ExactlyOne(dps, "records-per-request.count")
 		So(dp.Dimensions["topic"], ShouldEqual, "trace_spans_firehose_477610686596251648")
@@ -40,7 +39,7 @@ func Test(t *testing.T) {
 		So(dp.Dimensions["vendor"], ShouldEqual, "dominos")
 		So(dp.Dimensions["foo"], ShouldEqual, "bar")
 		So(len(e.memory), ShouldEqual, 6)
-		fmt.Println(e.memory)
+		log.DefaultLogger.Log(e.memory)
 	})
 }
 

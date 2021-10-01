@@ -10,8 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type allErrorBacking struct {
-}
+type allErrorBacking struct{}
 
 var errNope = errors.New("nope")
 
@@ -27,11 +26,9 @@ func (m *allErrorBacking) Watch(key string, callback backingCallbackFunction) er
 	return errNope
 }
 
-func (m *allErrorBacking) Close() {
-}
+func (m *allErrorBacking) Close() {}
 
-type allErrorconfigVariable struct {
-}
+type allErrorconfigVariable struct{}
 
 func (a *allErrorconfigVariable) Update(_ []byte) error {
 	return errNope
