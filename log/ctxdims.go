@@ -3,8 +3,7 @@ package log
 import "context"
 
 // CtxDimensions can propagate log dimensions inside a context object
-type CtxDimensions struct {
-}
+type CtxDimensions struct{}
 
 // From returns the dimensions currently set inside a context object
 func (c *CtxDimensions) From(ctx context.Context) []interface{} {

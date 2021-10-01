@@ -110,8 +110,9 @@ func WithSpanFilterContext(ctx context.Context, sf interface{}) context.Context 
 func GetSpanFilterMapOrNew(ctx context.Context) (context.Context, *Map) {
 	v := ctx.Value(spanFailures)
 	if v != nil {
-		failMap := v.(*Map)
-		return ctx, failMap
+		if failMap, ok := v.(*Map); ok {
+			return ctx, failMap
+		}
 	}
 	failMap := &Map{}
 	return context.WithValue(ctx, spanFailures, failMap), failMap
@@ -121,8 +122,9 @@ func GetSpanFilterMapOrNew(ctx context.Context) (context.Context, *Map) {
 func GetSpanFilterMapFromContext(ctx context.Context) error {
 	v := ctx.Value(spanFailures)
 	if v != nil {
-		failMap := v.(*Map)
-		return failMap
+		if failMap, ok := v.(*Map); ok {
+			return failMap
+		}
 	}
 	return emptySpanFilter
 }

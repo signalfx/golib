@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	goerrors "errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -559,7 +558,6 @@ func TestHTTPTraceSink(t *testing.T) {
 		Convey("should check invalid endpoints", func() {
 			s.TraceEndpoint = sinkEndpoint
 			err := s.AddSpans(ctx, traces)
-			fmt.Println(err)
 			So(errors.Details(err), ShouldContainSubstring, "cannot parse new HTTP request to")
 		})
 		Convey("reading the full body should be checked", func() {

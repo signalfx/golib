@@ -10,8 +10,7 @@ import (
 	"github.com/signalfx/golib/v3/log"
 )
 
-type panicLogger struct {
-}
+type panicLogger struct{}
 
 func (d *panicLogger) Disabled() bool {
 	return true

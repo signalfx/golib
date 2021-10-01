@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/signalfx/golib/v3/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,7 +62,7 @@ func TestKetama(t *testing.T) {
 	}
 	r0 := float64(i0) / float64(i0+i1)
 	r1 := float64(i1) / float64(i0+i1)
-	fmt.Printf("%f %f\n", r0, r1)
+	log.DefaultLogger.Log(fmt.Sprintf("%f %f\n", r0, r1))
 	assert.True(t, r0 > .1 && r0 < .4)
 	assert.True(t, r1 > .5 && r1 < .75)
 }

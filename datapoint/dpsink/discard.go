@@ -8,8 +8,7 @@ import (
 	"github.com/signalfx/golib/v3/trace"
 )
 
-type discardSink struct {
-}
+type discardSink struct{}
 
 func (d discardSink) AddDatapoints(_ context.Context, _ []*datapoint.Datapoint) error {
 	return nil

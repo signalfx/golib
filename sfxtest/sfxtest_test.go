@@ -9,12 +9,12 @@ import (
 
 func TestForcedErr(t *testing.T) {
 	Convey("Given an error and names", t, func() {
-		error := errors.New("my error")
+		err := errors.New("my error")
 		names := []string{"foo", "bar"}
 		Convey("ForcedError returns a ErrCheck", func() {
-			errCheck := ForcedError(error, names...)
+			errCheck := ForcedError(err, names...)
 			Convey("That returns error when one of names is specified", func() {
-				So(errCheck(names[0]), ShouldEqual, error)
+				So(errCheck(names[0]), ShouldEqual, err)
 			})
 			Convey("That does not return error when a string not in names is specified", func() {
 				So(errCheck(names[0]+"moo"), ShouldBeNil)

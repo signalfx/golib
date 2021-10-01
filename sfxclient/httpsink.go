@@ -19,7 +19,6 @@ import (
 	"unsafe"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/mailru/easyjson"
 	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 	"github.com/signalfx/golib/v3/datapoint"
