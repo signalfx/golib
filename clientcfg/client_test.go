@@ -83,3 +83,30 @@ func TestClient(t *testing.T) {
 		})
 	})
 }
+
+func TestSetupSinkClientChanger(t *testing.T) {
+	mem := distconf.Mem()
+	dconf := distconf.New([]distconf.Reader{mem})
+	conf := &ClientConfig{}
+	logger := log.Discard
+	conf.Load(dconf)
+	authToken := func() string {
+		return "test-token"
+	}
+	newToken := "new-token"
+	Convey("http sink without auth watcher but with auth update func should work", t, func() {
+		httpSink := sfxclient.NewHTTPSink()
+		sink, ok := SetupSinkClientChanger(httpSink, conf, authToken, logger).(*ClientConfigChangerSink)
+		So(ok, ShouldBeTrue)
+		So(sink, ShouldNotBeNil)
+		authUpdaterFunc := sink.AuthUpdate()
+		So(authUpdaterFunc, ShouldNotBeNil)
+		authUpdaterFunc(newToken)
+		sink.mu.Lock()
+		So(sink.Destination.AuthToken, ShouldEqual, newToken)
+		sink.mu.Unlock()
+
+		basicSink := dptest.NewBasicSink()
+		So(SetupSinkClientChanger(basicSink, conf, nil, logger), ShouldEqual, basicSink)
+	})
+}
