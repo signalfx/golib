@@ -418,3 +418,12 @@ func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, _
 	case <-time.After(time.Microsecond):
 	}
 }
+
+func TestDiscardLoggerSetup(t *testing.T) {
+	zkConn := &ZkConn{}
+	nextID := int64(0)
+	zkConn.setZkConnLogger(log.Discard, &nextID)
+	assert.Equal(t, zkConn.Logger, log.Discard)
+	zkConn.setZkConnLogger(log.DefaultLogger, &nextID)
+	assert.NotEqual(t, zkConn.Logger, log.Discard)
+}
