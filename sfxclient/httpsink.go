@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -154,6 +155,28 @@ var _ Sink = &HTTPSink{}
 // TokenHeaderName is the header key for the auth token in the HTTP request
 const TokenHeaderName = "X-Sf-Token"
 
+func getShaValue(values []string) string {
+	h := sha1.New()
+	for _, v := range values {
+		h.Write([]byte(v))
+	}
+	return string(h.Sum(nil))
+}
+
+// loggableHeaders returns headers that are only allowed to be logged. For instance "X-Sf-Token" should not be logged so
+// it will generate a sha value and then log it
+func loggableHeaders(headers map[string][]string) (rv map[string][]string) {
+	rv = make(map[string][]string, len(headers))
+	for header, value := range headers {
+		if strings.EqualFold(header, TokenHeaderName) {
+			rv[header] = []string{getShaValue(value)}
+			continue
+		}
+		rv[header] = value
+	}
+	return rv
+}
+
 func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, error), contentType, endpoint string,
 	respValidator responseValidator) error {
 	if ctx.Err() != nil {
@@ -176,7 +199,7 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 	if err != nil {
 		// According to docs, resp can be ignored since err is non-nil, so we
 		// don't have to close body.
-		return fmt.Errorf("failed to send/receive http request: %w: %v", err, req.Header)
+		return fmt.Errorf("failed to send/receive http request: %w: %v", err, loggableHeaders(req.Header))
 	}
 
 	return h.handleResponse(resp, respValidator)
