@@ -727,3 +727,26 @@ func TestSetHeaders(t *testing.T) {
 		So(req.Header.Get(TokenHeaderName), ShouldEqual, "bar")
 	})
 }
+
+func TestLoggableHeaders(t *testing.T) {
+	Convey("given a list of request headers we should log all except some", t, func() {
+		lowerCaseTokenHeader := "x-sf-token"
+		inputHeaders := map[string][]string{
+			lowerCaseTokenHeader: {"thisIsValidToken"},
+			"version":            {"test"},
+			"gzip":               {"yes"},
+		}
+		expectedHeader := map[string][]string{
+			lowerCaseTokenHeader: {getShaValue(inputHeaders[lowerCaseTokenHeader])},
+			"version":            {"test"},
+			"gzip":               {"yes"},
+		}
+		actualHeaders := loggableHeaders(inputHeaders)
+		So(len(actualHeaders), ShouldEqual, len(expectedHeader))
+		So(actualHeaders, ShouldResemble, expectedHeader)
+		So(actualHeaders[lowerCaseTokenHeader], ShouldNotEqual, inputHeaders[lowerCaseTokenHeader])
+		for header := range expectedHeader {
+			So(actualHeaders[header], ShouldNotBeNil)
+		}
+	})
+}
