@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,13 +32,13 @@ type errReader struct {
 	shouldBlock chan struct{}
 }
 
-var errReadErr = errors.New("read bad")
+var errRead = errors.New("read bad")
 
 func (e *errReader) Read(_ []byte) (n int, err error) {
 	if e.shouldBlock != nil {
 		<-e.shouldBlock
 	}
-	return 0, errReadErr
+	return 0, errRead
 }
 
 func TestHelperFunctions(t *testing.T) {
@@ -105,6 +106,20 @@ func (g *goEvents) Events() []*event.Event {
 func TestGoEventSource(t *testing.T) {
 	Convey("go events should fetch", t, func() {
 		So(len(GoEventSource.Events()), ShouldEqual, 30)
+	})
+}
+
+func TestHTTPSinkZipper(t *testing.T) {
+	t.Parallel()
+	Convey("http sink zippers should be setup properly", t, func() {
+		sink := NewHTTPSink()
+		reader, _, err := sink.getReader([]byte(longTraceExample))
+		So(reader, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+		sink.zippers = sync.Pool{New: func() interface{} { return bytes.NewBuffer([]byte{}) }}
+		reader, _, err = sink.getReader([]byte(longTraceExample))
+		So(err.Error(), ShouldContainSubstring, "invalid gzip writer")
+		So(reader, ShouldBeNil)
 	})
 }
 
@@ -268,17 +283,17 @@ func TestHTTPDatapointSink(t *testing.T) {
 				}
 				Convey("retry after seconds", func() {
 					retHeaders["Retry-After"] = "1"
-					err, ok := s.AddDatapoints(ctx, dps).(*TooManyRequestError)
-					So(ok, ShouldBeTrue)
-					So(err.RetryAfter, ShouldEqual, time.Second)
-					So(err.Error(), ShouldContainSubstring, "[x] too many requests, retry after")
+					var tooManyRequestError *TooManyRequestError
+					So(goerrors.As(s.AddDatapoints(ctx, dps), &tooManyRequestError), ShouldBeTrue)
+					So(tooManyRequestError.RetryAfter, ShouldEqual, time.Second)
+					So(tooManyRequestError.Error(), ShouldContainSubstring, "[x] too many requests, retry after")
 				})
 				Convey("retry until date", func() {
 					retHeaders["Retry-After"] = time.Now().Add(time.Second).Format(time.RFC850)
-					err, ok := s.AddDatapoints(ctx, dps).(*TooManyRequestError)
-					So(ok, ShouldBeTrue)
-					So(err.RetryAfter, ShouldBeLessThanOrEqualTo, time.Second)
-					So(err.Error(), ShouldContainSubstring, "[x] too many requests, retry after")
+					var tooManyRequestError *TooManyRequestError
+					So(goerrors.As(s.AddDatapoints(ctx, dps), &tooManyRequestError), ShouldBeTrue)
+					So(tooManyRequestError.RetryAfter, ShouldBeLessThanOrEqualTo, time.Second)
+					So(tooManyRequestError.Error(), ShouldContainSubstring, "[x] too many requests, retry after")
 				})
 				Convey("error fallback", func() {
 					retHeaders["Retry-After"] = ""

@@ -50,7 +50,7 @@ func EnsureDelete(z ZkConnSupported, path string) error {
 	}
 	for i := 0; i < 3; i++ {
 		err = z.Delete(path, -1)
-		if err == nil || err == zk.ErrNoNode {
+		if err == nil || errors.Is(err, zk.ErrNoNode) {
 			return nil
 		}
 	}

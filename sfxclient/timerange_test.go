@@ -7,13 +7,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type basicDuration time.Duration
-
-func (b basicDuration) Get() time.Duration {
-	return time.Duration(b)
-}
-
 func TestTimeCounter(t *testing.T) {
+	t.Parallel()
 	Convey("Default error handler should not panic", t, func() {
 		tc := TimeCounter{
 			NsBarrier: time.Second.Nanoseconds(),

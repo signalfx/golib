@@ -103,6 +103,7 @@ func BenchmarkRollingBucket10(b *testing.B) {
 }
 
 func benchRB(b *testing.B, numGoroutine int) {
+	b.Helper()
 	cb := NewRollingBucket("", nil)
 	w := sync.WaitGroup{}
 	w.Add(numGoroutine)

@@ -265,8 +265,7 @@ func (c *Distconf) refresh(key string, configVar configVariable) bool {
 		}
 	}
 
-	e := configVar.Update(nil)
-	if e != nil {
+	if e := configVar.Update(nil); e != nil {
 		c.Logger.Log(log.Err, e, "Unable to set bytes to nil/clear")
 	}
 

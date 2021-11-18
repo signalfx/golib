@@ -52,6 +52,7 @@ func makeConf() (ReaderWriter, *Distconf) {
 	return memConf, conf
 }
 
+//nolint:dupl
 func TestDistconfInt(t *testing.T) {
 	memConf, conf := makeConf()
 	defer conf.Close()
@@ -87,6 +88,7 @@ func TestDistconfInt(t *testing.T) {
 	assert.Contains(t, conf.Var().String(), "testval")
 }
 
+//nolint:dupl
 func TestDistconfFloat(t *testing.T) {
 	memConf, conf := makeConf()
 	defer conf.Close()
@@ -235,6 +237,7 @@ func TestDistconfErrorBackings(t *testing.T) {
 }
 
 func testInfo(t *testing.T, dat map[string]DistInfo, key string, val interface{}, dtype DistType) {
+	t.Helper()
 	v, ok := dat[key]
 	assert.True(t, ok)
 	assert.NotEqual(t, v.Line, 0)

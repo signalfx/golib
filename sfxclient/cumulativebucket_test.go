@@ -99,6 +99,7 @@ func BenchmarkCumulativeBucket10(b *testing.B) {
 }
 
 func benchCB(b *testing.B, numGoroutine int) {
+	b.Helper()
 	cb := &CumulativeBucket{}
 	w := sync.WaitGroup{}
 	w.Add(numGoroutine)

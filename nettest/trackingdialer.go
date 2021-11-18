@@ -15,7 +15,7 @@ type TrackingDialer struct {
 
 // Close all stored connections.  Returns an error on the first close that fails
 func (t *TrackingDialer) Close() error {
-	errs := make([]error, len(t.Conns))
+	errs := make([]error, 0, len(t.Conns))
 	for len(t.Conns) != 0 {
 		c := t.Conns[0]
 		err := c.Close()

@@ -158,6 +158,7 @@ func TestMap(t *testing.T) {
 }
 
 func verify(t *testing.T, v reflect.Value, desc string, vals []string) {
+	t.Helper()
 	for i := 0; i < len(vals)-1; i++ {
 		o := ExploreObject(v, vals[0:i])
 		assert.Contains(t, o.Children, vals[i])

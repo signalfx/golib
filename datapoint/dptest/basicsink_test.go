@@ -87,6 +87,7 @@ func TestContextErrorTrace(t *testing.T) {
 	<-progressChan
 }
 
+//nolint:dupl
 func TestNext(t *testing.T) {
 	ctx := context.Background()
 	b := NewBasicSink()
@@ -105,6 +106,7 @@ func TestNext(t *testing.T) {
 	})
 }
 
+//nolint:dupl
 func TestNextEvent(t *testing.T) {
 	ctx := context.Background()
 	b := NewBasicSink()
@@ -123,6 +125,7 @@ func TestNextEvent(t *testing.T) {
 	})
 }
 
+//nolint:dupl
 func TestNextSpan(t *testing.T) {
 	ctx := context.Background()
 	b := NewBasicSink()

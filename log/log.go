@@ -113,7 +113,7 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 	}
 }
 
-// WithPrefix is like With but adds keyvalus to the beginning of the eventual log statement
+// WithPrefix is like With but adds key/values to the beginning of the eventual log statement
 func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	if len(keyvals)%2 != 0 {
 		panic("Programmer error.  Please call log.Context.WithPrefix() only with an even number of arguments.")

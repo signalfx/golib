@@ -15,6 +15,7 @@ import (
 
 var toFind = "asdfasdfdsa"
 
+//nolint:gochecknoinits
 func init() {
 	expvar.NewString("expvar2.TestExpvarHandler.a").Set("abc")
 	expvar.NewString("expvar2.TestExpvarHandler.b").Set(toFind)

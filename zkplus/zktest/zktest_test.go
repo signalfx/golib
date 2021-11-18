@@ -118,6 +118,7 @@ func TestForcedErrorCheck(t *testing.T) {
 }
 
 func EnsureDeleteTesting(t *testing.T, z ZkConnSupported, path string) {
+	t.Helper()
 	assert.NoError(t, EnsureDelete(z, path))
 }
 
@@ -129,6 +130,7 @@ func TestBasics(t *testing.T) {
 }
 
 func testBasics(t *testing.T, z ZkConnSupported) {
+	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testBasics", []byte(""), 0, zk.WorldACL(zk.PermAll)))
@@ -206,6 +208,7 @@ func TestSet(t *testing.T) {
 }
 
 func testSet(t *testing.T, z ZkConnSupported) {
+	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testSet", []byte(""), 0, zk.WorldACL(zk.PermAll)))
@@ -234,6 +237,7 @@ func TestExistsW(t *testing.T) {
 }
 
 func testExistsW(t *testing.T, z ZkConnSupported, e <-chan zk.Event) {
+	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testEvents", []byte(""), 0, zk.WorldACL(zk.PermAll)))
@@ -286,6 +290,7 @@ func TestGetW(t *testing.T) {
 }
 
 func testGetW(t *testing.T, z ZkConnSupported, e <-chan zk.Event) {
+	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testGetW", []byte(""), 0, zk.WorldACL(zk.PermAll)))
@@ -337,6 +342,7 @@ func TestChildrenW(t *testing.T) {
 }
 
 func testChildrenW(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, e <-chan zk.Event) {
+	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testChildrenW", []byte(""), 0, zk.WorldACL(zk.PermAll)))
@@ -398,6 +404,7 @@ func TestChildrenWNotHere(t *testing.T) {
 }
 
 func testChildrenWNotHere(t *testing.T, z ZkConnSupported, z2 ZkConnSupported, _ <-chan zk.Event) {
+	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	ensureCreate(z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll)))
 	ensureCreate(z.Create("/test/testChildrenWNotHere", []byte(""), 0, zk.WorldACL(zk.PermAll)))

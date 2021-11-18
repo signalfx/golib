@@ -11,6 +11,7 @@ var DefaultLogger = NewHierarchy(NewLogfmtLogger(os.Stderr, Discard))
 // LoggingEnv is the env variable that if exported to /dev/null can disable the default logger
 const LoggingEnv = "GOLIB_LOG"
 
+//nolint:gochecknoinits
 func init() {
 	DefaultLogger.setupFromEnv(os.Getenv)
 }

@@ -2,6 +2,7 @@ package dpsink
 
 import (
 	"context"
+	goerrors "errors"
 	"sync/atomic"
 	"time"
 
@@ -67,6 +68,7 @@ func (c *Counter) logErrMsg(ctx context.Context, err error, msg string) {
 }
 
 // AddDatapoints will send points to the next sink and track points send to the next sink
+//nolint:dupl
 func (c *Counter) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint, next Sink) error {
 	atomic.AddInt64(&c.TotalDatapoints, int64(len(points)))
 	atomic.AddInt64(&c.TotalProcessCalls, 1)
@@ -91,6 +93,7 @@ func (c *Counter) logger() log.Logger {
 }
 
 // AddEvents will send events to the next sink and track events sent to the next sink
+//nolint:dupl
 func (c *Counter) AddEvents(ctx context.Context, events []*event.Event, next Sink) error {
 	atomic.AddInt64(&c.TotalEvents, int64(len(events)))
 	atomic.AddInt64(&c.TotalProcessCalls, 1)
@@ -108,6 +111,7 @@ func (c *Counter) AddEvents(ctx context.Context, events []*event.Event, next Sin
 }
 
 // AddSpans will send spans to the next sink and track spans sent to the next sink
+//nolint:dupl
 func (c *Counter) AddSpans(ctx context.Context, spans []*trace.Span, next trace.Sink) error {
 	atomic.AddInt64(&c.TotalSpans, int64(len(spans)))
 	atomic.AddInt64(&c.TotalProcessCalls, 1)
@@ -118,7 +122,8 @@ func (c *Counter) AddSpans(ctx context.Context, spans []*trace.Span, next trace.
 	atomic.AddInt64(&c.CallsInFlight, -1)
 	if err != nil && spanfilter.IsInvalid(err) {
 		atomic.AddInt64(&c.TotalProcessErrors, 1)
-		if m, ok := err.(*spanfilter.Map); ok {
+		var m *spanfilter.Map
+		if goerrors.As(err, &m) {
 			atomic.AddInt64(&c.ProcessErrorSpans, int64(len(m.Invalid)))
 		} else {
 			atomic.AddInt64(&c.ProcessErrorSpans, int64(len(spans)))

@@ -2,6 +2,7 @@ package disco
 
 import (
 	"bytes"
+	errors2 "errors"
 	"fmt"
 	"runtime"
 	"sort"
@@ -65,6 +66,7 @@ func TestDupAdvertise(t *testing.T) {
 }
 
 func testDupAdvertise(t *testing.T, z zktest.ZkConnSupported, ch <-chan zk.Event) {
+	t.Helper()
 	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
 	log.IfErr(log.Panic, err)
 
@@ -168,8 +170,7 @@ func TestBadRefresh(t *testing.T) {
 	}
 	for {
 		runtime.Gosched()
-		err1 := errors.Tail(s.refresh(z))
-		if err1 == badForce {
+		if err1 := errors.Tail(s.refresh(z)); errors2.Is(err1, badForce) {
 			break
 		}
 	}
@@ -279,6 +280,7 @@ func TestAdvertise(t *testing.T) {
 }
 
 func testAdvertise(t *testing.T, zkConnFunc ZkConnCreatorFunc, zkConnFunc2 ZkConnCreatorFunc) {
+	t.Helper()
 	d1, err := New(zkConnFunc, "TestAdvertise1", nil)
 
 	require.NoError(t, err)
@@ -328,6 +330,7 @@ func TestServices(t *testing.T) {
 }
 
 func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z2 zktest.ZkConnSupported) {
+	t.Helper()
 	zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
 		return z1, ch, nil
 	})

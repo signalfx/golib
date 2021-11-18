@@ -18,11 +18,13 @@ func (e envMap) get(key string) string {
 }
 
 func asserErrorEq(t *testing.T, e error, f func() (string, error)) {
+	t.Helper()
 	_, err := f()
 	assert.Equal(t, e, err)
 }
 
 func assertStrEq(t *testing.T, s string, f func() (string, error)) {
+	t.Helper()
 	r, err := f()
 	assert.NoError(t, err)
 	assert.Equal(t, s, r)
@@ -31,6 +33,7 @@ func assertStrEq(t *testing.T, s string, f func() (string, error)) {
 var i = 0
 
 func testPath(t *testing.T, e envMap, err error, key string, f func() (string, error)) {
+	t.Helper()
 	asserErrorEq(t, err, f)
 	v := fmt.Sprintf("%dhello", i)
 	e[key] = v

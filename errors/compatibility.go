@@ -18,33 +18,33 @@ type hasMessage interface {
 }
 
 var (
-	_ causableError = &ErrorChain{}
-	_ hasUnderline  = &ErrorChain{}
-	_ hasMessage    = &ErrorChain{}
+	_ causableError = &ChainError{}
+	_ hasUnderline  = &ChainError{}
+	_ hasMessage    = &ChainError{}
 )
 
 // Cause lets me simulate errgo
-func (e *ErrorChain) Cause() error {
+func (e *ChainError) Cause() error {
 	return e.Tail()
 }
 
 // Message lets me simulate errgo
-func (e *ErrorChain) Message() string {
+func (e *ChainError) Message() string {
 	return e.Head().Error()
 }
 
 // GetMessage is used by dropbox
-func (e *ErrorChain) GetMessage() string {
+func (e *ChainError) GetMessage() string {
 	return e.Head().Error()
 }
 
 // GetInner is used by dropbox
-func (e *ErrorChain) GetInner() error {
+func (e *ChainError) GetInner() error {
 	return e.Head()
 }
 
 // Underlying lets me simulate errgo/facebook
-func (e *ErrorChain) Underlying() error {
+func (e *ChainError) Underlying() error {
 	return e.Next()
 }
 

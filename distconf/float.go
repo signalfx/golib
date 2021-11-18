@@ -32,6 +32,7 @@ func (c *Float) Get() float64 {
 }
 
 // Update the content of this config variable to newValue.
+//nolint:ifshort
 func (c *floatConf) Update(newValue []byte) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

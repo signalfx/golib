@@ -26,7 +26,7 @@ type Str struct {
 func (s *strConf) Update(newValue []byte) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	oldValue := s.currentVal.Load().(string)
+	oldValue, _ := s.currentVal.Load().(string)
 	if newValue == nil {
 		s.currentVal.Store(s.defaultVal)
 	} else {

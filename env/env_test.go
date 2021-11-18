@@ -60,6 +60,7 @@ func TestGetDurationEnvVar(t *testing.T) {
 	})
 }
 
+//nolint:dupl
 func TestGetUint64EnvVar(t *testing.T) {
 	convey.Convey("getUint64EnvVar", t, func() {
 		convey.Convey("should return the value if the environment variable is set", func() {
@@ -84,6 +85,7 @@ func TestGetUint64EnvVar(t *testing.T) {
 	})
 }
 
+//nolint:dupl
 func TestGetUintEnvVar(t *testing.T) {
 	convey.Convey("getUintEnvVar", t, func() {
 		convey.Convey("should return the value if the environment variable is set", func() {

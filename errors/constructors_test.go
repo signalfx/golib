@@ -30,7 +30,8 @@ func TestBaseError(t *testing.T) {
 				Err: os.ErrNotExist,
 			}
 			So(Wrap(baseErr, nil), ShouldEqual, baseErr)
-			wrappedErr := Wrap(baseErr, pathErr).(*ErrorChain)
+			var wrappedErr *ChainError
+			So(errors.As(Wrap(baseErr, pathErr), &wrappedErr), ShouldBeTrue)
 			So(Tail(wrappedErr), ShouldEqual, pathErr)
 			So(Next(wrappedErr), ShouldEqual, pathErr)
 			So(wrappedErr.Error(), ShouldContainSubstring, "file does not exist")

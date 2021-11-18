@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	goerrors "errors"
 	"expvar"
 	"fmt"
 	"io"
@@ -130,32 +131,34 @@ var DefaultConfig = &Config{
 }
 
 // New creates a disco discovery/publishing service
-func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (*Disco, error) {
-	conf := pointer.FillDefaultFrom(config, DefaultConfig).(*Config)
-	var GUID [16]byte
-	_, err := io.ReadFull(conf.RandomSource, GUID[:16])
-	if err != nil {
-		return nil, errors.Annotate(err, "cannot create random GUID")
-	}
+func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d *Disco, err error) {
+	conf, ok := pointer.FillDefaultFrom(config, DefaultConfig).(*Config)
+	if ok {
+		var GUID [16]byte
+		_, err = io.ReadFull(conf.RandomSource, GUID[:16])
+		if err != nil {
+			return nil, errors.Annotate(err, "cannot create random GUID")
+		}
 
-	d := &Disco{
-		zkConnCreator:        zkConnCreator,
-		myAdvertisedServices: make(map[string]ServiceInstance),
-		myEphemeralNodes:     make(map[string][]byte),
-		GUIDbytes:            GUID,
-		jsonMarshal:          json.Marshal,
-		publishAddress:       publishAddress,
-		shouldQuit:           make(chan struct{}),
-		eventLoopDone:        make(chan struct{}),
-		watchedServices:      make(map[string]*Service),
-		manualEvents:         make(chan zk.Event),
+		d = &Disco{
+			zkConnCreator:        zkConnCreator,
+			myAdvertisedServices: make(map[string]ServiceInstance),
+			myEphemeralNodes:     make(map[string][]byte),
+			GUIDbytes:            GUID,
+			jsonMarshal:          json.Marshal,
+			publishAddress:       publishAddress,
+			shouldQuit:           make(chan struct{}),
+			eventLoopDone:        make(chan struct{}),
+			watchedServices:      make(map[string]*Service),
+			manualEvents:         make(chan zk.Event),
+		}
+		d.stateLog = log.NewContext(conf.Logger).With(logkey.GUID, d.GUID())
+		d.zkConn, d.eventChan, err = zkConnCreator.Connect()
+		if err != nil {
+			return nil, errors.Annotate(err, "cannot create first zk connection")
+		}
+		go d.eventLoop()
 	}
-	d.stateLog = log.NewContext(conf.Logger).With(logkey.GUID, d.GUID())
-	d.zkConn, d.eventChan, err = zkConnCreator.Connect()
-	if err != nil {
-		return nil, errors.Annotate(err, "cannot create first zk connection")
-	}
-	go d.eventLoop()
 	return d, nil
 }
 
@@ -339,7 +342,7 @@ func (d *Disco) createInZk(deleteIfExists bool, pathDirectory string, instanceBy
 func (d *Disco) advertiseInZK(deleteIfExists bool, serviceName string, instanceData ServiceInstance) error {
 	// Need to create service root node
 	_, err := d.zkConn.Create(fmt.Sprintf("/%s", serviceName), []byte{}, 0, zk.WorldACL(zk.PermAll))
-	if err != nil && errors.Tail(err) != zk.ErrNodeExists {
+	if err != nil && !goerrors.Is(errors.Tail(err), zk.ErrNodeExists) {
 		return errors.Annotatef(err, "unhandled ZK error on Create of %s", serviceName)
 	}
 	instanceBytes, err := d.jsonMarshal(instanceData)
@@ -409,7 +412,7 @@ func (d *Disco) CreatePersistentEphemeralNode(path string, payload []byte) (err 
 	d.watchedMutex.Lock()
 	defer d.watchedMutex.Unlock()
 	_, err = d.zkConn.Create(fmt.Sprintf("/%s", path), []byte{}, 0, zk.WorldACL(zk.PermAll))
-	if err != nil && errors.Tail(err) != zk.ErrNodeExists {
+	if err != nil && !goerrors.Is(errors.Tail(err), zk.ErrNodeExists) {
 		return errors.Annotatef(err, "unhandled ZK error on Create of %s", path)
 	}
 	if err = d.createInZk(true, path, payload); err != nil {
@@ -469,11 +472,13 @@ func (x serviceInstanceList) Swap(i, j int) {
 }
 
 // ServiceInstances that represent instances of this service in your system
-func (s *Service) ServiceInstances() []ServiceInstance {
-	svcs := s.services.Load().([]ServiceInstance)
-	ret := make([]ServiceInstance, len(svcs))
-	copy(ret, svcs)
-	sort.Sort(serviceInstanceList(ret))
+func (s *Service) ServiceInstances() (ret []ServiceInstance) {
+	svcs, ok := s.services.Load().([]ServiceInstance)
+	if ok {
+		ret = make([]ServiceInstance, len(svcs))
+		copy(ret, svcs)
+		sort.Sort(serviceInstanceList(ret))
+	}
 	return ret
 }
 
@@ -549,6 +554,7 @@ func childrenServices(logger log.Logger, serviceName string, children []string, 
 	return ret, errors.NewMultiErr(allErrors)
 }
 
+//nolint:ifshort
 func (s *Service) refresh(zkConn ZkConn) error {
 	if atomic.LoadInt64(&s.ignoreUpdates) != 0 {
 		s.stateLog.Log("refresh flag set.  Ignoring refresh")
@@ -557,12 +563,12 @@ func (s *Service) refresh(zkConn ZkConn) error {
 	s.stateLog.Log(log.Msg, fmt.Sprintf("refresh called for %s service", s.name))
 	oldHash := s.byteHashes()
 	children, _, _, err := zkConn.ChildrenW(fmt.Sprintf("/%s", s.name))
-	if err != nil && errors.Tail(err) != zk.ErrNoNode {
+	if err != nil && !goerrors.Is(errors.Tail(err), zk.ErrNoNode) {
 		s.stateLog.Log(log.Err, err, "Error getting children")
 		return errors.Annotatef(err, "unexpected zk error on childrenw")
 	}
 
-	if errors.Tail(err) == zk.ErrNoNode {
+	if goerrors.Is(errors.Tail(err), zk.ErrNoNode) {
 		exists, _, _, err := zkConn.ExistsW(fmt.Sprintf("/%s", s.name))
 		if exists || err != nil {
 			s.stateLog.Log(log.Err, err, "Unable to register exists watch!")

@@ -22,8 +22,9 @@ func TestWithConcurrentInternal(t *testing.T) {
 	// This logger extracts a goroutine id from the last value field and
 	// increments the referenced bucket.
 	logger := LoggerFunc(func(kv ...interface{}) {
-		goroutine := kv[len(kv)-1].(int)
-		counts[goroutine]++
+		if goroutine, ok := kv[len(kv)-1].(int); ok {
+			counts[goroutine]++
+		}
 		if len(kv) != 10 {
 			panic(kv)
 		}
@@ -88,6 +89,7 @@ func toStr(in []interface{}) []string {
 	return ret
 }
 
+//nolint:staticcheck
 func TestLoggingBasics(t *testing.T) {
 	Convey("A nil logger should work as expected", t, func() {
 		var l *Context
@@ -379,6 +381,8 @@ func TestIfErr(t *testing.T) {
 	}
 }
 
+var errTest = errors.New("nope")
+
 func TestIfErrAndReturn(t *testing.T) {
 	b := &bytes.Buffer{}
 	l := NewLogfmtLogger(b, Panic)
@@ -388,8 +392,8 @@ func TestIfErrAndReturn(t *testing.T) {
 	if b.String() != "" {
 		t.Error("Expected empty string")
 	}
-	testErr := errors.New("nope")
-	if err := IfErrAndReturn(l, testErr); err != testErr {
+
+	if err := IfErrAndReturn(l, errTest); !errors.Is(err, errTest) {
 		t.Error("Expected error to equal ")
 	}
 	if b.String() == "" {
@@ -406,8 +410,8 @@ func TestIfErrWithKeysAndReturn(t *testing.T) {
 	if b.String() != "" {
 		t.Error("Expected empty string")
 	}
-	testErr := errors.New("nope")
-	if err := IfErrWithKeysAndReturn(l, testErr, Err, "test message"); err != testErr {
+
+	if err := IfErrWithKeysAndReturn(l, errTest, Err, "test message"); !errors.Is(err, errTest) {
 		t.Error("Expected error to equal ")
 	}
 	if b.String() == "" {
@@ -436,6 +440,7 @@ func TestChannelLoggerRace(t *testing.T) {
 }
 
 func fullyVerifyLogger(t *testing.T, factory func() (Logger, *bytes.Buffer)) {
+	t.Helper()
 	Convey("When verifying a logger", t, func() {
 		Convey("Racing should be ok", func() {
 			l, _ := factory()
