@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -160,7 +161,7 @@ func getShaValue(values []string) string {
 	for _, v := range values {
 		h.Write([]byte(v))
 	}
-	return string(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // loggableHeaders returns headers that are only allowed to be logged. For instance "X-Sf-Token" should not be logged so
