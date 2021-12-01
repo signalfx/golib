@@ -13,6 +13,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/trace"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -349,46 +350,56 @@ func TestAsyncMultiTokenSinkShutdownDroppedSpans(t *testing.T) {
 }
 
 func TestAsyncTokenStatusCounter(t *testing.T) {
-	s := NewAsyncTokenStatusCounter("testCounter", 5000, 1, map[string]string{"testdim1": "testdimval"})
-	wg := sync.WaitGroup{}
-	wg.Add(5)
-	for i := 0; i < 5; i++ {
-		go func() {
-			d := &tokenStatus{
-				status: http.StatusOK,
-				token:  "HELLOOO",
-				val:    5,
-			}
-			for i := 0; i < 5; i++ {
-				s.Increment(d)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-	dps := s.Datapoints()
-	Convey("An AsyncTokenStatusMap should be able to accept simultaneous calls to Increment", t, func() {
-		So(dps, ShouldNotBeNil)
-		dp := dps[0]
-		for dp.Value.(datapoint.IntValue).Int() != 125 {
-			runtime.Gosched()
-			dp = s.Datapoints()[0]
+	t.Parallel()
+	Convey("we should be able to properly increment the counts async", t, func() {
+		s := NewAsyncTokenStatusCounter("testCounter", 5000, 1, map[string]string{"testdim1": "testdimval"})
+		wg := sync.WaitGroup{}
+		wg.Add(5)
+		for i := 0; i < 5; i++ {
+			go func() {
+				d := &tokenStatus{
+					status: http.StatusOK,
+					token:  "HELLOOO",
+					val:    5,
+				}
+				for i := 0; i < 5; i++ {
+					s.Increment(d)
+				}
+				wg.Done()
+			}()
 		}
-		So(dp.Value.(datapoint.IntValue).Int(), ShouldEqual, 125)
+		wg.Wait()
+		dps := s.Datapoints()
+		Convey("An AsyncTokenStatusMap should be able to accept simultaneous calls to Increment", func() {
+			So(dps, ShouldNotBeNil)
+			dp := dps[0]
+			for dp.Value.(datapoint.IntValue).Int() != 125 {
+				runtime.Gosched()
+				dp = s.Datapoints()[0]
+			}
+			So(dp.Value.(datapoint.IntValue).Int(), ShouldEqual, 125)
+		})
 	})
 }
 
 func TestAsyncMultiTokenSinkCleanCloseDatapointsEventsAndSpans(t *testing.T) {
+	t.Parallel()
 	Convey("An AsyncMultiTokenSink", t, func() {
 		Convey("should gracefully shutdown after some data is added to it", func() {
-			s := NewAsyncMultiTokenSink(int64(2), int64(2), 5, 2500, "", "", "", "", newDefaultHTTPClient, nil, 0)
+			s := NewAsyncMultiTokenSink(int64(2), int64(2), 5, 2500, "", "", "", "", newDefaultHTTPClient, func(err error) error {
+				log.Discard.Log(log.Err, err, "Unable to handle error")
+				return nil
+			}, 0)
 			dps := GoMetricsSource.Datapoints()
 			evs := GoEventSource.Events()
 			sps := GoSpanSource.Spans()
 			s.ShutdownTimeout = time.Second * 5
 			iterations := 10000
+			wg := sync.WaitGroup{}
 			for i := 0; i < iterations; i++ {
+				wg.Add(1)
 				go func() {
+					defer wg.Done()
 					_ = s.AddDatapointsWithToken("HELLOOOOOO", dps)
 					_ = s.AddEventsWithToken("HELLOOOOOO", evs)
 					_ = s.AddSpansWithToken("HELLOOOOOO", sps)
@@ -399,6 +410,7 @@ func TestAsyncMultiTokenSinkCleanCloseDatapointsEventsAndSpans(t *testing.T) {
 				}()
 				runtime.Gosched()
 			}
+			wg.Wait()
 			for atomic.LoadInt64(&s.dpBuffered) <= int64(iterations) {
 				runtime.Gosched()
 			}
@@ -459,6 +471,7 @@ func ProcessDatapoints(data []*datapoint.Datapoint) (dpDropped, evDropped, spans
 }
 
 func TestAsyncMultiTokenSinkDatapoints(t *testing.T) {
+	t.Parallel()
 	verifyDrop := func(s *AsyncMultiTokenSink, expDpDropped, expEvDropped, expSpanDropped, expDpEm, expEvEm, expSpanEm int64) {
 		data := s.Datapoints()
 		So(data, ShouldNotBeEmpty)

@@ -25,6 +25,7 @@ type DatapointSource struct {
 
 var globalSource DatapointSource
 
+//nolint:gochecknoinits
 func init() {
 	globalSource.Metric = "random"
 	globalSource.Dims = map[string]string{"source": "randtest"}

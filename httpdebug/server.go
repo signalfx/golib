@@ -38,7 +38,7 @@ var LogKeyHTTPClass = log.Key("http_class")
 
 // New creates a new debug server
 func New(conf *Config) *Server {
-	conf = pointer.FillDefaultFrom(conf, DefaultConfig).(*Config)
+	conf, _ = pointer.FillDefaultFrom(conf, DefaultConfig).(*Config)
 	m := http.NewServeMux()
 	s := &Server{
 		Server: http.Server{

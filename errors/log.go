@@ -24,8 +24,7 @@ func LogIfErr(err error, l Loggable, msg string, args ...interface{}) {
 //    // Do something with f
 //  }
 func DeferLogIfErr(errCallback func() error, l Loggable, msg string, args ...interface{}) {
-	err := errCallback()
-	if err != nil {
+	if err := errCallback(); err != nil {
 		l.Printf("%s: %s", err.Error(), fmt.Sprintf(msg, args...))
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-stack/stack"
 	"github.com/signalfx/golib/v3/log"
+	"github.com/stretchr/testify/assert"
 )
 
 type panicLogger struct{}
@@ -101,8 +102,8 @@ func TestContextStackDepth(t *testing.T) {
 
 	// Call through interface to get baseline.
 	iface.Log("k", "v")
-	want := output[1].(int)
-
+	want, ok := output[1].(int)
+	assert.True(t, ok)
 	for len(output) < 10 {
 		concrete.Log("k", "v")
 		if have := output[1]; have != want {
@@ -138,8 +139,10 @@ func TestWithConcurrent(t *testing.T) {
 	// This logger extracts a goroutine id from the last value field and
 	// increments the referenced bucket.
 	logger := log.LoggerFunc(func(kv ...interface{}) {
-		goroutine := kv[len(kv)-1].(int)
-		counts[goroutine]++
+		goroutine, ok := kv[len(kv)-1].(int)
+		if ok {
+			counts[goroutine]++
+		}
 	})
 
 	// With must be careful about handling slices that can grow without

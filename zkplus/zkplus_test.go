@@ -22,6 +22,7 @@ func TestPrefix(t *testing.T) {
 }
 
 func testPrefix(t *testing.T, zkp zktest.ZkConnSupported) {
+	t.Helper()
 	defer func() {
 		log.IfErr(log.Panic, zktest.EnsureDelete(zkp, "modifyNode"))
 	}()
@@ -132,6 +133,7 @@ func TestWatches(t *testing.T) {
 }
 
 func testWatches(t *testing.T, zkp *ZkPlus) {
+	t.Helper()
 	ch := zkp.EventChan()
 	defer func() {
 		log.IfErr(log.Panic, zktest.EnsureDelete(zkp, "testWatches"))
@@ -192,6 +194,7 @@ func testWatches(t *testing.T, zkp *ZkPlus) {
 }
 
 func create(t *testing.T, zkp *ZkPlus) {
+	t.Helper()
 	ch := zkp.EventChan()
 	exists, _, ch2, err := zkp.ExistsW("testWatches")
 	assert.NoError(t, err)

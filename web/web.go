@@ -132,7 +132,7 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 // ServeHTTPC will pass the request between each middleware layer
 func (h *Handler) ServeHTTPC(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	stack := h.Pool.Get().(ContextHandler)
+	stack, _ := h.Pool.Get().(ContextHandler)
 	stack.ServeHTTPC(ctx, rw, r)
 	h.Pool.Put(stack)
 }

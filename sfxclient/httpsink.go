@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -157,7 +157,7 @@ var _ Sink = &HTTPSink{}
 const TokenHeaderName = "X-Sf-Token"
 
 func getShaValue(values []string) string {
-	h := sha1.New()
+	h := sha256.New()
 	for _, v := range values {
 		h.Write([]byte(v))
 	}
@@ -382,7 +382,10 @@ func (h *HTTPSink) getReader(b []byte) (io.Reader, bool, error) {
 	var err error
 	if !h.DisableCompression && len(b) > 1500 {
 		buf := new(bytes.Buffer) // TODO use a pool for this too?
-		w := h.zippers.Get().(*gzip.Writer)
+		w, ok := h.zippers.Get().(*gzip.Writer)
+		if !ok {
+			return nil, false, errors.New("invalid gzip writer")
+		}
 		defer h.zippers.Put(w)
 		w.Reset(buf)
 		_, err = w.Write(b)

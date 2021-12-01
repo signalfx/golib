@@ -5,12 +5,12 @@ import (
 	"fmt"
 )
 
-// New error.  Note returns error rather than *ErrorChain so that it matches errors.New signature
+// New error.  Note returns error rather than *ChainError so that it matches errors.New signature
 func New(msg string) error {
 	return errors.New(msg)
 }
 
-// Errorf is fmt.Errorf.  Note returns error rather than *ErrorChain so that it matches fmt.Errorf signature
+// Errorf is fmt.Errorf.  Note returns error rather than *ChainError so that it matches fmt.Errorf signature
 func Errorf(msg string, args ...interface{}) error {
 	return fmt.Errorf(msg, args...)
 }
@@ -42,7 +42,7 @@ func Wrap(head error, next error) error {
 		return head
 	}
 	tail := Tail(next)
-	return &ErrorChain{
+	return &ChainError{
 		head: head,
 		next: next,
 		tail: tail,

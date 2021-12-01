@@ -2,6 +2,7 @@
 package distconf
 
 import (
+	errors2 "errors"
 	"fmt"
 	"sync"
 	"time"
@@ -113,7 +114,7 @@ func (back *zkConfig) Get(key string) ([]byte, error) {
 	pathToFetch := back.configPath(key)
 	bytes, _, _, err := back.conn.GetW(pathToFetch)
 	if err != nil {
-		if err == zk.ErrNoNode {
+		if errors2.Is(err, zk.ErrNoNode) {
 			return nil, nil
 		}
 		return nil, errors.Annotatef(err, "cannot load zk node %s", pathToFetch)
@@ -147,8 +148,7 @@ func (back *zkConfig) Write(key string, value []byte) error {
 func (back *zkConfig) Watch(key string, callback backingCallbackFunction) error {
 	back.rootLogger.Log(logkey.ZkMethod, "watch", logkey.ZkPath, key)
 	path := back.configPath(key)
-	_, _, _, err := back.conn.ExistsW(path)
-	if err != nil {
+	if _, _, _, err := back.conn.ExistsW(path); err != nil {
 		return errors.Annotatef(err, "cannot watch path %s", path)
 	}
 	back.callbacks.add(path, callback)
@@ -240,8 +240,7 @@ func (back *zkConfig) setRefreshDelay(refreshDelay time.Duration) {
 func (back *zkConfig) reregisterWatch(path string, logger log.Logger) error {
 	logger = log.NewContext(logger).With(logkey.ZkPath, path)
 	logger.Log("Reregistering watch")
-	_, _, _, err := back.conn.ExistsW(path)
-	if err != nil {
+	if _, _, _, err := back.conn.ExistsW(path); err != nil {
 		logger.Log(log.Err, err, "Unable to reregistering watch")
 		return errors.Annotatef(err, "unable to reregister watch for node %s", path)
 	}
@@ -260,22 +259,25 @@ var DefaultZkConfig = &ZkConfig{
 
 // Zk creates a zookeeper readable backing
 func Zk(zkConnector ZkConnector, conf *ZkConfig) (ReaderWriter, error) {
-	conf = pointer.FillDefaultFrom(conf, DefaultZkConfig).(*ZkConfig)
-	ret := &zkConfig{
-		rootLogger: log.NewContext(conf.Logger).With(logkey.DistconfBacking, "zk"),
-		shouldQuit: make(chan struct{}),
-		callbacks: callbackMap{
-			callbacks: make(map[string][]backingCallbackFunction),
-		},
-		refreshDelay: atomicDuration{
-			refreshRetryDelay: time.Millisecond * 500,
-		},
+	zkCfg, ok := pointer.FillDefaultFrom(conf, DefaultZkConfig).(*ZkConfig)
+	var ret *zkConfig
+	if ok {
+		ret = &zkConfig{
+			rootLogger: log.NewContext(zkCfg.Logger).With(logkey.DistconfBacking, "zk"),
+			shouldQuit: make(chan struct{}),
+			callbacks: callbackMap{
+				callbacks: make(map[string][]backingCallbackFunction),
+			},
+			refreshDelay: atomicDuration{
+				refreshRetryDelay: time.Millisecond * 500,
+			},
+		}
+		var err error
+		ret.conn, ret.eventChan, err = zkConnector.Connect()
+		if err != nil {
+			return nil, errors.Annotate(err, "cannot create zk connection")
+		}
+		go ret.drainEventChan(zkCfg.Logger)
 	}
-	var err error
-	ret.conn, ret.eventChan, err = zkConnector.Connect()
-	if err != nil {
-		return nil, errors.Annotate(err, "cannot create zk connection")
-	}
-	go ret.drainEventChan(conf.Logger)
 	return ret, nil
 }

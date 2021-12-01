@@ -2,6 +2,7 @@ package sfxclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -53,12 +54,15 @@ func getHTTPStatusCode(status *tokenStatus, err error) *tokenStatus {
 	if err == nil {
 		status.status = http.StatusOK
 	} else {
-		// refactor: use `errors.As` to simplify type assertion on error chain once we get rid of go 1.12 build.
-		if obj, ok := err.(*TooManyRequestError); ok {
-			err = obj.Err
+		var (
+			tooManyRequestErr *TooManyRequestError
+			sfxAPIErr         *SFXAPIError
+		)
+		if errors.As(err, &tooManyRequestErr) {
+			err = tooManyRequestErr.Err
 		}
-		if obj, ok := err.(*SFXAPIError); ok {
-			status.status = obj.StatusCode
+		if errors.As(err, &sfxAPIErr) {
+			status.status = sfxAPIErr.StatusCode
 		}
 	}
 	return status
@@ -206,6 +210,7 @@ func (w *datapointWorker) emit(token string) {
 	w.buffer = w.buffer[:0]
 }
 
+//nolint:dupl
 func (w *datapointWorker) handleError(err error, token string, datapoints []*datapoint.Datapoint, addDatapoints func(context.Context, []*datapoint.Datapoint) error) {
 	errr := err
 	status := &tokenStatus{
@@ -321,6 +326,7 @@ func (w *eventWorker) emit(token string) {
 	w.buffer = w.buffer[:0]
 }
 
+//nolint:dupl
 func (w *eventWorker) handleError(err error, token string, events []*event.Event, addEvents func(context.Context, []*event.Event) error) {
 	errr := err
 	status := &tokenStatus{
@@ -437,6 +443,7 @@ func (w *spanWorker) emit(token string) {
 	w.buffer = w.buffer[:0]
 }
 
+//nolint:dupl
 func (w *spanWorker) handleError(err error, token string, traces []*trace.Span, addSpans func(context.Context, []*trace.Span) error) {
 	errr := err
 	status := &tokenStatus{
@@ -637,6 +644,7 @@ func (a *AsyncMultiTokenSink) getChannel(input string, size int) (workerID int64
 }
 
 // AddDatapointsWithToken emits a list of datapoints using a supplied token
+//nolint:dupl
 func (a *AsyncMultiTokenSink) AddDatapointsWithToken(token string, datapoints []*datapoint.Datapoint) (err error) {
 	var channelID int64
 	if channelID, err = a.getChannel(token, len(a.dpChannels)); err == nil {
@@ -660,7 +668,7 @@ func (a *AsyncMultiTokenSink) AddDatapointsWithToken(token string, datapoints []
 			}
 		}
 	} else {
-		err = fmt.Errorf("unable to add datapoints: there was an error while hashing the token to a worker. %v", err)
+		err = fmt.Errorf("unable to add datapoints: there was an error while hashing the token to a worker. %w", err)
 	}
 
 	return
@@ -677,6 +685,7 @@ func (a *AsyncMultiTokenSink) AddDatapoints(ctx context.Context, datapoints []*d
 }
 
 // AddEventsWithToken emits a list of events using a supplied token
+//nolint:dupl
 func (a *AsyncMultiTokenSink) AddEventsWithToken(token string, events []*event.Event) (err error) {
 	var channelID int64
 	if channelID, err = a.getChannel(token, len(a.evChannels)); err == nil {
@@ -699,11 +708,9 @@ func (a *AsyncMultiTokenSink) AddEventsWithToken(token string, events []*event.E
 				err = fmt.Errorf("unable to add events: the input buffer is full")
 			}
 		}
-
 	} else {
-		err = fmt.Errorf("unable to add events: there was an error while hashing the token to a worker. %v", err)
+		err = fmt.Errorf("unable to add events: there was an error while hashing the token to a worker. %w", err)
 	}
-
 	return
 }
 
@@ -718,6 +725,7 @@ func (a *AsyncMultiTokenSink) AddEvents(ctx context.Context, events []*event.Eve
 }
 
 // AddSpansWithToken emits a list of events using a supplied token
+//nolint:dupl
 func (a *AsyncMultiTokenSink) AddSpansWithToken(token string, spans []*trace.Span) (err error) {
 	var channelID int64
 	if channelID, err = a.getChannel(token, len(a.evChannels)); err == nil {
@@ -740,11 +748,9 @@ func (a *AsyncMultiTokenSink) AddSpansWithToken(token string, spans []*trace.Spa
 				err = fmt.Errorf("unable to add spans: the input buffer is full")
 			}
 		}
-
 	} else {
-		err = fmt.Errorf("unable to add spans: there was an error while hashing the token to a worker. %v", err)
+		err = fmt.Errorf("unable to add spans: there was an error while hashing the token to a worker. %w", err)
 	}
-
 	return
 }
 
@@ -830,6 +836,7 @@ type spanChannel struct {
 	workers []*spanWorker
 }
 
+//nolint:dupl
 func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, datapointEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (dpc *dpChannel) {
 	dpc = &dpChannel{
 		input:   make(chan *dpMsg, int64(buffer)),
@@ -851,6 +858,7 @@ func newDPChannel(numDrainingThreads int64, buffer int, batchSize int, datapoint
 	return
 }
 
+//nolint:dupl
 func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, eventEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (evc *evChannel) {
 	evc = &evChannel{
 		input:   make(chan *evMsg, int64(buffer)),
@@ -872,6 +880,7 @@ func newEVChannel(numDrainingThreads int64, buffer int, batchSize int, eventEndp
 	return
 }
 
+//nolint:dupl
 func newSpanChannel(numDrainingThreads int64, buffer int, batchSize int, traceEndpoint string, userAgent string, httpClient func() *http.Client, errorHandler func(error) error, stats *asyncMultiTokenSinkStats, closing chan bool, done chan bool, maxRetry int) (spc *spanChannel) {
 	spc = &spanChannel{
 		input:   make(chan *spanMsg, int64(buffer)),

@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"testing"
 
 	dropboxerrors "github.com/dropbox/godropbox/errors"
@@ -15,7 +16,8 @@ func TestGoDropbox(t *testing.T) {
 		So(Tail(root), ShouldEqual, root)
 		dropboxWrap := dropboxerrors.Wrap(root, "Wrapped error")
 		So(Tail(dropboxWrap), ShouldEqual, root)
-		myAnnotation := Annotate(dropboxWrap, "I have annotated dropbox error").(*ErrorChain)
+		var myAnnotation *ChainError
+		So(errors.As(Annotate(dropboxWrap, "I have annotated dropbox error"), &myAnnotation), ShouldBeTrue)
 		So(Tail(myAnnotation), ShouldEqual, root)
 		So(Cause(myAnnotation), ShouldEqual, root)
 		So(Details(myAnnotation), ShouldContainSubstring, "dropbox root error")

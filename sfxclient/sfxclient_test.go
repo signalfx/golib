@@ -124,29 +124,30 @@ func TestScheduler_ReportingTimeout(t *testing.T) {
 }
 
 func TestCollectDatapointDebug(t *testing.T) {
-	var handleErrors []error
-	var handleErrRet error
-	s := &Scheduler{
-		ErrorHandler: func(e error) error {
-			handleErrors = append(handleErrors, e)
-			return errors.Wrap(handleErrRet, e)
-		},
-		ReportingDelayNs: time.Second.Nanoseconds(),
-		callbackMap:      make(map[string]*callbackPair),
-	}
-	sink := &testSink{
-		lastDatapoints: make(chan []*datapoint.Datapoint, 1),
-	}
-	s.Sink = sink
-	tk := timekeepertest.NewStubClock(time.Now())
-	s.Timer = tk
-
-	ctx, cancel := context.WithCancel(context.Background())
 	Convey("testing collect datapoints with debug mode enabled", t, func() {
+		var handleErrors []error
+		var handleErrRet error
+		s := &Scheduler{
+			ErrorHandler: func(e error) error {
+				handleErrors = append(handleErrors, e)
+				return errors.Wrap(handleErrRet, e)
+			},
+			ReportingDelayNs: time.Second.Nanoseconds(),
+			callbackMap:      make(map[string]*callbackPair),
+		}
+		sink := &testSink{
+			lastDatapoints: make(chan []*datapoint.Datapoint, 1),
+		}
+		s.Sink = sink
+		tk := timekeepertest.NewStubClock(time.Now())
+		s.Timer = tk
+
+		ctx, cancel := context.WithCancel(context.Background())
 		s.Debug(true)
 		s.AddCallback(GoMetricsSource)
 		s.AddGroupedCallback("goMetrics", GoMetricsSource)
 		go s.Schedule(ctx)
+		runtime.Gosched()
 		go func() {
 			for {
 				runtime.Gosched()

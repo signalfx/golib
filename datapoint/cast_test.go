@@ -159,6 +159,7 @@ func TestCastMetricValueWithBool(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestCastFloatValue(t *testing.T) {
 	type args struct {
 		value interface{}
@@ -192,6 +193,7 @@ func TestCastFloatValue(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestCastUIntegerValue(t *testing.T) {
 	type args struct {
 		value interface{}
@@ -225,6 +227,7 @@ func TestCastUIntegerValue(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestCastIntegerValue(t *testing.T) {
 	type args struct {
 		value interface{}

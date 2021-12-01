@@ -9,13 +9,13 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type errMarshall struct{}
+type marshallError struct{}
 
-func (e *errMarshall) MarshalText() (text []byte, err error) {
-	return nil, &errMarshall{}
+func (e *marshallError) MarshalText() (text []byte, err error) {
+	return nil, &marshallError{}
 }
 
-func (e *errMarshall) Error() string {
+func (e *marshallError) Error() string {
 	return "I am an error"
 }
 
@@ -41,9 +41,9 @@ func TestNewLogfmtLogger(t *testing.T) {
 			l.Log("name", "john doe")
 			So(strings.TrimSpace(buf.String()), ShouldResemble, `name="john doe"`)
 		})
-		Convey("should forward marshall errors", func() {
+		Convey("should forward marshallError errors", func() {
 			So(func() {
-				l.Log(&errMarshall{}, &errMarshall{})
+				l.Log(&marshallError{}, &marshallError{})
 			}, ShouldPanic)
 		})
 		Convey("should forward writer errors", func() {

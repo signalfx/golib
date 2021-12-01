@@ -17,6 +17,7 @@ func BenchmarkValueBindingTimestampCount(b *testing.B) {
 }
 
 func benchmarkValueBindingTimestamp(b *testing.B, logger Logger) {
+	b.Helper()
 	lc := NewContext(logger).With("ts", DefaultTimestamp)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -34,6 +35,7 @@ func BenchmarkValueBindingCallerCount(b *testing.B) {
 }
 
 func benchmarkValueBindingCaller(b *testing.B, logger Logger) {
+	b.Helper()
 	lc := NewContext(logger).With("caller", DefaultCaller)
 	b.ReportAllocs()
 	b.ResetTimer()

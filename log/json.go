@@ -58,7 +58,7 @@ func mapFromKeyvals(missingValueKey Key, keyvals ...interface{}) map[string]inte
 func mapKey(k interface{}) (s string) {
 	defer func() {
 		if panicVal := recover(); panicVal != nil {
-			s = nilCheck(k, panicVal, "NULL").(string)
+			s, _ = nilCheck(k, panicVal, "NULL").(string)
 		}
 	}()
 	switch x := k.(type) {

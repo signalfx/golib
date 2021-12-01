@@ -94,7 +94,7 @@ func (s *StubClock) triggerChans() {
 	for len(s.waitingChans) > 0 {
 		firstItem := s.waitingChans[0]
 		if !firstItem.triggerTime.After(s.currentTime) {
-			i := heap.Pop(&s.waitingChans).(*chanTime)
+			i, _ := heap.Pop(&s.waitingChans).(*chanTime)
 			i.ch <- i.triggerTime
 			runtime.Gosched()
 		} else {

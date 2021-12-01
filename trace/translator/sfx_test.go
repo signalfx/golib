@@ -15,7 +15,9 @@
 package translator
 
 import (
+	"net/http"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -139,18 +141,21 @@ func TestBadSpans(t *testing.T) {
 }
 
 func assertBatchesAreEqual(t *testing.T, got, want *jaegerpb.Batch) {
+	t.Helper()
 	require.Equal(t, len(got.Spans), len(want.Spans))
 	assertProcessesAreEqual(t, got.Process, want.Process)
 	assertSpansAreEqual(t, got.Spans, want.Spans)
 }
 
 func assertProcessesAreEqual(t *testing.T, got, want *jaegerpb.Process) {
+	t.Helper()
 	sortTags(want.Tags)
 	sortTags(got.Tags)
 	assert.Equal(t, got, want)
 }
 
 func assertSpansAreEqual(t *testing.T, got, want []*jaegerpb.Span) {
+	t.Helper()
 	sortSpans(got)
 	sortSpans(want)
 	for i := 0; i < len(got); i++ {
@@ -229,7 +234,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					SpanID:        jaegerpb.SpanID(0x147d98),
 					TraceID:       jaegerpb.TraceID{Low: 11715721395283892799},
 					OperationName: "get",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Duration(22938000),
 					Flags:         0,
 					Process:       nil,
@@ -280,7 +285,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					},
 					Logs: []jaegerpb.Log{
 						{
-							Timestamp: time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+							Timestamp: time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 							Fields: []jaegerpb.KeyValue{
 								{
 									Key:   "key1",
@@ -295,7 +300,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 							},
 						},
 						{
-							Timestamp: time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+							Timestamp: time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 							Fields: []jaegerpb.KeyValue{
 								{
 									Key:   "annotation",
@@ -311,7 +316,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					TraceID:       jaegerpb.TraceID{Low: 12868642899890739775, High: 1},
 					SpanID:        jaegerpb.SpanID(0x21d092272e),
 					OperationName: "post",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Microsecond * 22938,
 					References: []jaegerpb.SpanRef{{
 						TraceID: jaegerpb.TraceID{Low: 12868642899890739775, High: 1},
@@ -341,7 +346,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					TraceID:       jaegerpb.TraceID{Low: 14021564404497586751},
 					SpanID:        jaegerpb.SpanID(213952636718),
 					OperationName: "post",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Microsecond * 22938,
 					References: []jaegerpb.SpanRef{{
 						TraceID: jaegerpb.TraceID{Low: 14021564404497586751},
@@ -361,8 +366,8 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 
 					TraceID:       jaegerpb.TraceID{Low: 15174485909104433727},
 					SpanID:        jaegerpb.SpanID(47532398882098234),
-					OperationName: "post",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					OperationName: strings.ToLower(http.MethodPost),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Microsecond * 22938,
 					Flags:         2,
 					References: []jaegerpb.SpanRef{
@@ -391,7 +396,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					TraceID:       jaegerpb.TraceID{Low: 16327407413711280703},
 					SpanID:        jaegerpb.SpanID(52035998509468730),
 					OperationName: "post",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Microsecond * 22938,
 					Flags:         2,
 					References: []jaegerpb.SpanRef{
@@ -447,7 +452,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					TraceID:       jaegerpb.TraceID{Low: 17480328918319176255},
 					SpanID:        jaegerpb.SpanID(58525199627357242),
 					OperationName: "post",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Microsecond * 22938,
 					Flags:         2,
 					References: []jaegerpb.SpanRef{
@@ -498,7 +503,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					TraceID:       jaegerpb.TraceID{Low: 18025686685695023674},
 					SpanID:        jaegerpb.SpanID(63028799254727738),
 					OperationName: "get",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Microsecond * 22938,
 					Tags: []jaegerpb.KeyValue{
 						{
@@ -541,7 +546,7 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					TraceID:       jaegerpb.TraceID{Low: 18025686685695023675},
 					SpanID:        jaegerpb.SpanID(63028799254727739),
 					OperationName: "get",
-					StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
 					Duration:      time.Microsecond * 22938,
 					Tags: []jaegerpb.KeyValue{
 						{

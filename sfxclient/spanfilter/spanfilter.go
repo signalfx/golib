@@ -3,6 +3,7 @@ package spanfilter
 import (
 	"context"
 	"encoding/json"
+	goerrors "errors"
 	"strings"
 
 	"github.com/signalfx/golib/v3/errors"
@@ -10,6 +11,7 @@ import (
 
 // Map is the response we return from ingest wrt our span endpoint
 // It contains the number of spans that were valid, and a map of string reason to spanIds for each invalid span
+//nolint:errname
 type Map struct {
 	Valid   int                 `json:"valid"`
 	Invalid map[string][]string `json:"invalid,omitempty"`
@@ -36,7 +38,7 @@ const (
 	RequiredTagMissing = "requiredTagMissing"
 )
 
-var emptySpanFilter = &Map{}
+var errEmptySpanFilter = &Map{}
 
 const (
 	// OK valid spans
@@ -76,6 +78,7 @@ func (s *Map) AddValid(i int) {
 }
 
 // FromBytes returns a Map or an error
+//nolint:nilerr
 func FromBytes(body []byte) *Map {
 	var spanFilter Map
 	if err := json.Unmarshal(body, &spanFilter); err != nil {
@@ -126,21 +129,20 @@ func GetSpanFilterMapFromContext(ctx context.Context) error {
 			return failMap
 		}
 	}
-	return emptySpanFilter
+	return errEmptySpanFilter
 }
 
 // IsMap returns whether an error is an instance of Map
 func IsMap(err error) bool {
-	if _, ok := err.(*Map); ok {
-		return true
-	}
-	return false
+	var errMap *Map
+	return goerrors.As(err, &errMap)
 }
 
 // IsInvalid returns false if it's a Map with no invalid entries or nil, else true
 func IsInvalid(err error) bool {
-	if m, ok := err.(*Map); ok {
-		return m.CheckInvalid()
+	var errMap *Map
+	if goerrors.As(err, &errMap) {
+		return errMap.CheckInvalid()
 	}
 	return err != nil
 }

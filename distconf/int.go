@@ -30,6 +30,7 @@ func (c *Int) Get() int64 {
 }
 
 // Update the content of this config variable to newValue.
+//nolint:ifshort
 func (c *intConf) Update(newValue []byte) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

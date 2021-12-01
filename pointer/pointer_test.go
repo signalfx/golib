@@ -80,7 +80,8 @@ func TestFillDefaultFrom(t *testing.T) {
 			},
 		}
 		Convey("should fill", func() {
-			p := FillDefaultFrom(&defaultPerson).(*Person)
+			p, ok := FillDefaultFrom(&defaultPerson).(*Person)
+			So(ok, ShouldBeTrue)
 			So(*p.Age, ShouldEqual, 21)
 			So(*p.Name, ShouldEqual, "john")
 			So(*p.SinceWakeup, ShouldEqual, time.Second)
@@ -100,7 +101,8 @@ func TestFillDefaultFrom(t *testing.T) {
 		})
 		Convey("should be able to override defaults", func() {
 			tkStub := timekeepertest.NewStubClock(time.Now())
-			p := FillDefaultFrom(&Person{Age: Int32(22), Tk: tkStub}, &defaultPerson).(*Person)
+			p, ok := FillDefaultFrom(&Person{Age: Int32(22), Tk: tkStub}, &defaultPerson).(*Person)
+			So(ok, ShouldBeTrue)
 			So(*p.Age, ShouldEqual, 22)
 			So(*p.Name, ShouldEqual, "john")
 			So(p.Job.Pay(), ShouldEqual, 100)
@@ -108,25 +110,29 @@ func TestFillDefaultFrom(t *testing.T) {
 		})
 		Convey("should allow nil defaults", func() {
 			defaultPerson.Age = nil
-			p := FillDefaultFrom(&defaultPerson).(*Person)
+			p, ok := FillDefaultFrom(&defaultPerson).(*Person)
+			So(ok, ShouldBeTrue)
 			So(p.Age, ShouldBeNil)
 			So(*p.Name, ShouldEqual, "john")
 		})
 		Convey("should allow nil elements", func() {
 			var nilPerson *Person
-			p := FillDefaultFrom(nilPerson, &defaultPerson).(*Person)
+			p, ok := FillDefaultFrom(nilPerson, &defaultPerson).(*Person)
+			So(ok, ShouldBeTrue)
 			So(*p.Age, ShouldEqual, 21)
 		})
 		Convey("should allow nil middle elements", func() {
 			var nilPerson *Person
-			p := FillDefaultFrom(nilPerson, nil, &defaultPerson).(*Person)
+			p, ok := FillDefaultFrom(nilPerson, nil, &defaultPerson).(*Person)
+			So(ok, ShouldBeTrue)
 			So(*p.Age, ShouldEqual, 21)
 		})
 		Convey("should allow chaining", func() {
 			firstDefault := Person{
 				Name: String("jackie"),
 			}
-			p := FillDefaultFrom(&firstDefault, &defaultPerson).(*Person)
+			p, ok := FillDefaultFrom(&firstDefault, &defaultPerson).(*Person)
+			So(ok, ShouldBeTrue)
 			So(*p.Age, ShouldEqual, 21)
 			So(*p.Name, ShouldEqual, "jackie")
 			Convey("and not modify structs", func() {

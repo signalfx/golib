@@ -33,6 +33,7 @@ func (s *Duration) Get() time.Duration {
 }
 
 // Update the contents of Duration to the new value
+//nolint:ifshort
 func (s *durationConf) Update(newValue []byte) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

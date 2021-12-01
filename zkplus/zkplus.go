@@ -1,6 +1,7 @@
 package zkplus
 
 import (
+	goerrors "errors"
 	"fmt"
 	"strings"
 	"time"
@@ -110,7 +111,7 @@ func (z *ZkPlus) ensureRootPath(conn zktest.ZkConnSupported) error {
 				_, err := conn.Create(totalPath, []byte(""), 0, zk.WorldACL(zk.PermAll))
 				// There could be a race where the root is created in the
 				// meantime since the Exists check above, so ignore ErrNodeExists.
-				if err != nil && err != zk.ErrNodeExists {
+				if err != nil && !goerrors.Is(err, zk.ErrNodeExists) {
 					return errors.Annotatef(err, "cannot create path %s", totalPath)
 				}
 			} else {
