@@ -482,6 +482,11 @@ func (s *Service) ServiceInstances() (ret []ServiceInstance) {
 	return ret
 }
 
+// Name of the service
+func (s *Service) Name() string {
+	return s.name
+}
+
 // ForceInstances overrides a disco service to have exactly the passed instances forever.  Useful
 // for debugging.
 func (s *Service) ForceInstances(instances []ServiceInstance) {
