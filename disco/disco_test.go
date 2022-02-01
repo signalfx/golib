@@ -348,6 +348,7 @@ func testServices(t *testing.T, z1 zktest.ZkConnSupported, ch <-chan zk.Event, z
 	require.NoError(t, err)
 	require.Equal(t, 0, len(s.ServiceInstances()))
 	require.NotNil(t, s.StateLog())
+	require.Equal(t, "not_here", s.Name())
 
 	onWatchChan := make(chan struct{})
 	s.Watch(func() {
