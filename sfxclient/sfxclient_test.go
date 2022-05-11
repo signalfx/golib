@@ -125,11 +125,9 @@ func TestScheduler_ReportingTimeout(t *testing.T) {
 
 func TestCollectDatapointDebug(t *testing.T) {
 	Convey("testing collect datapoints with debug mode enabled", t, func() {
-		var handleErrors []error
 		var handleErrRet error
 		s := &Scheduler{
 			ErrorHandler: func(e error) error {
-				handleErrors = append(handleErrors, e)
 				return errors.Wrap(handleErrRet, e)
 			},
 			ReportingDelayNs: time.Second.Nanoseconds(),
