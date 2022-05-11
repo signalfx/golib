@@ -363,7 +363,6 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					Logs: []jaegerpb.Log{},
 				},
 				{
-
 					TraceID:       jaegerpb.TraceID{Low: 15174485909104433727},
 					SpanID:        jaegerpb.SpanID(47532398882098234),
 					OperationName: strings.ToLower(http.MethodPost),
@@ -392,7 +391,6 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 					Logs: []jaegerpb.Log{},
 				},
 				{
-
 					TraceID:       jaegerpb.TraceID{Low: 16327407413711280703},
 					SpanID:        jaegerpb.SpanID(52035998509468730),
 					OperationName: "post",

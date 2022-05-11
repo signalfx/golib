@@ -36,8 +36,7 @@ func (m *memConfig) Write(key string, value []byte) error {
 func (m *memConfig) Watch(key string, callback backingCallbackFunction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	_, existing := m.watches[key]
-	if !existing {
+	if _, existing := m.watches[key]; !existing {
 		m.watches[key] = []backingCallbackFunction{}
 	}
 	m.watches[key] = append(m.watches[key], callback)

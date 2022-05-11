@@ -14,6 +14,7 @@ run:
   skip-files:
     - ".*\\.pb\\.go"
     - ".*\\.gen\\.go"
+    - ".*_easyjson\\.go"
   # by default isn't set. If set we pass it to "go list -mod={option}". From "go help modules":
   # If invoked with -mod=readonly, the go command is disallowed from the implicit
   # automatic updating of go.mod described above. Instead, it fails when any changes
@@ -150,6 +151,7 @@ linters-settings:
     threshold: 100
 
 linters:
+  disable-all: true
   enable: # please use alphabetical order when enabling any linters
     - asciicheck
     - bodyclose
@@ -162,7 +164,6 @@ linters:
     - errname
     - exportloopref
     - forbidigo
-    - forcetypeassert
     - gci
     - gocognit
     - goconst
@@ -194,31 +195,11 @@ linters:
     - testpackage
     - thelper
     - tparallel
-    - typecheck
     - unconvert
     - unparam
     - unused
     - wastedassign
     - whitespace
-  enable-all: true
-  disable:
-    - lll
-    - paralleltest # this has lots of test cases that needs to be added as parallel and some of them have race condition so disabling after some effort
-    - gochecknoglobals
-    - exhaustive
-    # TODO: need to enable this two low priority for better coding guidelines in terms of space between condition
-    - wsl
-    - godot
-    - gomnd # we cannot enable this as there are lots of magic numbers
-    - nestif # cannot enable this given the way the code structure is organized for unit testing
-    - nlreturn
-    - nolintlint
-    - tagliatelle # cannot be enabled as it's asking to modify `json` which is not possible
-    - promlinter # we do not care above prometheus linter for metrics
-    - gomoddirectives # needs to be disabled as we need replacement for jaeger & redis
-    - scopelint # deprecated and hence disabled it
-    - interfacer # deprecated and hence disabled
-    - wrapcheck # Checks that errors returned from external packages are wrapped
   fast: true
 
 # output configuration options

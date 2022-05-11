@@ -736,7 +736,7 @@ func TestSetHeaders(t *testing.T) {
 	Convey("test setTokenHeader", t, func() {
 		h := &HTTPSink{AuthToken: "foo", UserAgent: "agent"}
 		req := httptest.NewRequest(http.MethodPost, "/v2/datapoint", nil)
-		// nolint:golint,staticcheck
+		// nolint:golint,staticcheck,revive
 		ctx := context.WithValue(context.Background(), TokenHeaderName, "bar")
 		h.setTokenHeader(ctx, req)
 		So(req.Header.Get(TokenHeaderName), ShouldEqual, "bar")

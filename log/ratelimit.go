@@ -26,8 +26,7 @@ func (r *RateLimitedLogger) now() time.Time {
 
 // Log kvs to the wrapped Logger if the limit hasn't been reached
 func (r *RateLimitedLogger) Log(kvs ...interface{}) {
-	now := r.now()
-	if r.EventCounter.Event(now) > r.Limit {
+	if r.EventCounter.Event(r.now()) > r.Limit {
 		if r.LimitLogger != nil {
 			// Note: Log here messes up "caller" :/
 			r.LimitLogger.Log(kvs...)

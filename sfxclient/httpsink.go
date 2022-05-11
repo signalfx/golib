@@ -178,8 +178,7 @@ func loggableHeaders(headers map[string][]string) (rv map[string][]string) {
 	return rv
 }
 
-func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, error), contentType, endpoint string,
-	respValidator responseValidator) error {
+func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, error), contentType, endpoint string, respValidator responseValidator) error {
 	if ctx.Err() != nil {
 		return errors.Annotate(ctx.Err(), "context already closed")
 	}
