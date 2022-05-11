@@ -5,6 +5,7 @@ import (
 	"expvar"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"sync"
 
 	"github.com/signalfx/golib/v3/datapoint"
@@ -19,6 +20,7 @@ type SHA1Reporter struct {
 	FileName string
 	Logger   log.Logger
 	Fi       fileInfo
+	Tag      string
 	oc       sync.Once
 }
 
@@ -42,8 +44,9 @@ func load(fileName string) (fileInfo, error) {
 	return fi, nil
 }
 
-func (s *SHA1Reporter) loadFileInfo() {
+func (s *SHA1Reporter) loadInfo() {
 	s.oc.Do(func() {
+		s.Tag = os.Getenv("DOCKER_TAG")
 		fi, err := load(s.FileName)
 		if err != nil {
 			s.Logger.Log(log.Err, err, logkey.Name, s.FileName, "Cannot load file info!")
@@ -56,7 +59,7 @@ func (s *SHA1Reporter) loadFileInfo() {
 
 // Var returns an expvar that is the build file info
 func (s *SHA1Reporter) Var() expvar.Var {
-	s.loadFileInfo()
+	s.loadInfo()
 	return expvar.Func(func() interface{} {
 		return s.Fi
 	})
@@ -64,8 +67,12 @@ func (s *SHA1Reporter) Var() expvar.Var {
 
 // Datapoints returns a single datapoint that includes the commit sha loaded from a config file
 func (s *SHA1Reporter) Datapoints() []*datapoint.Datapoint {
-	s.loadFileInfo()
+	s.loadInfo()
+	dims := map[string]string{"commit": s.Fi.Commit}
+	if len(s.Tag) > 0 {
+		dims["dockerTag"] = s.Tag
+	}
 	return []*datapoint.Datapoint{
-		sfxclient.Gauge("fileinfo_commit", map[string]string{"commit": s.Fi.Commit}, int64(1)),
+		sfxclient.Gauge("fileinfo_commit", dims, int64(1)),
 	}
 }

@@ -28,8 +28,10 @@ func TestReportSha(t *testing.T) {
 		}
 
 		Convey("Commit should load ok", func() {
+			os.Setenv("DOCKER_TAG", "foo")
 			dps := reporter.Datapoints()
 			So(dps[0].Dimensions["commit"], ShouldEqual, "b70a843b07741e04ce6845aaefdbcb077787b4a3")
+			So(dps[0].Dimensions["dockerTag"], ShouldEqual, "foo")
 			So(reporter.Var().String(), ShouldContainSubstring, "b70a843b07741e04ce6845aaefdbcb077787b4a3")
 		})
 
