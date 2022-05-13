@@ -69,8 +69,7 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		}
 		childTable += "</table>\n"
 	}
-	s :=
-		fmt.Sprintf(`
+	s := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 	<head>
