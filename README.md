@@ -1,3 +1,5 @@
+>ℹ️&nbsp;&nbsp;SignalFx was acquired by Splunk in October 2019. See [Splunk SignalFx](https://www.splunk.com/en_us/investor-relations/acquisitions/signalfx.html) for more information.
+
 # golib [![Build Status](https://travis-ci.org/signalfx/golib.svg?branch=master)](https://travis-ci.org/signalfx/golib)
 
 Various golang libraries we've found useful. The SignalFx client library (SDK) for Go is available [here](https://github.com/signalfx/golib/tree/master/sfxclient) along with instructions for installing the library and using the included functions.
