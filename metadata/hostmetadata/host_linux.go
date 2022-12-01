@@ -1,5 +1,5 @@
-//go:build linux
-// +build linux
+//go:build linux && !ppc && !ppc64 && !ppc64le
+// +build linux,!ppc,!ppc64,!ppc64le
 
 package hostmetadata
 

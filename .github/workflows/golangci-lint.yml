@@ -31,3 +31,20 @@ jobs:
 
           # Optional: if set to true then the action don't cache or restore ~/.cache/go-build.
           skip-build-cache: true
+  cross-compile:
+    name: cross-compile
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ linux, windows, darwin ]
+        arch: [ ppc64le, amd64, arm64 ]
+        exclude:
+          - os: darwin
+            arch: ppc64le
+          - os: windows
+            arch: ppc64le
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build ./...
+
