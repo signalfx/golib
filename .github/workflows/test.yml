@@ -1,0 +1,40 @@
+name: build-and-test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        GO_VERSION: [ "1.17" ]
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.GO_VERSION }}
+
+      - name: Caching dependency
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/go/bin
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Run tests
+        run: |
+          go mod download
+          set -x
+          go test -covermode atomic -race -timeout 120s -coverprofile ./coverage.out $(go list ./...)
+          cov="$(go tool cover -func coverage.out | grep -v 100.0% || true)"
+          echo $cov
+          test -z "$cov"
