@@ -13,6 +13,30 @@ import (
 	"github.com/signalfx/golib/v3/zkplus/zktest"
 )
 
+const (
+	// DEBUG all the annoying zk message
+	DEBUG = iota
+	// NORMAL enough to be useful (he says)
+	NORMAL
+)
+
+// LogLevel sets the log level of this module
+// I'm sorry to have to put this here but i just can't deal with rewriting the entire
+// log library or swapping it out for zap at the moment. sorry.
+var LogLevel = NORMAL
+
+func normalit(logger log.Logger, keyvals ...interface{}) {
+	if LogLevel <= NORMAL {
+		logger.Log(keyvals...)
+	}
+}
+
+func debugit(logger log.Logger, keyvals ...interface{}) {
+	if LogLevel <= DEBUG {
+		logger.Log(keyvals...)
+	}
+}
+
 // ZkConnector tells ZkPlus how to create a zk connection
 type ZkConnector interface {
 	Conn() (zktest.ZkConnSupported, <-chan zk.Event, error)
@@ -129,7 +153,7 @@ func (z *ZkPlus) eventLoop() {
 	for {
 		select {
 		case eventToSend = <-whenI(!haveEventToSend && z.connectedChan != nil, z.connectedChan):
-			z.logger.Log(logkey.ZkEvent, eventToSend, logkey.ZkPrefix, z.pathPrefix, log.Msg, "ZK node modification event")
+			normalit(z.logger, logkey.ZkEvent, eventToSend, logkey.ZkPrefix, z.pathPrefix, log.Msg, "ZK node modification event")
 			if strings.HasPrefix(eventToSend.Path, z.pathPrefix) {
 				eventToSend.Path = eventToSend.Path[len(z.pathPrefix):]
 				if eventToSend.Path == "" {
@@ -158,7 +182,7 @@ func (z *ZkPlus) onQuit(c chan struct{}) {
 		z.connectedConn.Close()
 		z.connectedConn = nil
 	}
-	z.logger.Log("Close on event loop")
+	normalit(z.logger, "Close on event loop")
 }
 
 func (z *ZkPlus) setupConn() {
@@ -169,7 +193,7 @@ func (z *ZkPlus) setupConn() {
 	z.connectedConn = c
 	z.connectedChan = e
 	if err := z.ensureRootPath(c); err != nil {
-		z.logger.Log("err", err, "Unable to ensure root path")
+		normalit(z.logger, "err", err, "Unable to ensure root path")
 		z.connectedConn.Close()
 		z.connectedConn = nil
 		z.connectedChan = nil
@@ -205,50 +229,50 @@ func (z *ZkPlus) blockOnConn() zktest.ZkConnSupported {
 
 // Exists returns true if the path exists
 func (z *ZkPlus) Exists(path string) (bool, *zk.Stat, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "Exists")
+	debugit(z.forPath(path), logkey.ZkMethod, "Exists")
 	return z.blockOnConn().Exists(z.realPath(path))
 }
 
 // ExistsW is like Exists but also sets a watch.  Note: We DO NOT change paths on the returned
 // channel nor do we reconnect it.  Use the global channel instead
 func (z *ZkPlus) ExistsW(path string) (bool, *zk.Stat, <-chan zk.Event, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "ExistsW")
+	debugit(z.forPath(path), logkey.ZkMethod, "ExistsW")
 	return z.blockOnConn().ExistsW(z.realPath(path))
 }
 
 // Get the bytes of a zk path
 func (z *ZkPlus) Get(path string) ([]byte, *zk.Stat, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "Get")
+	debugit(z.forPath(path), logkey.ZkMethod, "Get")
 	return z.blockOnConn().Get(z.realPath(path))
 }
 
 // GetW is like Get, but also sets a watch
 func (z *ZkPlus) GetW(path string) ([]byte, *zk.Stat, <-chan zk.Event, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "GetW")
+	debugit(z.forPath(path), logkey.ZkMethod, "GetW")
 	return z.blockOnConn().GetW(z.realPath(path))
 }
 
 // Children gets children of a path
 func (z *ZkPlus) Children(path string) ([]string, *zk.Stat, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "Children")
+	debugit(z.forPath(path), logkey.ZkMethod, "Children")
 	return z.blockOnConn().Children(z.realPath(path))
 }
 
 // ChildrenW is like children but also sets a watch
 func (z *ZkPlus) ChildrenW(path string) ([]string, *zk.Stat, <-chan zk.Event, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "ChildrenW")
+	debugit(z.forPath(path), logkey.ZkMethod, "ChildrenW")
 	return z.blockOnConn().ChildrenW(z.realPath(path))
 }
 
 // Delete a Zk node
 func (z *ZkPlus) Delete(path string, version int32) error {
-	z.forPath(path).Log(logkey.ZkMethod, "Delete")
+	normalit(z.forPath(path), logkey.ZkMethod, "Delete")
 	return z.blockOnConn().Delete(z.realPath(path), version)
 }
 
 // Create a Zk node
 func (z *ZkPlus) Create(path string, data []byte, flags int32, acl []zk.ACL) (string, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "Create")
+	normalit(z.forPath(path), logkey.ZkMethod, "Create")
 	p, err := z.blockOnConn().Create(z.realPath(path), data, flags, acl)
 	if strings.HasPrefix(p, z.pathPrefix) && z.pathPrefix != "" {
 		p = p[len(z.pathPrefix)+1:]
@@ -258,7 +282,7 @@ func (z *ZkPlus) Create(path string, data []byte, flags int32, acl []zk.ACL) (st
 
 // Set the data of a zk node
 func (z *ZkPlus) Set(path string, data []byte, version int32) (*zk.Stat, error) {
-	z.forPath(path).Log(logkey.ZkMethod, "Set")
+	normalit(z.forPath(path), logkey.ZkMethod, "Set")
 	return z.blockOnConn().Set(z.realPath(path), data, version)
 }
 
