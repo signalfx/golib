@@ -243,3 +243,14 @@ func TestBadConnection(t *testing.T) {
 	assert.Nil(t, conn)
 	z.Close()
 }
+
+func TestLogger(t *testing.T) {
+	logger := &log.Counter{}
+	normalit(logger, "normal level")
+	assert.Equal(t, logger.Count, int64(1))
+	debugit(logger, "debug level")
+	assert.Equal(t, logger.Count, int64(1))
+	LogLevel = DEBUG
+	debugit(logger, "debug level")
+	assert.Equal(t, logger.Count, int64(2))
+}
