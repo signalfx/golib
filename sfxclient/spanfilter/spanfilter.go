@@ -36,6 +36,8 @@ const (
 	NilOperationName = "nilOperationName"
 	// RequiredTagMissing means the span was missing a required tag
 	RequiredTagMissing = "requiredTagMissing"
+	// SpanTooLargeDropped means a span size was over limits and was dropped
+	SpanTooLargeDropped = "spanTooLargeDropped"
 )
 
 var errEmptySpanFilter = &Map{}
