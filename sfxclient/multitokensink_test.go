@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/juju/errors"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/log"
@@ -41,9 +40,9 @@ func TestAddDataToAsyncMultitokenSink(t *testing.T) {
 		spans := GoSpanSource.Spans()
 
 		Convey("shouldn't accept dps and events with a context if a token isn't provided in the context", func() {
-			So(errors.Details(s.AddEvents(ctx, evs)), ShouldContainSubstring, "no value was found on the context with key")
-			So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "no value was found on the context with key")
-			So(errors.Details(s.AddSpans(ctx, spans)), ShouldContainSubstring, "no value was found on the context with key")
+			So(s.AddEvents(ctx, evs).Error(), ShouldContainSubstring, "no value was found on the context with key")
+			So(s.AddDatapoints(ctx, dps).Error(), ShouldContainSubstring, "no value was found on the context with key")
+			So(s.AddSpans(ctx, spans).Error(), ShouldContainSubstring, "no value was found on the context with key")
 		})
 
 		Convey("shouldn't accept dps and events if the sink has started, but the workers have shutdown", func() {
@@ -52,10 +51,10 @@ func TestAddDataToAsyncMultitokenSink(t *testing.T) {
 			So(s.Close(), ShouldBeNil)
 			_ = s.AddEvents(ctx, evs)
 			_ = s.AddDatapointsWithToken("HELLOOOOOO", dps)
-			So(errors.Details(s.AddEvents(ctx, evs)), ShouldContainSubstring, "unable to add events: the worker has been stopped")
-			So(errors.Details(s.AddDatapoints(ctx, dps)), ShouldContainSubstring, "unable to add datapoints: the worker has been stopped")
-			So(errors.Details(s.AddEventsWithToken("HELLOOOOO", evs)), ShouldContainSubstring, "unable to add events: the worker has been stopped")
-			So(errors.Details(s.AddDatapointsWithToken("HELLOOOOOO", dps)), ShouldContainSubstring, "unable to add datapoints: the worker has been stopped")
+			So(s.AddEvents(ctx, evs).Error(), ShouldContainSubstring, "unable to add events: the worker has been stopped")
+			So(s.AddDatapoints(ctx, dps).Error(), ShouldContainSubstring, "unable to add datapoints: the worker has been stopped")
+			So(s.AddEventsWithToken("HELLOOOOO", evs).Error(), ShouldContainSubstring, "unable to add events: the worker has been stopped")
+			So(s.AddDatapointsWithToken("HELLOOOOOO", dps).Error(), ShouldContainSubstring, "unable to add datapoints: the worker has been stopped")
 		})
 	})
 }
@@ -282,7 +281,7 @@ func TestAsyncMultiTokenSinkShutdownDroppedDatapoints(t *testing.T) {
 			for atomic.LoadInt64(&s.dpBuffered) <= int64(iterations) {
 				runtime.Gosched()
 			}
-			So(errors.Details(s.Close()), ShouldContainSubstring, "may have been dropped")
+			So(s.Close().Error(), ShouldContainSubstring, "may have been dropped")
 		})
 	})
 }
@@ -313,7 +312,7 @@ func TestAsyncMultiTokenSinkShutdownDroppedEvents(t *testing.T) {
 			for atomic.LoadInt64(&s.evBuffered) <= int64(iterations) {
 				runtime.Gosched()
 			}
-			So(errors.Details(s.Close()), ShouldContainSubstring, "may have been dropped")
+			So(s.Close().Error(), ShouldContainSubstring, "may have been dropped")
 		})
 	})
 }
@@ -344,7 +343,7 @@ func TestAsyncMultiTokenSinkShutdownDroppedSpans(t *testing.T) {
 			for atomic.LoadInt64(&s.spansBuffered) <= int64(iterations) {
 				runtime.Gosched()
 			}
-			So(errors.Details(s.Close()), ShouldContainSubstring, "may have been dropped")
+			So(s.Close().Error(), ShouldContainSubstring, "may have been dropped")
 		})
 	})
 }
