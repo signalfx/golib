@@ -40,6 +40,7 @@ func TestFacebookErrors(t *testing.T) {
 		fbWrap := facebookerrors.Wrap(root)
 		So(Tail(fbWrap), ShouldEqual, root)
 		myAnnotation := Annotate(fbWrap, "I have annotated fb error")
+		So(Cause(myAnnotation), ShouldEqual, root)
 
 		So(Tail(myAnnotation), ShouldEqual, root)
 		So(Cause(myAnnotation), ShouldEqual, root)
