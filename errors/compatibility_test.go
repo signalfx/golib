@@ -2,13 +2,60 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	dropboxerrors "github.com/dropbox/godropbox/errors"
 	facebookerrors "github.com/facebookgo/stackerr"
-	jujuerrors "github.com/juju/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+type causableImplError struct {
+	root  error
+	cause error
+}
+
+func (e causableImplError) Error() string {
+	return fmt.Sprintf("%v\n\tcause:%v", e.root, e.cause)
+}
+
+func (e causableImplError) Cause() error {
+	return e.cause
+}
+
+type messageImplError struct {
+	root    error
+	message string
+}
+
+func (e messageImplError) Error() string {
+	return fmt.Sprintf("%v\n\tcause:%v", e.root, e.message)
+}
+
+func (e messageImplError) Message() string {
+	return e.message
+}
+
+func TestMessageErrors(t *testing.T) {
+	Convey("When the original error implements hasMessage", t, func() {
+		err := messageImplError{
+			root:    errors.New("foo"),
+			message: "bar",
+		}
+		So(Message(err), ShouldEqual, "bar")
+	})
+}
+
+func TestCausableErrors(t *testing.T) {
+	Convey("When the original error implements causableError", t, func() {
+		cause := errors.New("cause")
+		err := causableImplError{
+			root:  errors.New("foo"),
+			cause: cause,
+		}
+		So(Cause(err), ShouldEqual, cause)
+	})
+}
 
 func TestGoDropbox(t *testing.T) {
 	Convey("When the original error is godropbox", t, func() {
@@ -31,21 +78,6 @@ func TestGoDropbox(t *testing.T) {
 		So(myAnnotation.GetInner().Error(), ShouldEqual, "I have annotated dropbox error")
 
 		So(dropboxerrors.RootError(myAnnotation).Error(), ShouldEqual, Tail(myAnnotation).Error())
-	})
-}
-
-func TestJujuErrors(t *testing.T) {
-	Convey("When the original error is jujuerror", t, func() {
-		root := jujuerrors.New("juju root error")
-		So(Tail(root), ShouldBeNil)
-		dropboxWrap := jujuerrors.Annotate(root, "Wrapped error")
-		So(Tail(dropboxWrap), ShouldEqual, root)
-		myAnnotation := Annotate(dropboxWrap, "I have annotated juju error")
-		So(Tail(myAnnotation), ShouldEqual, root)
-		So(Cause(myAnnotation), ShouldEqual, root)
-		So(Details(myAnnotation), ShouldContainSubstring, "juju root error")
-		So(Details(myAnnotation), ShouldContainSubstring, "I have annotated juju error")
-		So(jujuerrors.Cause(myAnnotation), ShouldEqual, Tail(myAnnotation))
 	})
 }
 

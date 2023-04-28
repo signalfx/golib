@@ -287,6 +287,9 @@ func testAdvertise(t *testing.T, zkConnFunc ZkConnCreatorFunc, zkConnFunc2 ZkCon
 	require.NotNil(t, d1)
 	defer d1.Close()
 
+	err = d1.refreshAll()
+	require.NoError(t, err)
+
 	service, err := d1.Services("TestAdvertiseService")
 	require.NoError(t, err)
 	require.Equal(t, 0, len(service.ServiceInstances()))
