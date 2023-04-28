@@ -1,15 +1,13 @@
+//go:build integration
 // +build integration
 
 package distconf
 
 import (
-	"testing"
-
-	"time"
-
 	"fmt"
-
 	"sync/atomic"
+	"testing"
+	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/signalfx/golib/v3/nettest"

@@ -17,7 +17,7 @@ import (
 
 type boolFlagCheck bool
 
-func (b *boolFlagCheck) HasFlag(ctx context.Context) bool {
+func (b *boolFlagCheck) HasFlag(_ context.Context) bool {
 	return bool(*b)
 }
 

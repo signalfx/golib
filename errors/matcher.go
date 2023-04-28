@@ -15,10 +15,10 @@ type Matcher interface {
 
 // Matches is used to wrap the Cause() and is similar to something like:
 //
-//   f, err := do_something()
-//   if Matches(err, os.IsTimeout) {
-//     // It was a timeout error somewhere...
-//   }
+//	f, err := do_something()
+//	if Matches(err, os.IsTimeout) {
+//	  // It was a timeout error somewhere...
+//	}
 func Matches(err error, f func(error) bool) bool {
 	return MatchesI(err, MatcherFunc(f))
 }

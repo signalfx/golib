@@ -3,10 +3,10 @@
 
 package hostmetadata
 
-func fillPlatformSpecificOSData(info *OS) error {
+func fillPlatformSpecificOSData(_ *OS) error {
 	return nil
 }
 
-func fillPlatformSpecificCPUData(info *CPU) error {
+func fillPlatformSpecificCPUData(_ *CPU) error {
 	return nil
 }

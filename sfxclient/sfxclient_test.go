@@ -22,7 +22,7 @@ type testSink struct {
 	lastDatapoints chan []*datapoint.Datapoint
 }
 
-func (t *testSink) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) (err error) {
+func (t *testSink) AddDatapoints(_ context.Context, points []*datapoint.Datapoint) (err error) {
 	t.lastDatapoints <- points
 	return t.retErr
 }

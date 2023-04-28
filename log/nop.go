@@ -6,7 +6,7 @@ type nop struct{}
 var Discard ErrorHandlingDisableableLogger = nop{}
 
 // Log does nothing
-func (n nop) Log(keyvals ...interface{}) {
+func (n nop) Log(_ ...interface{}) {
 	//nolint
 	return
 }

@@ -20,7 +20,7 @@ func dpNamed(name string, dps []*datapoint.Datapoint) *datapoint.Datapoint {
 	return nil
 }
 
-func TestCumulativeBucketThreadRaces(t *testing.T) {
+func TestCumulativeBucketThreadRaces(_ *testing.T) {
 	cb := &CumulativeBucket{
 		MetricName: "mname",
 		Dimensions: map[string]string{"type": "dev"},

@@ -17,12 +17,12 @@ func LogIfErr(err error, l Loggable, msg string, args ...interface{}) {
 // DeferLogIfErr will log to l a Printf message if the return value of errCallback is not nil.  Intended use
 // is during a defer function whos return value you don't really care about.
 //
-//  func Thing() error {
-//    f, err := os.Open("/tmp/a")
-//    if err != nil { return Annotate(err, "Cannot open /tmp/a") }
-//    defer DeferLogIfErr(f.Close, log, "Cannot close file %s", "/tmp/a")
-//    // Do something with f
-//  }
+//	func Thing() error {
+//	  f, err := os.Open("/tmp/a")
+//	  if err != nil { return Annotate(err, "Cannot open /tmp/a") }
+//	  defer DeferLogIfErr(f.Close, log, "Cannot close file %s", "/tmp/a")
+//	  // Do something with f
+//	}
 func DeferLogIfErr(errCallback func() error, l Loggable, msg string, args ...interface{}) {
 	if err := errCallback(); err != nil {
 		l.Printf("%s: %s", err.Error(), fmt.Sprintf(msg, args...))
@@ -37,7 +37,7 @@ func PanicIfErr(err error, msg string, args ...interface{}) {
 }
 
 // PanicIfErrWrite is similar to PanicIfErr, but works well with io results that return integer+err
-func PanicIfErrWrite(numWritten int, err error) {
+func PanicIfErrWrite(_ int, err error) {
 	if err != nil {
 		panic(fmt.Sprintf("Write err: %s", err.Error()))
 	}

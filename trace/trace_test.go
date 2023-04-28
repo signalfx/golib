@@ -13,7 +13,7 @@ type end struct {
 	count int64
 }
 
-func (t *end) AddSpans(ctx context.Context, traces []*Span) error {
+func (t *end) AddSpans(_ context.Context, _ []*Span) error {
 	atomic.AddInt64(&t.count, 1)
 	return nil
 }

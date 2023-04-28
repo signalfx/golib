@@ -21,7 +21,7 @@ func TestStop(t *testing.T) {
 	assert.False(t, timer.Stop())
 }
 
-func TestAfterClose(t *testing.T) {
+func TestAfterClose(_ *testing.T) {
 	timer := time.Millisecond * 10
 	x := time.NewTimer(timer)
 	x.Stop()

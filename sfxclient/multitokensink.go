@@ -644,6 +644,7 @@ func (a *AsyncMultiTokenSink) getChannel(input string, size int) (workerID int64
 }
 
 // AddDatapointsWithToken emits a list of datapoints using a supplied token
+//
 //nolint:dupl
 func (a *AsyncMultiTokenSink) AddDatapointsWithToken(token string, datapoints []*datapoint.Datapoint) (err error) {
 	var channelID int64
@@ -685,6 +686,7 @@ func (a *AsyncMultiTokenSink) AddDatapoints(ctx context.Context, datapoints []*d
 }
 
 // AddEventsWithToken emits a list of events using a supplied token
+//
 //nolint:dupl
 func (a *AsyncMultiTokenSink) AddEventsWithToken(token string, events []*event.Event) (err error) {
 	var channelID int64
@@ -725,6 +727,7 @@ func (a *AsyncMultiTokenSink) AddEvents(ctx context.Context, events []*event.Eve
 }
 
 // AddSpansWithToken emits a list of events using a supplied token
+//
 //nolint:dupl
 func (a *AsyncMultiTokenSink) AddSpansWithToken(token string, spans []*trace.Span) (err error) {
 	var channelID int64

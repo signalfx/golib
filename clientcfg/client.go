@@ -141,7 +141,7 @@ func (s *ClientConfigChangerSink) AddEvents(ctx context.Context, events []*event
 	return s.Destination.AddEvents(ctx, events)
 }
 
-func (s *ClientConfigChangerSink) disableCompressionWatch(newValue *distconf.Bool, old bool) {
+func (s *ClientConfigChangerSink) disableCompressionWatch(newValue *distconf.Bool, _ bool) {
 	s.logger.Log("disableCompression watch")
 	s.mu.Lock()
 	s.Destination.DisableCompression = newValue.Get()
@@ -161,7 +161,7 @@ func (s *ClientConfigChangerSink) authTokenWatch(str *distconf.Str, _ string) {
 
 // endpointWatch returns a distconf watch that sets the correct ingest endpoint for a signalfx
 // client
-func (s *ClientConfigChangerSink) endpointWatch(str *distconf.Str, oldValue string) {
+func (s *ClientConfigChangerSink) endpointWatch(str *distconf.Str, _ string) {
 	s.logger.Log("endpoint watch")
 	e := str.Get()
 	if e == "" {

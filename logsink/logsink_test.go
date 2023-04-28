@@ -13,7 +13,7 @@ type end struct {
 	count int64
 }
 
-func (e *end) AddLogs(ctx context.Context, logs []*Log) error {
+func (e *end) AddLogs(_ context.Context, _ []*Log) error {
 	atomic.AddInt64(&e.count, 1)
 	return nil
 }

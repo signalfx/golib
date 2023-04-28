@@ -45,7 +45,7 @@ func (e *expect) next(sendTo Sink) Sink {
 	}
 }
 
-func TestFromChain(t *testing.T) {
+func TestFromChain(_ *testing.T) {
 	e2 := expect{count: 2}
 	e1 := expect{count: 1}
 	e0 := expect{count: 0}
