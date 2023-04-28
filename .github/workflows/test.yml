@@ -34,4 +34,7 @@ jobs:
         run: |
           go mod download
           set -x
-          go test -race -timeout 120s $(go list ./...)
+          go test -covermode atomic -race -timeout 120s -coverprofile ./coverage.out $(go list ./...)
+          cov="$(go tool cover -func coverage.out | grep -v 100.0% || true)"
+          echo $cov
+          test -z "$cov"
