@@ -4,6 +4,7 @@ import (
 	goerrors "errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
@@ -25,13 +26,26 @@ const (
 // log library or swapping it out for zap at the moment. sorry.
 var LogLevel = NORMAL
 
+// SetLogLevel sets the log level of the library.
+func SetLogLevel(ll int) {
+	logLevelRWLock.Lock()
+	defer logLevelRWLock.Unlock()
+	LogLevel = ll
+}
+
+var logLevelRWLock = sync.RWMutex{}
+
 func normalit(logger log.Logger, keyvals ...interface{}) {
+	logLevelRWLock.RLock()
+	defer logLevelRWLock.RUnlock()
 	if LogLevel <= NORMAL {
 		logger.Log(keyvals...)
 	}
 }
 
 func debugit(logger log.Logger, keyvals ...interface{}) {
+	logLevelRWLock.RLock()
+	defer logLevelRWLock.RUnlock()
 	if LogLevel <= DEBUG {
 		logger.Log(keyvals...)
 	}
