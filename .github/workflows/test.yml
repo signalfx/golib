@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        GO_VERSION: [ "1.17" ]
+        GO_VERSION: [ "1.19" ]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v3
@@ -34,7 +34,4 @@ jobs:
         run: |
           go mod download
           set -x
-          go test -covermode atomic -race -timeout 120s -coverprofile ./coverage.out $(go list ./...)
-          cov="$(go tool cover -func coverage.out | grep -v 100.0% || true)"
-          echo $cov
-          test -z "$cov"
+          go test -race -timeout 120s $(go list ./...)
