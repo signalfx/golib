@@ -2,12 +2,59 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	dropboxerrors "github.com/dropbox/godropbox/errors"
 	facebookerrors "github.com/facebookgo/stackerr"
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+type causableErrorImpl struct {
+	root  error
+	cause error
+}
+
+func (e causableErrorImpl) Error() string {
+	return fmt.Sprintf("%v\n\tcause:%v", e.root, e.cause)
+}
+
+func (e causableErrorImpl) Cause() error {
+	return e.cause
+}
+
+type messageErrorImpl struct {
+	root    error
+	message string
+}
+
+func (e messageErrorImpl) Error() string {
+	return fmt.Sprintf("%v\n\tcause:%v", e.root, e.message)
+}
+
+func (e messageErrorImpl) Message() string {
+	return e.message
+}
+func TestMessageErrors(t *testing.T) {
+	Convey("When the original error implements hasMessage", t, func() {
+		err := messageErrorImpl{
+			root:    errors.New("foo"),
+			message: "bar",
+		}
+		So(Message(err), ShouldEqual, "bar")
+	})
+}
+
+func TestCausableErrors(t *testing.T) {
+	Convey("When the original error implements causableError", t, func() {
+		cause := errors.New("cause")
+		err := causableErrorImpl{
+			root:  errors.New("foo"),
+			cause: cause,
+		}
+		So(Cause(err), ShouldEqual, cause)
+	})
+}
 
 func TestGoDropbox(t *testing.T) {
 	Convey("When the original error is godropbox", t, func() {
@@ -40,7 +87,6 @@ func TestFacebookErrors(t *testing.T) {
 		fbWrap := facebookerrors.Wrap(root)
 		So(Tail(fbWrap), ShouldEqual, root)
 		myAnnotation := Annotate(fbWrap, "I have annotated fb error")
-		So(Cause(myAnnotation), ShouldEqual, root)
 
 		So(Tail(myAnnotation), ShouldEqual, root)
 		So(Cause(myAnnotation), ShouldEqual, root)
