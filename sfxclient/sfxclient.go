@@ -4,42 +4,44 @@
 // ad-hoc.  A Scheduler is built on top of this to facility easy management of metrics for multiple
 // SignalFx reporters at once in more complex libraries.
 //
-// HTTPSink
+// # HTTPSink
 //
 // The simplest way to send metrics and events to SignalFx is with HTTPSink.  The only struct
 // parameter that needs to be configured is AuthToken.  To make it easier to create common
 // Datapoint objects, wrappers exist for Gauge and Cumulative.  An example of sending a hello
 // world metric would look like this:
-//     func SendHelloWorld() {
-//         client := NewHTTPSink()
-//         client.AuthToken = "ABCDXYZ"
-//         ctx := context.Background()
-//         client.AddDatapoints(ctx, []*datapoint.Datapoint{
-//             GaugeF("hello.world", nil, 1.0),
-//         })
-//     }
 //
-// Scheduler
+//	func SendHelloWorld() {
+//	    client := NewHTTPSink()
+//	    client.AuthToken = "ABCDXYZ"
+//	    ctx := context.Background()
+//	    client.AddDatapoints(ctx, []*datapoint.Datapoint{
+//	        GaugeF("hello.world", nil, 1.0),
+//	    })
+//	}
+//
+// # Scheduler
 //
 // To facilitate periodic sending of datapoints to SignalFx, a Scheduler abstraction exists.  You
 // can use this to report custom metrics to SignalFx at some periodic interval.
-//     type CustomApplication struct {
-//         queue chan int64
-//     }
-//     func (c *CustomApplication) Datapoints() []*datapoint.Datapoint {
-//         return []*datapoint.Datapoint {
-//           sfxclient.Gauge("queue.size", nil, len(queue)),
-//         }
-//     }
-//     func main() {
-//         scheduler := sfxclient.NewScheduler()
-//         scheduler.Sink.(*HTTPSink).AuthToken = "ABCD-XYZ"
-//         app := &CustomApplication{}
-//         scheduler.AddCallback(app)
-//         go scheduler.Schedule(context.Background())
-//     }
 //
-// RollingBucket and CumulativeBucket
+//	type CustomApplication struct {
+//	    queue chan int64
+//	}
+//	func (c *CustomApplication) Datapoints() []*datapoint.Datapoint {
+//	    return []*datapoint.Datapoint {
+//	      sfxclient.Gauge("queue.size", nil, len(queue)),
+//	    }
+//	}
+//	func main() {
+//	    scheduler := sfxclient.NewScheduler()
+//	    scheduler.Sink.(*HTTPSink).AuthToken = "ABCD-XYZ"
+//	    app := &CustomApplication{}
+//	    scheduler.AddCallback(app)
+//	    go scheduler.Schedule(context.Background())
+//	}
+//
+// # RollingBucket and CumulativeBucket
 //
 // Because counting things and calculating percentiles like p99 or median are common operations,
 // RollingBucket and CumulativeBucket exist to make this easier.  They implement the Collector
@@ -47,12 +49,14 @@
 //
 // To run integration tests, testing sending to SignalFx with an actual token, create a file named
 // authinfo.json that has your auth Token, similar to the following
-//     {
-//       "AuthToken": "abcdefg"
-//     }
+//
+//	{
+//	  "AuthToken": "abcdefg"
+//	}
 //
 // Then execute the following:
-//     go test -v --tags=integration -run TestDatapointSending ./sfxclient/
+//
+//	go test -v --tags=integration -run TestDatapointSending ./sfxclient/
 package sfxclient
 
 import (

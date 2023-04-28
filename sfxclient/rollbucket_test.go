@@ -10,7 +10,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestRollingBucketThreadRaces(t *testing.T) {
+func TestRollingBucketThreadRaces(_ *testing.T) {
 	r := NewRollingBucket("mname", nil)
 	tk := timekeepertest.NewStubClock(time.Now())
 	r.Timer = tk

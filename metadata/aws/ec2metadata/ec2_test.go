@@ -14,7 +14,7 @@ type requestHandler struct {
 	response string
 }
 
-func (rh *requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (rh *requestHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, rh.response)
 }
 

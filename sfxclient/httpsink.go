@@ -195,6 +195,7 @@ func (h *HTTPSink) doBottom(ctx context.Context, f func() (io.Reader, bool, erro
 		req.Header.Set(k, v)
 	}
 	h.setHeadersOnBottom(ctx, req, contentType, compressed)
+	// nolint:bodyclose
 	resp, err := h.Client.Do(req)
 	if err != nil {
 		// According to docs, resp can be ignored since err is non-nil, so we

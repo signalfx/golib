@@ -250,7 +250,7 @@ func TestLogger(t *testing.T) {
 	assert.Equal(t, logger.Count, int64(1))
 	debugit(logger, "debug level")
 	assert.Equal(t, logger.Count, int64(1))
-	LogLevel = DEBUG
+	SetLogLevel(DEBUG)
 	debugit(logger, "debug level")
 	assert.Equal(t, logger.Count, int64(2))
 }

@@ -25,6 +25,7 @@ type Bool struct {
 }
 
 // Update the contents of Bool to the new value
+//
 //nolint:ifshort
 func (s *boolConf) Update(newValue []byte) error {
 	s.mutex.Lock()

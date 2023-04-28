@@ -11,6 +11,7 @@ import (
 
 // Map is the response we return from ingest wrt our span endpoint
 // It contains the number of spans that were valid, and a map of string reason to spanIds for each invalid span
+//
 //nolint:errname
 type Map struct {
 	Valid   int                 `json:"valid"`
@@ -80,6 +81,7 @@ func (s *Map) AddValid(i int) {
 }
 
 // FromBytes returns a Map or an error
+//
 //nolint:nilerr
 func FromBytes(body []byte) *Map {
 	var spanFilter Map

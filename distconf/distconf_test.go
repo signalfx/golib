@@ -14,15 +14,15 @@ type allErrorBacking struct{}
 
 var errNope = errors.New("nope")
 
-func (m *allErrorBacking) Get(key string) ([]byte, error) {
+func (m *allErrorBacking) Get(_ string) ([]byte, error) {
 	return nil, errNope
 }
 
-func (m *allErrorBacking) Write(key string, value []byte) error {
+func (m *allErrorBacking) Write(_ string, _ []byte) error {
 	return errNope
 }
 
-func (m *allErrorBacking) Watch(key string, callback backingCallbackFunction) error {
+func (m *allErrorBacking) Watch(_ string, _ backingCallbackFunction) error {
 	return errNope
 }
 

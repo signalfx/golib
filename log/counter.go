@@ -10,7 +10,7 @@ type Counter struct {
 var _ Logger = &Counter{}
 
 // Log increments Count
-func (c *Counter) Log(keyvals ...interface{}) {
+func (c *Counter) Log(_ ...interface{}) {
 	atomic.AddInt64(&c.Count, 1)
 }
 

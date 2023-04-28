@@ -71,7 +71,7 @@ func TestAsyncMultiTokenSinkClose(t *testing.T) {
 	})
 }
 
-func AddDatapointsGetError(ctx context.Context, dps []*datapoint.Datapoint) (err error) {
+func AddDatapointsGetError(_ context.Context, _ []*datapoint.Datapoint) (err error) {
 	err = &SFXAPIError{
 		StatusCode:   http.StatusRequestTimeout,
 		ResponseBody: "HELLO",
@@ -79,11 +79,11 @@ func AddDatapointsGetError(ctx context.Context, dps []*datapoint.Datapoint) (err
 	return
 }
 
-func AddDatapointsGetSuccess(ctx context.Context, dps []*datapoint.Datapoint) (err error) {
+func AddDatapointsGetSuccess(_ context.Context, _ []*datapoint.Datapoint) (err error) {
 	return
 }
 
-func AddEventsGetError(ctx context.Context, evs []*event.Event) (err error) {
+func AddEventsGetError(_ context.Context, _ []*event.Event) (err error) {
 	err = &SFXAPIError{
 		StatusCode:   http.StatusRequestTimeout,
 		ResponseBody: "HELLO",
@@ -91,11 +91,11 @@ func AddEventsGetError(ctx context.Context, evs []*event.Event) (err error) {
 	return
 }
 
-func AddEventsGetSuccess(ctx context.Context, evs []*event.Event) (err error) {
+func AddEventsGetSuccess(_ context.Context, _ []*event.Event) (err error) {
 	return
 }
 
-func AddSpansGetError(ctx context.Context, evs []*trace.Span) (err error) {
+func AddSpansGetError(_ context.Context, _ []*trace.Span) (err error) {
 	err = &SFXAPIError{
 		StatusCode:   http.StatusRequestTimeout,
 		ResponseBody: "HELLO",
@@ -103,7 +103,7 @@ func AddSpansGetError(ctx context.Context, evs []*trace.Span) (err error) {
 	return
 }
 
-func AddSpansGetSuccess(ctx context.Context, evs []*trace.Span) (err error) {
+func AddSpansGetSuccess(_ context.Context, _ []*trace.Span) (err error) {
 	return
 }
 

@@ -51,7 +51,7 @@ func (m *RequestCounter) ServeHTTP(rw http.ResponseWriter, r *http.Request, next
 }
 
 // GRPCInterceptor makes a unary GRPC interceptor to track requests.
-func (m *RequestCounter) GRPCInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func (m *RequestCounter) GRPCInterceptor(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	var resp interface{}
 	var err error
 
