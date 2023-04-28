@@ -10,34 +10,34 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type causableErrorImpl struct {
+type causableImpl struct {
 	root  error
 	cause error
 }
 
-func (e causableErrorImpl) Error() string {
+func (e causableImpl) Error() string {
 	return fmt.Sprintf("%v\n\tcause:%v", e.root, e.cause)
 }
 
-func (e causableErrorImpl) Cause() error {
+func (e causableImpl) Cause() error {
 	return e.cause
 }
 
-type messageErrorImpl struct {
+type messageImpl struct {
 	root    error
 	message string
 }
 
-func (e messageErrorImpl) Error() string {
+func (e messageImpl) Error() string {
 	return fmt.Sprintf("%v\n\tcause:%v", e.root, e.message)
 }
 
-func (e messageErrorImpl) Message() string {
+func (e messageImpl) Message() string {
 	return e.message
 }
 func TestMessageErrors(t *testing.T) {
 	Convey("When the original error implements hasMessage", t, func() {
-		err := messageErrorImpl{
+		err := messageImpl{
 			root:    errors.New("foo"),
 			message: "bar",
 		}
@@ -48,7 +48,7 @@ func TestMessageErrors(t *testing.T) {
 func TestCausableErrors(t *testing.T) {
 	Convey("When the original error implements causableError", t, func() {
 		cause := errors.New("cause")
-		err := causableErrorImpl{
+		err := causableImpl{
 			root:  errors.New("foo"),
 			cause: cause,
 		}
