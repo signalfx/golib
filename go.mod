@@ -21,6 +21,7 @@ require (
 	github.com/signalfx/sapm-proto v0.12.0
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.8.4
+	github.com/twmb/murmur3 v1.1.7
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	google.golang.org/grpc v1.56.1
 )

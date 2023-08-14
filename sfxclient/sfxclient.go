@@ -64,7 +64,9 @@ import (
 	"context"
 	"expvar"
 	"fmt"
+	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -75,6 +77,7 @@ import (
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/timekeeper"
+	"github.com/twmb/murmur3"
 )
 
 const (
@@ -84,6 +87,8 @@ const (
 	DefaultReportingTimeout = time.Second * 5
 	// used when group name is ""
 	defaultCallbackGroup = "default-callback-group"
+	// used if you want to check if you're emitting the same datapoint twice and causing inaccurate metrics
+	panicOnDupes = "SFXCLIENT_PANIC_ON_DUPES"
 )
 
 // DefaultErrorHandler is the default way to handle errors by a scheduler.  It simply prints them to stdout
@@ -236,6 +241,7 @@ func (s *Scheduler) collectDatapoints() []*datapoint.Datapoint {
 			ret = append(ret, p.getDatapoints(now, s.SendZeroTime)...)
 		}
 	}
+	s.checkDatapoints(ret)
 	return ret
 }
 
@@ -369,6 +375,44 @@ func (s *Scheduler) Schedule(ctx context.Context) error {
 				}
 			}
 			rT.Stop()
+		}
+	}
+}
+
+func (s *Scheduler) checkDatapoints(ret []*datapoint.Datapoint) {
+	if len(os.Getenv(panicOnDupes)) > 0 {
+		var dupes []*datapoint.Datapoint
+		m := make(map[uint32]*datapoint.Datapoint, len(ret))
+		buff := bytes.Buffer{}
+		for _, d := range ret {
+			buff.Reset()
+
+			buff.WriteString(d.Metric)
+			mk := make([]string, len(d.Dimensions))
+			i := 0
+			for k := range d.Dimensions {
+				mk[i] = k
+				i++
+			}
+			sort.Strings(mk)
+			for k := range mk {
+				buff.WriteString(mk[k])
+				buff.WriteString(d.Dimensions[mk[k]])
+			}
+
+			murmHash := murmur3.Sum32(buff.Bytes())
+			if _, ok := m[murmHash]; ok {
+				dupes = append(dupes, d)
+			} else {
+				m[murmHash] = d
+			}
+		}
+		if len(dupes) > 0 {
+			msg := make([]string, len(dupes))
+			for i, d := range dupes {
+				msg[i] = fmt.Sprintf("Found duplicate datapoint: %s", d)
+			}
+			panic(strings.Join(msg, "\n"))
 		}
 	}
 }
