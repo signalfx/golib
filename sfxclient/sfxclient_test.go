@@ -3,6 +3,7 @@ package sfxclient
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/datapoint/dptest"
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/timekeeper/timekeepertest"
 	. "github.com/smartystreets/goconvey/convey"
@@ -120,6 +122,19 @@ func TestScheduler_ReportingTimeout(t *testing.T) {
 		}
 		cancel()
 		So(atomic.LoadInt64(&s.stats.reportingTimeoutCounts), ShouldEqual, int64(1))
+	})
+}
+
+func TestPanicOnDupes(t *testing.T) {
+	Convey("testing panic on dupes", t, func() {
+		s := &Scheduler{}
+
+		os.Setenv(panicOnDupes, "true")
+		defer os.Setenv(panicOnDupes, "")
+		dp := dptest.DP()
+		s.checkDatapoints([]*datapoint.Datapoint{dp})
+
+		So(func() { s.checkDatapoints([]*datapoint.Datapoint{dp, dp}) }, ShouldPanic)
 	})
 }
 
