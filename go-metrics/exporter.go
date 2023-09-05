@@ -46,7 +46,7 @@ func (e *Exporter) metricToDatapoints(dps []*datapoint.Datapoint, name string, i
 	case metrics.Meter:
 		m := metric.Snapshot()
 		dps = append(dps,
-			sfxclient.Cumulative(metricName+".count", e.dims, m.Count()),
+			sfxclient.Cumulative(metricName+".count", dims, m.Count()),
 			sfxclient.GaugeF(metricName+".1m", dims, m.Rate1()),
 			sfxclient.GaugeF(metricName+".5m", dims, m.Rate5()),
 			sfxclient.GaugeF(metricName+".15m", dims, m.Rate15()),
