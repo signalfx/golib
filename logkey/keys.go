@@ -1,3 +1,4 @@
+// Deprecated: This package will be removed in a future release.
 package logkey
 
 import "github.com/signalfx/golib/v3/log"

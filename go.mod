@@ -1,3 +1,4 @@
+// Deprecated: This module will be removed in a future release.
 module github.com/signalfx/golib/v3
 
 go 1.18

@@ -1,3 +1,4 @@
+// Deprecated: This package will be removed in a future release.
 package ec2metadata
 
 import (
