@@ -1,3 +1,4 @@
+// Deprecated: This package will be removed in a future release.
 package traceformat
 
 import "github.com/signalfx/golib/v3/trace"
