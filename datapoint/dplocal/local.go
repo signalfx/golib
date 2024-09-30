@@ -1,3 +1,4 @@
+// Deprecated: This package is no longer supported and will be removed.
 package dplocal
 
 import (
