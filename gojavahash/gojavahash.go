@@ -1,6 +1,7 @@
 // Package gojavahash implements a ServerSelector for gomemcache that provides
 // hashing that's compatible with SpyMemcached's native (e.g. java) hashing.
 // This is based very closely on the excellent https://github.com/thatguystone/gomcketama
+// Deprecated: this package is no longer supported.
 package gojavahash
 
 import (

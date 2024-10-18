@@ -1,3 +1,4 @@
+// Deprecated: this package is no longer supported.
 package dataunit
 
 // Size represents a measurement of data and can return that measurement

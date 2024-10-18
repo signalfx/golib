@@ -1,3 +1,4 @@
+// Deprecated: this package is no longer supported.
 package log
 
 // ChannelLogger creates a logger that sends log messages to a channel.  It's useful for testing and buffering
