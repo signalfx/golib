@@ -1,3 +1,5 @@
+// Deprecated: this package is no longer supported.
+//
 //nolint:gocritic
 package disco
 
