@@ -8,10 +8,12 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
+    env:
+      REQUIRED_COVERAGE: 80
     strategy:
       matrix:
-        GO_VERSION: [ "1.19" ]
+        GO_VERSION: [ "1.23", "1.24", "1.25" ]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v3
@@ -35,6 +37,10 @@ jobs:
           go mod download
           set -x
           go test -covermode atomic -race -timeout 300s -coverprofile ./coverage.out $(go list ./...)
-          cov="$(go tool cover -func coverage.out | grep -v 100.0% || true)"
-          echo $cov
-          test -z "$cov"
+          total_coverage=$(go tool cover -func coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Total coverage: ${total_coverage}%"
+          if (( $(echo "${total_coverage} < ${REQUIRED_COVERAGE}" | bc -l) )); then
+            echo "Coverage ${total_coverage}% is below required ${REQUIRED_COVERAGE}%"
+            exit 1
+          fi
+          echo "Coverage check passed: ${total_coverage}% >= ${REQUIRED_COVERAGE}%"

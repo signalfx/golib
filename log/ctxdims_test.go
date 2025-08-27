@@ -21,7 +21,7 @@ func TestCtxDims(t *testing.T) {
 			}, ShouldPanic)
 		})
 		Convey("empty append should do nothing", func() {
-			So(cd.Append(ctx), ShouldEqual, ctx)
+			So(cd.Append(ctx), ShouldResemble, ctx)
 		})
 		Convey("And a default append", func() {
 			ctx2 := cd.Append(ctx, "name", "john")

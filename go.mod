@@ -1,6 +1,6 @@
 module github.com/signalfx/golib/v3
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9
