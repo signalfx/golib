@@ -19,7 +19,7 @@ import (
 	"crypto/sha256"
 
 	"github.com/gogo/protobuf/proto"
-	jaegerpb "github.com/jaegertracing/jaeger/model"
+	jaegerpb "github.com/jaegertracing/jaeger-idl/model/v1"
 )
 
 // SpanBatcher is simpler version of OpenTelemetry's Node Batcher.
