@@ -17,7 +17,7 @@ package translator
 import (
 	"testing"
 
-	jaegerpb "github.com/jaegertracing/jaeger/model"
+	jaegerpb "github.com/jaegertracing/jaeger-idl/model/v1"
 	"github.com/stretchr/testify/assert"
 )
 
