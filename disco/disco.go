@@ -144,7 +144,6 @@ var DefaultConfig = &Config{
 func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d *Disco, err error) {
 	conf, ok := pointer.FillDefaultFrom(config, DefaultConfig).(*Config)
 	if ok {
-
 		autoPublishComponentMappingInfo := false
 		if config != nil {
 			autoPublishComponentMappingInfo = config.AutoPublishComponentMapping

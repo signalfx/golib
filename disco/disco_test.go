@@ -575,8 +575,8 @@ func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
-			zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
-			return zkp, zkp.EventChan(), err
+			zkp, zkErr := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), zkErr
 		})
 
 		d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
