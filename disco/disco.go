@@ -129,8 +129,9 @@ func BuilderConnector(b *zkplus.Builder) ZkConnCreator {
 
 // Config controls optional parameters for disco
 type Config struct {
-	RandomSource io.Reader
-	Logger       log.Logger
+	RandomSource                io.Reader
+	Logger                      log.Logger
+	AutoPublishComponentMapping bool // call PublishComponentMapping() when New() is called to publish /config.mapping
 }
 
 // DefaultConfig is used if any config values are nil
@@ -143,6 +144,12 @@ var DefaultConfig = &Config{
 func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d *Disco, err error) {
 	conf, ok := pointer.FillDefaultFrom(config, DefaultConfig).(*Config)
 	if ok {
+
+		autoPublishComponentMappingInfo := false
+		if config != nil {
+			autoPublishComponentMappingInfo = config.AutoPublishComponentMapping
+		}
+
 		var GUID [16]byte
 		_, err = io.ReadFull(conf.RandomSource, GUID[:16])
 		if err != nil {
@@ -167,6 +174,12 @@ func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d 
 			return nil, errors.Annotate(err, "cannot create first zk connection")
 		}
 		go d.eventLoop()
+
+		if autoPublishComponentMappingInfo {
+			if err := d.PublishComponentMapping(); err != nil {
+				d.stateLog.Log(log.Err, err, log.Msg, "failed to auto-publish component mapping")
+			}
+		}
 	}
 	return d, nil
 }

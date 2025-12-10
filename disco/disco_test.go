@@ -4,6 +4,7 @@ import (
 	"bytes"
 	errors2 "errors"
 	"fmt"
+	"os"
 	"runtime"
 	"sort"
 	"strings"
@@ -500,5 +501,96 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(d1.PublishComponentMapping(), ShouldBeNil)
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
 		})
+	})
+}
+
+func TestDisco_AutoPublishComponentMapping(t *testing.T) {
+	Convey("test AutoPublishComponentMapping config option", t, func() {
+		s2 := zktest.New()
+		z, ch, _ := s2.Connect()
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), err
+		})
+
+		Convey("should not auto-publish when AutoPublishComponentMapping is false (default)", func() {
+			t.Setenv("HELM_RELEASE_NAME", "my-release")
+			t.Setenv("K8S_NAMESPACE", "my-namespace")
+
+			d1, err := New(zkConnFunc, "TestAutoPublish", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			// Should not have published automatically
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+
+		Convey("should not auto-publish when AutoPublishComponentMapping is explicitly false", func() {
+			t.Setenv("HELM_RELEASE_NAME", "my-release")
+			t.Setenv("K8S_NAMESPACE", "my-namespace")
+
+			d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
+				AutoPublishComponentMapping: false,
+			})
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			// Should not have published automatically
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+
+		Convey("should skip auto-publish when env vars are not set even with AutoPublishComponentMapping true", func() {
+			t.Setenv("HELM_RELEASE_NAME", "")
+			t.Setenv("K8S_NAMESPACE", "")
+
+			d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
+				AutoPublishComponentMapping: true,
+			})
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			// Should not have published because env vars are missing
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+	})
+}
+
+func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
+	// Set env vars before test starts - use os.Setenv to ensure they're set immediately
+	originalReleaseName := os.Getenv("HELM_RELEASE_NAME")
+	originalNamespace := os.Getenv("K8S_NAMESPACE")
+	os.Setenv("HELM_RELEASE_NAME", "auto-release")
+	os.Setenv("K8S_NAMESPACE", "auto-namespace")
+	defer func() {
+		os.Setenv("HELM_RELEASE_NAME", originalReleaseName)
+		os.Setenv("K8S_NAMESPACE", originalNamespace)
+	}()
+
+	Convey("should auto-publish when AutoPublishComponentMapping is true and env vars are set", t, func() {
+		s2 := zktest.New()
+		z, ch, _ := s2.Connect()
+
+		// Create the /test path first
+		_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+		So(err, ShouldBeNil)
+
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), err
+		})
+
+		d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
+			AutoPublishComponentMapping: true,
+		})
+		So(err, ShouldBeNil)
+		defer d1.Close()
+
+		// Should have published automatically during New()
+		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+
+		payload, exists := d1.myEphemeralNodes["config.mapping"]
+		So(exists, ShouldBeTrue)
+		So(string(payload), ShouldContainSubstring, `"releaseName":"auto-release"`)
+		So(string(payload), ShouldContainSubstring, `"namespace":"auto-namespace"`)
 	})
 }
