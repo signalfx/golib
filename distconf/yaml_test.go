@@ -228,7 +228,7 @@ func TestYamlFileChangeTriggersCallbacks(t *testing.T) {
 	}()
 
 	filename := tmpDir + "/config.yaml"
-	assert.NoError(t, ioutil.WriteFile(filename, []byte(`val1: abc`), 0600))
+	assert.NoError(t, ioutil.WriteFile(filename, []byte(`val1: abc`), 0o600))
 
 	y, err := Yaml(filename)
 	assert.NoError(t, err)
@@ -253,7 +253,7 @@ func TestYamlFileChangeTriggersCallbacks(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Modify the file to trigger the callback - use truncate and write to ensure change is detected
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC, 0o600)
 	assert.NoError(t, err)
 	_, err = f.WriteString(`val1: xyz`)
 	assert.NoError(t, err)
@@ -291,7 +291,7 @@ func TestYamlDistconfIntegration(t *testing.T) {
 	}()
 
 	filename := tmpDir + "/config.yaml"
-	assert.NoError(t, ioutil.WriteFile(filename, []byte(`testkey: initialvalue`), 0600))
+	assert.NoError(t, ioutil.WriteFile(filename, []byte(`testkey: initialvalue`), 0o600))
 
 	// Create distconf with YAML backing
 	backs := []BackingLoader{YamlLoader(filename)}
@@ -306,7 +306,7 @@ func TestYamlDistconfIntegration(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Modify the file - use truncate and write to ensure change is detected
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC, 0o600)
 	assert.NoError(t, err)
 	_, err = f.WriteString(`testkey: newvalue`)
 	assert.NoError(t, err)
