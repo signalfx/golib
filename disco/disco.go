@@ -451,7 +451,7 @@ func (d *Disco) PublishComponentMapping() error {
 	namespace := os.Getenv("K8S_NAMESPACE")
 
 	if releaseName == "" || namespace == "" {
-		d.stateLog.Log(log.Msg, "Skipping component mapping publication: HELM_RELEASE_NAME or K8S_NAMESPACE not set")
+		d.stateLog.Log(log.Msg, "Skipping component mapping publication: K8S_NAMESPACE or HELM_RELEASE_NAME not set")
 		return nil
 	}
 
