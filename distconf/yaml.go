@@ -86,16 +86,13 @@ func (y *yamlFileDisco) watchFile() error {
 func Yaml(filename string) (Reader, error) {
 	v := viper.New()
 
-	// Set the configuration file and format
 	v.SetConfigFile(filename)
 	v.SetConfigType("yaml")
 
-	// Attempt to read the configuration file
 	if err := v.ReadInConfig(); err != nil {
 		return nil, errors.Annotatef(err, "Unable to open file %s", filename)
 	}
 
-	// Create a new yamlFileDisco instance
 	yamlDisco := &yamlFileDisco{
 		filename: filename,
 		v:        v,
@@ -104,7 +101,6 @@ func Yaml(filename string) (Reader, error) {
 		},
 	}
 
-	// Start watching the file for changes
 	if err := yamlDisco.watchFile(); err != nil {
 		return nil, errors.Annotatef(err, "Unable to watch file %s", filename)
 	}
