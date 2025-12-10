@@ -9,12 +9,35 @@ import (
 	"github.com/spf13/viper"
 )
 
-// yamlFileDisco is a struct that implements the Reader interface for YAML files.
+// yamlCallbackMap manages callbacks for YAML config keys.
+type yamlCallbackMap struct {
+	mu        sync.Mutex
+	callbacks map[string][]backingCallbackFunction
+}
+
+func (c *yamlCallbackMap) add(key string, val backingCallbackFunction) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.callbacks[key] = append(c.callbacks[key], val)
+}
+
+func (c *yamlCallbackMap) copy() map[string][]backingCallbackFunction {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	ret := make(map[string][]backingCallbackFunction, len(c.callbacks))
+	for k, v := range c.callbacks {
+		ret[k] = append([]backingCallbackFunction{}, v...)
+	}
+	return ret
+}
+
+// yamlFileDisco is a struct that implements the Reader and Dynamic interfaces for YAML files.
 type yamlFileDisco struct {
 	noopCloser
-	filename string
-	v        *viper.Viper
-	mu       sync.RWMutex // Protects concurrent access to the Viper instance
+	filename  string
+	v         *viper.Viper
+	mu        sync.RWMutex    // Protects concurrent access to the Viper instance
+	callbacks yamlCallbackMap // Stores registered callbacks for dynamic updates
 }
 
 // Get retrieves the value for a given key from the YAML file.
@@ -30,14 +53,30 @@ func (y *yamlFileDisco) Get(key string) ([]byte, error) {
 	return []byte(value), nil
 }
 
+// Watch registers a callback function for a given key.
+// The callback will be invoked when the YAML file changes.
+func (y *yamlFileDisco) Watch(key string, callback backingCallbackFunction) error {
+	y.callbacks.add(key, callback)
+	return nil
+}
+
 // watchFile watches for changes to the YAML file and reloads the configuration automatically.
 func (y *yamlFileDisco) watchFile() error {
 	y.v.WatchConfig()
 	y.v.OnConfigChange(func(e fsnotify.Event) {
-		y.mu.Lock()
-		defer y.mu.Unlock()
 		// Handle file change events (Viper automatically reloads the config)
 		fmt.Printf("Configuration file changed: %s\n", e.Name)
+
+		// Copy callbacks before invoking them to avoid holding locks during callback execution.
+		// This prevents deadlock since callbacks may call Get() which needs the read lock.
+		callbacksCopy := y.callbacks.copy()
+
+		// Notify all registered callbacks about the change
+		for key, callbacks := range callbacksCopy {
+			for _, c := range callbacks {
+				c(key)
+			}
+		}
 	})
 	return nil
 }
@@ -60,6 +99,9 @@ func Yaml(filename string) (Reader, error) {
 	yamlDisco := &yamlFileDisco{
 		filename: filename,
 		v:        v,
+		callbacks: yamlCallbackMap{
+			callbacks: make(map[string][]backingCallbackFunction),
+		},
 	}
 
 	// Start watching the file for changes

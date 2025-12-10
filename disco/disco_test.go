@@ -422,3 +422,83 @@ func TestDisco_CreatePersistentEphemeralNodeInZKErr(t *testing.T) {
 	})
 	require.NotNil(t, d1.CreatePersistentEphemeralNode("service1", []byte("blarg")))
 }
+
+func TestDisco_PublishComponentMapping(t *testing.T) {
+	Convey("test PublishComponentMapping", t, func() {
+		s2 := zktest.New()
+		z, ch, _ := s2.Connect()
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), err
+		})
+
+		Convey("should skip publishing when env vars are not set", func() {
+			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			t.Setenv("HELM_RELEASE_NAME", "")
+			t.Setenv("K8S_NAMESPACE", "")
+
+			So(d1.PublishComponentMapping(), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+
+		Convey("should skip publishing when only HELM_RELEASE_NAME is set", func() {
+			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			t.Setenv("HELM_RELEASE_NAME", "my-release")
+			t.Setenv("K8S_NAMESPACE", "")
+
+			So(d1.PublishComponentMapping(), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+
+		Convey("should skip publishing when only K8S_NAMESPACE is set", func() {
+			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			t.Setenv("HELM_RELEASE_NAME", "")
+			t.Setenv("K8S_NAMESPACE", "my-namespace")
+
+			So(d1.PublishComponentMapping(), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+
+		Convey("should publish when both env vars are set", func() {
+			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+			log.IfErr(log.Panic, err)
+
+			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			t.Setenv("HELM_RELEASE_NAME", "my-release")
+			t.Setenv("K8S_NAMESPACE", "my-namespace")
+
+			So(d1.PublishComponentMapping(), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+
+			payload, exists := d1.myEphemeralNodes["config.mapping"]
+			So(exists, ShouldBeTrue)
+			So(string(payload), ShouldContainSubstring, `"releaseName":"my-release"`)
+			So(string(payload), ShouldContainSubstring, `"namespace":"my-namespace"`)
+		})
+
+		Convey("should not publish in ninja mode", func() {
+			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			t.Setenv("HELM_RELEASE_NAME", "my-release")
+			t.Setenv("K8S_NAMESPACE", "my-namespace")
+
+			d1.NinjaMode(true)
+			So(d1.PublishComponentMapping(), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+	})
+}

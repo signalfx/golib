@@ -12,6 +12,7 @@ import (
 	"expvar"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -65,6 +66,12 @@ type Service struct {
 	stateLog  log.Logger
 	watchLock sync.Mutex
 	watches   []ChangeWatch
+}
+
+// ComponentMapping represents the mapping data published to /config.mapping
+type ComponentMapping struct {
+	ReleaseName string `json:"releaseName"`
+	Namespace   string `json:"namespace"`
 }
 
 // ZkConn does zookeeper connections
@@ -422,6 +429,31 @@ func (d *Disco) CreatePersistentEphemeralNode(path string, payload []byte) (err 
 	}
 	d.myEphemeralNodes[path] = payload
 	return nil
+}
+
+// PublishComponentMapping creates a persistent ephemeral node at /config.mapping
+// with releaseName and namespace values from environment variables HELM_RELEASE_NAME
+// and K8S_NAMESPACE respectively.
+func (d *Disco) PublishComponentMapping() error {
+	releaseName := os.Getenv("HELM_RELEASE_NAME")
+	namespace := os.Getenv("K8S_NAMESPACE")
+
+	if releaseName == "" || namespace == "" {
+		d.stateLog.Log(log.Msg, "Skipping component mapping publication: HELM_RELEASE_NAME or K8S_NAMESPACE not set")
+		return nil
+	}
+
+	mapping := ComponentMapping{
+		ReleaseName: releaseName,
+		Namespace:   namespace,
+	}
+
+	payload, err := json.Marshal(mapping)
+	if err != nil {
+		return errors.Annotate(err, "cannot marshal component mapping")
+	}
+
+	return d.CreatePersistentEphemeralNode("config.mapping", payload)
 }
 
 // Var returns an expvar variable that shows all the current disco services and the current
