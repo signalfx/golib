@@ -110,10 +110,10 @@ func TestYamlCallbackMapConcurrency(t *testing.T) {
 	// Concurrently add callbacks
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
-		go func(i int) {
+		go func() {
 			defer wg.Done()
 			m.add("key1", func(key string) {})
-		}(i)
+		}()
 	}
 
 	// Concurrently copy while adding
@@ -228,7 +228,7 @@ func TestYamlFileChangeTriggersCallbacks(t *testing.T) {
 	}()
 
 	filename := tmpDir + "/config.yaml"
-	assert.NoError(t, ioutil.WriteFile(filename, []byte(`val1: abc`), 0644))
+	assert.NoError(t, ioutil.WriteFile(filename, []byte(`val1: abc`), 0600))
 
 	y, err := Yaml(filename)
 	assert.NoError(t, err)
@@ -291,7 +291,7 @@ func TestYamlDistconfIntegration(t *testing.T) {
 	}()
 
 	filename := tmpDir + "/config.yaml"
-	assert.NoError(t, ioutil.WriteFile(filename, []byte(`testkey: initialvalue`), 0644))
+	assert.NoError(t, ioutil.WriteFile(filename, []byte(`testkey: initialvalue`), 0600))
 
 	// Create distconf with YAML backing
 	backs := []BackingLoader{YamlLoader(filename)}
