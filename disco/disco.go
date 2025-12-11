@@ -131,7 +131,7 @@ func BuilderConnector(b *zkplus.Builder) ZkConnCreator {
 type Config struct {
 	RandomSource                io.Reader
 	Logger                      log.Logger
-	AutoPublishComponentMapping bool // call PublishComponentMapping() when New() is called to publish /config.mapping
+	AutoPublishComponentMapping bool // call PublishComponentMapping() when invoking New() to publish /config.mapping
 }
 
 // DefaultConfig is used if any config values are nil
