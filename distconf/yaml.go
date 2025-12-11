@@ -81,8 +81,8 @@ func (y *yamlFileDisco) watchFile() error {
 	return nil
 }
 
-// Yaml creates a backing config reader that reads properties from a YAML file.
-// It supports watching the file for real-time updates.
+// Yaml creates a backing config reader that reads properties from a YAML file
+// and hot reloading during updates
 func Yaml(filename string) (Reader, error) {
 	v := viper.New()
 
