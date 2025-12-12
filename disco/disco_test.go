@@ -447,7 +447,7 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			t.Setenv("NAMESPACE", "")
 
 			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
 
 			payload, exists := d1.myEphemeralNodes["config.mapping/service-name"]
 			So(exists, ShouldBeTrue)
@@ -469,15 +469,9 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			t.Setenv("NAMESPACE", "my-namespace")
 
 			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
 
-			// Verify parent node
-			parentPayload, parentExists := d1.myEphemeralNodes["config.mapping"]
-			So(parentExists, ShouldBeTrue)
-			So(string(parentPayload), ShouldContainSubstring, `"releaseName":"my-release"`)
-			So(string(parentPayload), ShouldContainSubstring, `"namespace":"my-namespace"`)
-
-			// Verify child node
+			// Verify child node (only one node is added to myEphemeralNodes now)
 			childPayload, childExists := d1.myEphemeralNodes["config.mapping/service-name"]
 			So(childExists, ShouldBeTrue)
 			So(string(childPayload), ShouldContainSubstring, `"releaseName":"my-release"`)
@@ -566,15 +560,9 @@ func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
 		defer d1.Close()
 
 		// Should have published automatically during New()
-		So(len(d1.myEphemeralNodes), ShouldEqual, 2)
+		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
 
-		// Verify parent node
-		parentPayload, parentExists := d1.myEphemeralNodes["config.mapping"]
-		So(parentExists, ShouldBeTrue)
-		So(string(parentPayload), ShouldContainSubstring, `"releaseName":"auto-release"`)
-		So(string(parentPayload), ShouldContainSubstring, `"namespace":"auto-namespace"`)
-
-		// Verify child node
+		// Verify child node (only one node is added to myEphemeralNodes now)
 		childPayload, childExists := d1.myEphemeralNodes["config.mapping/TestAutoPublish"]
 		So(childExists, ShouldBeTrue)
 		So(string(childPayload), ShouldContainSubstring, `"releaseName":"auto-release"`)

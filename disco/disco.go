@@ -473,7 +473,7 @@ func (d *Disco) PublishComponentMapping(discoServiceName string) error {
 	}
 
 	// Need to first create the root node and then we can create the child node
-	err = d.CreatePersistentEphemeralNode("config.mapping", payload)
+	_, err = d.zkConn.Create("config.mapping", []byte{}, 0, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		return err
 	}
