@@ -146,8 +146,10 @@ func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d 
 	conf, ok := pointer.FillDefaultFrom(config, DefaultConfig).(*Config)
 	if ok {
 		autoPublishComponentMappingInfo := false
+		discoServiceName := ""
 		if config != nil {
 			autoPublishComponentMappingInfo = config.AutoPublishComponentMapping
+			discoServiceName = config.DiscoServiceName
 		}
 
 		var GUID [16]byte
@@ -175,7 +177,6 @@ func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d 
 		}
 		go d.eventLoop()
 
-		discoServiceName := config.DiscoServiceName
 		if autoPublishComponentMappingInfo {
 			if err := d.PublishComponentMapping(discoServiceName); err != nil {
 				d.stateLog.Log(log.Err, err, log.Msg, "failed to auto-publish component mapping")
