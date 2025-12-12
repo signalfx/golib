@@ -444,15 +444,19 @@ func (d *Disco) CreatePersistentEphemeralNode(path string, payload []byte) (err 
 }
 
 // PublishComponentMapping creates a persistent ephemeral node at /config.mapping
-// with releaseName and namespace values from environment variables HELM_RELEASE_NAME
-// and K8S_NAMESPACE
+// with releaseName and namespace values from environment variables RELEASE_NAME
+// and NAMESPACE
 func (d *Disco) PublishComponentMapping() error {
-	releaseName := os.Getenv("HELM_RELEASE_NAME")
-	namespace := os.Getenv("K8S_NAMESPACE")
+	releaseName := os.Getenv("RELEASE_NAME")
+	namespace := os.Getenv("NAMESPACE")
 
-	if releaseName == "" || namespace == "" {
-		d.stateLog.Log(log.Msg, "Skipping component mapping publication: K8S_NAMESPACE or HELM_RELEASE_NAME not set")
-		return nil
+	if releaseName == "" {
+		d.stateLog.Log(logkey.DiscoService, "RELEASE_NAME env var not set")
+		releaseName = "SET_RELEASE_NAME_ENV_VAR"
+	}
+	if namespace == "" {
+		d.stateLog.Log(logkey.DiscoService, "NAMESPACE env var not set")
+		namespace = "SET_NAMESPACE_ENV_VAR"
 	}
 
 	mapping := ComponentMapping{

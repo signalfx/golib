@@ -438,32 +438,32 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			t.Setenv("HELM_RELEASE_NAME", "")
-			t.Setenv("K8S_NAMESPACE", "")
+			t.Setenv("RELEASE_NAME", "")
+			t.Setenv("NAMESPACE", "")
 
 			So(d1.PublishComponentMapping(), ShouldBeNil)
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
 		})
 
-		Convey("should skip publishing when only HELM_RELEASE_NAME is set", func() {
+		Convey("should skip publishing when only RELEASE_NAME is set", func() {
 			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			t.Setenv("HELM_RELEASE_NAME", "my-release")
-			t.Setenv("K8S_NAMESPACE", "")
+			t.Setenv("RELEASE_NAME", "my-release")
+			t.Setenv("NAMESPACE", "")
 
 			So(d1.PublishComponentMapping(), ShouldBeNil)
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
 		})
 
-		Convey("should skip publishing when only K8S_NAMESPACE is set", func() {
+		Convey("should skip publishing when only NAMESPACE is set", func() {
 			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			t.Setenv("HELM_RELEASE_NAME", "")
-			t.Setenv("K8S_NAMESPACE", "my-namespace")
+			t.Setenv("RELEASE_NAME", "")
+			t.Setenv("NAMESPACE", "my-namespace")
 
 			So(d1.PublishComponentMapping(), ShouldBeNil)
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
@@ -477,8 +477,8 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			t.Setenv("HELM_RELEASE_NAME", "my-release")
-			t.Setenv("K8S_NAMESPACE", "my-namespace")
+			t.Setenv("RELEASE_NAME", "my-release")
+			t.Setenv("NAMESPACE", "my-namespace")
 
 			So(d1.PublishComponentMapping(), ShouldBeNil)
 			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
@@ -494,8 +494,8 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			t.Setenv("HELM_RELEASE_NAME", "my-release")
-			t.Setenv("K8S_NAMESPACE", "my-namespace")
+			t.Setenv("RELEASE_NAME", "my-release")
+			t.Setenv("NAMESPACE", "my-namespace")
 
 			d1.NinjaMode(true)
 			So(d1.PublishComponentMapping(), ShouldBeNil)
@@ -514,8 +514,8 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 		})
 
 		Convey("should not auto-publish when AutoPublishComponentMapping is false (default)", func() {
-			t.Setenv("HELM_RELEASE_NAME", "my-release")
-			t.Setenv("K8S_NAMESPACE", "my-namespace")
+			t.Setenv("RELEASE_NAME", "my-release")
+			t.Setenv("NAMESPACE", "my-namespace")
 
 			d1, err := New(zkConnFunc, "TestAutoPublish", nil)
 			So(err, ShouldBeNil)
@@ -526,8 +526,8 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 		})
 
 		Convey("should not auto-publish when AutoPublishComponentMapping is explicitly false", func() {
-			t.Setenv("HELM_RELEASE_NAME", "my-release")
-			t.Setenv("K8S_NAMESPACE", "my-namespace")
+			t.Setenv("RELEASE_NAME", "my-release")
+			t.Setenv("NAMESPACE", "my-namespace")
 
 			d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
 				AutoPublishComponentMapping: false,
@@ -540,8 +540,8 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 		})
 
 		Convey("should skip auto-publish when env vars are not set even with AutoPublishComponentMapping true", func() {
-			t.Setenv("HELM_RELEASE_NAME", "")
-			t.Setenv("K8S_NAMESPACE", "")
+			t.Setenv("RELEASE_NAME", "")
+			t.Setenv("NAMESPACE", "")
 
 			d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
 				AutoPublishComponentMapping: true,
@@ -557,13 +557,13 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 
 func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
 	// Set env vars before test starts - use os.Setenv to ensure they're set immediately
-	originalReleaseName := os.Getenv("HELM_RELEASE_NAME")
-	originalNamespace := os.Getenv("K8S_NAMESPACE")
-	os.Setenv("HELM_RELEASE_NAME", "auto-release")
-	os.Setenv("K8S_NAMESPACE", "auto-namespace")
+	originalReleaseName := os.Getenv("RELEASE_NAME")
+	originalNamespace := os.Getenv("NAMESPACE")
+	os.Setenv("RELEASE_NAME", "auto-release")
+	os.Setenv("NAMESPACE", "auto-namespace")
 	defer func() {
-		os.Setenv("HELM_RELEASE_NAME", originalReleaseName)
-		os.Setenv("K8S_NAMESPACE", originalNamespace)
+		os.Setenv("RELEASE_NAME", originalReleaseName)
+		os.Setenv("NAMESPACE", originalNamespace)
 	}()
 
 	Convey("should auto-publish when AutoPublishComponentMapping is true and env vars are set", t, func() {
