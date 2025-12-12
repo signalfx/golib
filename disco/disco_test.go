@@ -560,7 +560,6 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			// Should not have published automatically
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
 		})
 
@@ -574,7 +573,6 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			// Should not have published automatically
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
 		})
 	})
