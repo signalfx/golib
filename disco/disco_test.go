@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/samuel/go-zookeeper/zk"
@@ -544,5 +545,75 @@ func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
 		So(childExists, ShouldBeTrue)
 		So(string(childPayload), ShouldContainSubstring, `"releaseName":"auto-release"`)
 		So(string(childPayload), ShouldContainSubstring, `"namespace":"auto-namespace"`)
+	})
+}
+
+func TestDisco_PublishComponentMappingConcurrent(t *testing.T) {
+	s := zktest.New()
+	z, ch, _ := s.Connect()
+
+	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	require.NoError(t, err)
+
+	zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		zkp, zkErr := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+		return zkp, zkp.EventChan(), zkErr
+	})
+
+	d1, err := New(zkConnFunc, "TestConcurrent", nil)
+	require.NoError(t, err)
+	defer d1.Close()
+
+	t.Setenv("RELEASE_NAME", "concurrent-release")
+	t.Setenv("NAMESPACE", "concurrent-namespace")
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			err := d1.PublishComponentMapping(fmt.Sprintf("service-%d", idx))
+			if err != nil {
+				errs <- err
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestDisco_PublishComponentMappingIdempotent(t *testing.T) {
+	Convey("should handle multiple publishes to same service name", t, func() {
+		s := zktest.New()
+		z, ch, _ := s.Connect()
+
+		_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+		So(err, ShouldBeNil)
+
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, zkErr := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), zkErr
+		})
+
+		d1, err := New(zkConnFunc, "TestIdempotent", nil)
+		So(err, ShouldBeNil)
+		defer d1.Close()
+
+		t.Setenv("RELEASE_NAME", "my-release")
+		t.Setenv("NAMESPACE", "my-namespace")
+
+		// First publish
+		So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+
+		// Second publish to same service should succeed (root already exists)
+		So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
 	})
 }
