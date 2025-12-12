@@ -450,15 +450,17 @@ func (d *Disco) CreatePersistentEphemeralNode(path string, payload []byte) (err 
 // with releaseName and namespace values from environment variables RELEASE_NAME
 // and NAMESPACE
 func (d *Disco) PublishComponentMapping(discoServiceName string) error {
-	releaseName := os.Getenv("RELEASE_NAME")
-	namespace := os.Getenv("NAMESPACE")
+	if d.ninjaMode {
+		return nil
+	}
 
+	releaseName := os.Getenv("RELEASE_NAME")
 	if releaseName == "" {
-		d.stateLog.Log(logkey.DiscoService, "RELEASE_NAME env var not set")
 		releaseName = "SET_RELEASE_NAME_ENV_VAR"
 	}
+
+	namespace := os.Getenv("NAMESPACE")
 	if namespace == "" {
-		d.stateLog.Log(logkey.DiscoService, "NAMESPACE env var not set")
 		namespace = "SET_NAMESPACE_ENV_VAR"
 	}
 
@@ -467,17 +469,52 @@ func (d *Disco) PublishComponentMapping(discoServiceName string) error {
 		Namespace:   namespace,
 	}
 
-	payload, err := json.Marshal(mapping)
+	payload, err := d.jsonMarshal(mapping)
 	if err != nil {
 		return errors.Annotate(err, "cannot marshal component mapping")
 	}
 
-	// Need to first create the root node and then we can create the child node
-	_, err = d.zkConn.Create("config.mapping", []byte{}, 0, zk.WorldACL(zk.PermAll))
-	if err != nil {
-		return err
+	// Create persistent parent nodes: /config.mapping and /config.mapping/{serviceName}
+	if err := d.createConfigMappingRoot(discoServiceName); err != nil {
+		return errors.Annotate(err, "cannot create config mapping root")
 	}
-	return d.CreatePersistentEphemeralNode(fmt.Sprintf("config.mapping/%s", discoServiceName), payload)
+
+	// Create ephemeral node at /config.mapping/{serviceName}/{GUID}
+	ephemeralPath := fmt.Sprintf("config.mapping/%s", discoServiceName)
+	return d.CreatePersistentEphemeralNode(ephemeralPath, payload)
+}
+
+func (d *Disco) createConfigMappingRoot(serviceName string) error {
+	d.watchedMutex.Lock()
+	defer d.watchedMutex.Unlock()
+
+	// Create /config.mapping if it doesn't exist
+	configMappingPath := "/config.mapping"
+	exists, _, _, err := d.zkConn.ExistsW(configMappingPath)
+	if err != nil {
+		return errors.Annotatef(err, "cannot check if %s exists", configMappingPath)
+	}
+	if !exists {
+		_, err = d.zkConn.Create(configMappingPath, []byte(""), 0, zk.WorldACL(zk.PermAll))
+		if err != nil && !goerrors.Is(errors.Tail(err), zk.ErrNodeExists) {
+			return errors.Annotatef(err, "cannot create %s", configMappingPath)
+		}
+	}
+
+	// Create /config.mapping/{serviceName} if it doesn't exist
+	serviceNamePath := fmt.Sprintf("%s/%s", configMappingPath, serviceName)
+	exists, _, _, err = d.zkConn.ExistsW(serviceNamePath)
+	if err != nil {
+		return errors.Annotatef(err, "cannot check if %s exists", serviceNamePath)
+	}
+	if !exists {
+		_, err = d.zkConn.Create(serviceNamePath, []byte(""), 0, zk.WorldACL(zk.PermAll))
+		if err != nil && !goerrors.Is(errors.Tail(err), zk.ErrNodeExists) {
+			return errors.Annotatef(err, "cannot create %s", serviceNamePath)
+		}
+	}
+
+	return nil
 }
 
 // Var returns an expvar variable that shows all the current disco services and the current
