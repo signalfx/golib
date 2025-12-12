@@ -433,7 +433,12 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			return zkp, zkp.EventChan(), err
 		})
 
-		Convey("should skip publishing when env vars are not set", func() {
+		Convey("should publish with default values when env vars are not set", func() {
+			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
+				log.IfErr(log.Panic, err)
+			}
+
 			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
 			So(err, ShouldBeNil)
 			defer d1.Close()
@@ -441,11 +446,21 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			t.Setenv("RELEASE_NAME", "")
 			t.Setenv("NAMESPACE", "")
 
-			So(d1.PublishComponentMapping(), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
+
+			payload, exists := d1.myEphemeralNodes["config.mapping/service-name"]
+			So(exists, ShouldBeTrue)
+			So(string(payload), ShouldContainSubstring, `"releaseName":"SET_RELEASE_NAME_ENV_VAR"`)
+			So(string(payload), ShouldContainSubstring, `"namespace":"SET_NAMESPACE_ENV_VAR"`)
 		})
 
-		Convey("should skip publishing when only RELEASE_NAME is set", func() {
+		Convey("should publish with placeholder namespace when only RELEASE_NAME is set", func() {
+			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
+				log.IfErr(log.Panic, err)
+			}
+
 			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
 			So(err, ShouldBeNil)
 			defer d1.Close()
@@ -453,11 +468,21 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			t.Setenv("RELEASE_NAME", "my-release")
 			t.Setenv("NAMESPACE", "")
 
-			So(d1.PublishComponentMapping(), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
+
+			payload, exists := d1.myEphemeralNodes["config.mapping/service-name"]
+			So(exists, ShouldBeTrue)
+			So(string(payload), ShouldContainSubstring, `"releaseName":"my-release"`)
+			So(string(payload), ShouldContainSubstring, `"namespace":"SET_NAMESPACE_ENV_VAR"`)
 		})
 
-		Convey("should skip publishing when only NAMESPACE is set", func() {
+		Convey("should publish with placeholder releaseName when only NAMESPACE is set", func() {
+			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
+				log.IfErr(log.Panic, err)
+			}
+
 			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
 			So(err, ShouldBeNil)
 			defer d1.Close()
@@ -465,13 +490,20 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			t.Setenv("RELEASE_NAME", "")
 			t.Setenv("NAMESPACE", "my-namespace")
 
-			So(d1.PublishComponentMapping(), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
+
+			payload, exists := d1.myEphemeralNodes["config.mapping/service-name"]
+			So(exists, ShouldBeTrue)
+			So(string(payload), ShouldContainSubstring, `"releaseName":"SET_RELEASE_NAME_ENV_VAR"`)
+			So(string(payload), ShouldContainSubstring, `"namespace":"my-namespace"`)
 		})
 
 		Convey("should publish when both env vars are set", func() {
 			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-			log.IfErr(log.Panic, err)
+			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
+				log.IfErr(log.Panic, err)
+			}
 
 			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
 			So(err, ShouldBeNil)
@@ -480,13 +512,20 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			t.Setenv("RELEASE_NAME", "my-release")
 			t.Setenv("NAMESPACE", "my-namespace")
 
-			So(d1.PublishComponentMapping(), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
 
-			payload, exists := d1.myEphemeralNodes["config.mapping"]
-			So(exists, ShouldBeTrue)
-			So(string(payload), ShouldContainSubstring, `"releaseName":"my-release"`)
-			So(string(payload), ShouldContainSubstring, `"namespace":"my-namespace"`)
+			// Verify parent node
+			parentPayload, parentExists := d1.myEphemeralNodes["config.mapping"]
+			So(parentExists, ShouldBeTrue)
+			So(string(parentPayload), ShouldContainSubstring, `"releaseName":"my-release"`)
+			So(string(parentPayload), ShouldContainSubstring, `"namespace":"my-namespace"`)
+
+			// Verify child node
+			childPayload, childExists := d1.myEphemeralNodes["config.mapping/service-name"]
+			So(childExists, ShouldBeTrue)
+			So(string(childPayload), ShouldContainSubstring, `"releaseName":"my-release"`)
+			So(string(childPayload), ShouldContainSubstring, `"namespace":"my-namespace"`)
 		})
 
 		Convey("should not publish in ninja mode", func() {
@@ -498,7 +537,7 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			t.Setenv("NAMESPACE", "my-namespace")
 
 			d1.NinjaMode(true)
-			So(d1.PublishComponentMapping(), ShouldBeNil)
+			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
 		})
 	})
@@ -538,20 +577,6 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 			// Should not have published automatically
 			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
 		})
-
-		Convey("should skip auto-publish when env vars are not set even with AutoPublishComponentMapping true", func() {
-			t.Setenv("RELEASE_NAME", "")
-			t.Setenv("NAMESPACE", "")
-
-			d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
-				AutoPublishComponentMapping: true,
-			})
-			So(err, ShouldBeNil)
-			defer d1.Close()
-
-			// Should not have published because env vars are missing
-			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
-		})
 	})
 }
 
@@ -581,16 +606,24 @@ func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
 
 		d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
 			AutoPublishComponentMapping: true,
+			DiscoServiceName:            "TestAutoPublish",
 		})
 		So(err, ShouldBeNil)
 		defer d1.Close()
 
 		// Should have published automatically during New()
-		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+		So(len(d1.myEphemeralNodes), ShouldEqual, 2)
 
-		payload, exists := d1.myEphemeralNodes["config.mapping"]
-		So(exists, ShouldBeTrue)
-		So(string(payload), ShouldContainSubstring, `"releaseName":"auto-release"`)
-		So(string(payload), ShouldContainSubstring, `"namespace":"auto-namespace"`)
+		// Verify parent node
+		parentPayload, parentExists := d1.myEphemeralNodes["config.mapping"]
+		So(parentExists, ShouldBeTrue)
+		So(string(parentPayload), ShouldContainSubstring, `"releaseName":"auto-release"`)
+		So(string(parentPayload), ShouldContainSubstring, `"namespace":"auto-namespace"`)
+
+		// Verify child node
+		childPayload, childExists := d1.myEphemeralNodes["config.mapping/TestAutoPublish"]
+		So(childExists, ShouldBeTrue)
+		So(string(childPayload), ShouldContainSubstring, `"releaseName":"auto-release"`)
+		So(string(childPayload), ShouldContainSubstring, `"namespace":"auto-namespace"`)
 	})
 }

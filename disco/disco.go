@@ -132,6 +132,7 @@ type Config struct {
 	RandomSource                io.Reader
 	Logger                      log.Logger
 	AutoPublishComponentMapping bool // call PublishComponentMapping() when invoking New() to publish /config.mapping
+	DiscoServiceName            string
 }
 
 // DefaultConfig is used if any config values are nil
@@ -174,8 +175,9 @@ func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d 
 		}
 		go d.eventLoop()
 
+		discoServiceName := config.DiscoServiceName
 		if autoPublishComponentMappingInfo {
-			if err := d.PublishComponentMapping(); err != nil {
+			if err := d.PublishComponentMapping(discoServiceName); err != nil {
 				d.stateLog.Log(log.Err, err, log.Msg, "failed to auto-publish component mapping")
 			}
 		}
@@ -446,7 +448,7 @@ func (d *Disco) CreatePersistentEphemeralNode(path string, payload []byte) (err 
 // PublishComponentMapping creates a persistent ephemeral node at /config.mapping
 // with releaseName and namespace values from environment variables RELEASE_NAME
 // and NAMESPACE
-func (d *Disco) PublishComponentMapping() error {
+func (d *Disco) PublishComponentMapping(discoServiceName string) error {
 	releaseName := os.Getenv("RELEASE_NAME")
 	namespace := os.Getenv("NAMESPACE")
 
@@ -469,7 +471,12 @@ func (d *Disco) PublishComponentMapping() error {
 		return errors.Annotate(err, "cannot marshal component mapping")
 	}
 
-	return d.CreatePersistentEphemeralNode("config.mapping", payload)
+	// Need to first create the root node and then we can create the child node
+	err = d.CreatePersistentEphemeralNode("config.mapping", payload)
+	if err != nil {
+		return err
+	}
+	return d.CreatePersistentEphemeralNode(fmt.Sprintf("config.mapping/%s", discoServiceName), payload)
 }
 
 // Var returns an expvar variable that shows all the current disco services and the current
