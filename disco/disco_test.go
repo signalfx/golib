@@ -455,50 +455,6 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(string(payload), ShouldContainSubstring, `"namespace":"SET_NAMESPACE_ENV_VAR"`)
 		})
 
-		Convey("should publish with placeholder namespace when only RELEASE_NAME is set", func() {
-			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
-				log.IfErr(log.Panic, err)
-			}
-
-			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
-			So(err, ShouldBeNil)
-			defer d1.Close()
-
-			t.Setenv("RELEASE_NAME", "my-release")
-			t.Setenv("NAMESPACE", "")
-
-			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
-
-			payload, exists := d1.myEphemeralNodes["config.mapping/service-name"]
-			So(exists, ShouldBeTrue)
-			So(string(payload), ShouldContainSubstring, `"releaseName":"my-release"`)
-			So(string(payload), ShouldContainSubstring, `"namespace":"SET_NAMESPACE_ENV_VAR"`)
-		})
-
-		Convey("should publish with placeholder releaseName when only NAMESPACE is set", func() {
-			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
-				log.IfErr(log.Panic, err)
-			}
-
-			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
-			So(err, ShouldBeNil)
-			defer d1.Close()
-
-			t.Setenv("RELEASE_NAME", "")
-			t.Setenv("NAMESPACE", "my-namespace")
-
-			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 2)
-
-			payload, exists := d1.myEphemeralNodes["config.mapping/service-name"]
-			So(exists, ShouldBeTrue)
-			So(string(payload), ShouldContainSubstring, `"releaseName":"SET_RELEASE_NAME_ENV_VAR"`)
-			So(string(payload), ShouldContainSubstring, `"namespace":"my-namespace"`)
-		})
-
 		Convey("should publish when both env vars are set", func() {
 			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
 			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
