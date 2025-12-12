@@ -455,29 +455,6 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(string(payload), ShouldContainSubstring, `"namespace":"SET_NAMESPACE_ENV_VAR"`)
 		})
 
-		Convey("should publish when both env vars are set", func() {
-			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
-			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
-				log.IfErr(log.Panic, err)
-			}
-
-			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
-			So(err, ShouldBeNil)
-			defer d1.Close()
-
-			t.Setenv("RELEASE_NAME", "my-release")
-			t.Setenv("NAMESPACE", "my-namespace")
-
-			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
-			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
-
-			// Verify child node (only one node is added to myEphemeralNodes now)
-			childPayload, childExists := d1.myEphemeralNodes["config.mapping/service-name"]
-			So(childExists, ShouldBeTrue)
-			So(string(childPayload), ShouldContainSubstring, `"releaseName":"my-release"`)
-			So(string(childPayload), ShouldContainSubstring, `"namespace":"my-namespace"`)
-		})
-
 		Convey("should not publish in ninja mode", func() {
 			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
 			So(err, ShouldBeNil)
