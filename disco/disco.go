@@ -141,6 +141,11 @@ var DefaultConfig = &Config{
 	Logger:       log.DefaultLogger.CreateChild(),
 }
 
+var (
+	ReleaseNameKey = "RELEASE_NAME"
+	NamespaceKey   = "NAMESPACE"
+)
+
 // New creates a disco discovery/publishing service
 func New(zkConnCreator ZkConnCreator, publishAddress string, config *Config) (d *Disco, err error) {
 	conf, ok := pointer.FillDefaultFrom(config, DefaultConfig).(*Config)
@@ -454,12 +459,12 @@ func (d *Disco) PublishComponentMapping(discoServiceName string) error {
 		return nil
 	}
 
-	releaseName := os.Getenv("RELEASE_NAME")
+	releaseName := os.Getenv(ReleaseNameKey)
 	if releaseName == "" {
 		releaseName = "SET_RELEASE_NAME_ENV_VAR"
 	}
 
-	namespace := os.Getenv("NAMESPACE")
+	namespace := os.Getenv(NamespaceKey)
 	if namespace == "" {
 		namespace = "SET_NAMESPACE_ENV_VAR"
 	}

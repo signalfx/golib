@@ -444,8 +444,8 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			t.Setenv("RELEASE_NAME", "")
-			t.Setenv("NAMESPACE", "")
+			t.Setenv(ReleaseNameKey, "")
+			t.Setenv(NamespaceKey, "")
 
 			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
 			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
@@ -461,8 +461,8 @@ func TestDisco_PublishComponentMapping(t *testing.T) {
 			So(err, ShouldBeNil)
 			defer d1.Close()
 
-			t.Setenv("RELEASE_NAME", "my-release")
-			t.Setenv("NAMESPACE", "my-namespace")
+			t.Setenv(ReleaseNameKey, "my-release")
+			t.Setenv(NamespaceKey, "my-namespace")
 
 			d1.NinjaMode(true)
 			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
@@ -481,8 +481,8 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 		})
 
 		Convey("should not auto-publish when AutoPublishComponentMapping is false (default)", func() {
-			t.Setenv("RELEASE_NAME", "my-release")
-			t.Setenv("NAMESPACE", "my-namespace")
+			t.Setenv(ReleaseNameKey, "my-release")
+			t.Setenv(NamespaceKey, "my-namespace")
 
 			d1, err := New(zkConnFunc, "TestAutoPublish", nil)
 			So(err, ShouldBeNil)
@@ -492,8 +492,8 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 		})
 
 		Convey("should not auto-publish when AutoPublishComponentMapping is explicitly false", func() {
-			t.Setenv("RELEASE_NAME", "my-release")
-			t.Setenv("NAMESPACE", "my-namespace")
+			t.Setenv(ReleaseNameKey, "my-release")
+			t.Setenv(NamespaceKey, "my-namespace")
 
 			d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
 				AutoPublishComponentMapping: false,
@@ -508,13 +508,13 @@ func TestDisco_AutoPublishComponentMapping(t *testing.T) {
 
 func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
 	// Set env vars before test starts - use os.Setenv to ensure they're set immediately
-	originalReleaseName := os.Getenv("RELEASE_NAME")
-	originalNamespace := os.Getenv("NAMESPACE")
-	os.Setenv("RELEASE_NAME", "auto-release")
-	os.Setenv("NAMESPACE", "auto-namespace")
+	originalReleaseName := os.Getenv(ReleaseNameKey)
+	originalNamespace := os.Getenv(NamespaceKey)
+	os.Setenv(ReleaseNameKey, "auto-release")
+	os.Setenv(NamespaceKey, "auto-namespace")
 	defer func() {
-		os.Setenv("RELEASE_NAME", originalReleaseName)
-		os.Setenv("NAMESPACE", originalNamespace)
+		os.Setenv(ReleaseNameKey, originalReleaseName)
+		os.Setenv(NamespaceKey, originalNamespace)
 	}()
 
 	Convey("should auto-publish when AutoPublishComponentMapping is true and env vars are set", t, func() {
@@ -564,8 +564,8 @@ func TestDisco_PublishComponentMappingConcurrent(t *testing.T) {
 	require.NoError(t, err)
 	defer d1.Close()
 
-	t.Setenv("RELEASE_NAME", "concurrent-release")
-	t.Setenv("NAMESPACE", "concurrent-namespace")
+	t.Setenv(ReleaseNameKey, "concurrent-release")
+	t.Setenv(NamespaceKey, "concurrent-namespace")
 
 	var wg sync.WaitGroup
 	errs := make(chan error, 10)
@@ -606,8 +606,8 @@ func TestDisco_PublishComponentMappingIdempotent(t *testing.T) {
 		So(err, ShouldBeNil)
 		defer d1.Close()
 
-		t.Setenv("RELEASE_NAME", "my-release")
-		t.Setenv("NAMESPACE", "my-namespace")
+		t.Setenv(ReleaseNameKey, "my-release")
+		t.Setenv(NamespaceKey, "my-namespace")
 
 		// First publish
 		So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
