@@ -142,8 +142,10 @@ var DefaultConfig = &Config{
 }
 
 var (
+	// ReleaseNameKey - environment variable key for component mapping
 	ReleaseNameKey = "RELEASE_NAME"
-	NamespaceKey   = "NAMESPACE"
+	// NamespaceKey - environment variable key for component mapping
+	NamespaceKey = "NAMESPACE"
 )
 
 // New creates a disco discovery/publishing service
