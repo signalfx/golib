@@ -4,9 +4,11 @@ import (
 	"bytes"
 	errors2 "errors"
 	"fmt"
+	"os"
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/samuel/go-zookeeper/zk"
@@ -421,4 +423,197 @@ func TestDisco_CreatePersistentEphemeralNodeInZKErr(t *testing.T) {
 		return nil
 	})
 	require.NotNil(t, d1.CreatePersistentEphemeralNode("service1", []byte("blarg")))
+}
+
+func TestDisco_PublishComponentMapping(t *testing.T) {
+	Convey("test PublishComponentMapping", t, func() {
+		s2 := zktest.New()
+		z, ch, _ := s2.Connect()
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), err
+		})
+
+		Convey("should publish with default values when env vars are not set", func() {
+			_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+			if err != nil && !errors2.Is(errors.Tail(err), zk.ErrNodeExists) {
+				log.IfErr(log.Panic, err)
+			}
+
+			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			t.Setenv(ReleaseNameKey, "")
+			t.Setenv(NamespaceKey, "")
+
+			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+
+			payload, exists := d1.myEphemeralNodes["config.mapping/service-name"]
+			So(exists, ShouldBeTrue)
+			So(string(payload), ShouldContainSubstring, `"releaseName":"SET_RELEASE_NAME_ENV_VAR"`)
+			So(string(payload), ShouldContainSubstring, `"namespace":"SET_NAMESPACE_ENV_VAR"`)
+		})
+
+		Convey("should not publish in ninja mode", func() {
+			d1, err := New(zkConnFunc, "TestPublishComponentMapping", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			t.Setenv(ReleaseNameKey, "my-release")
+			t.Setenv(NamespaceKey, "my-namespace")
+
+			d1.NinjaMode(true)
+			So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+	})
+}
+
+func TestDisco_AutoPublishComponentMapping(t *testing.T) {
+	Convey("test AutoPublishComponentMapping config option", t, func() {
+		s2 := zktest.New()
+		z, ch, _ := s2.Connect()
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, err := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), err
+		})
+
+		Convey("should not auto-publish when AutoPublishComponentMapping is false (default)", func() {
+			t.Setenv(ReleaseNameKey, "my-release")
+			t.Setenv(NamespaceKey, "my-namespace")
+
+			d1, err := New(zkConnFunc, "TestAutoPublish", nil)
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+
+		Convey("should not auto-publish when AutoPublishComponentMapping is explicitly false", func() {
+			t.Setenv(ReleaseNameKey, "my-release")
+			t.Setenv(NamespaceKey, "my-namespace")
+
+			d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
+				AutoPublishComponentMapping: false,
+			})
+			So(err, ShouldBeNil)
+			defer d1.Close()
+
+			So(len(d1.myEphemeralNodes), ShouldEqual, 0)
+		})
+	})
+}
+
+func TestDisco_AutoPublishComponentMappingWithEnvVars(t *testing.T) {
+	// Set env vars before test starts - use os.Setenv to ensure they're set immediately
+	originalReleaseName := os.Getenv(ReleaseNameKey)
+	originalNamespace := os.Getenv(NamespaceKey)
+	os.Setenv(ReleaseNameKey, "auto-release")
+	os.Setenv(NamespaceKey, "auto-namespace")
+	defer func() {
+		os.Setenv(ReleaseNameKey, originalReleaseName)
+		os.Setenv(NamespaceKey, originalNamespace)
+	}()
+
+	Convey("should auto-publish when AutoPublishComponentMapping is true and env vars are set", t, func() {
+		s2 := zktest.New()
+		z, ch, _ := s2.Connect()
+
+		// Create the /test path first
+		_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+		So(err, ShouldBeNil)
+
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, zkErr := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), zkErr
+		})
+
+		d1, err := New(zkConnFunc, "TestAutoPublish", &Config{
+			AutoPublishComponentMapping: true,
+			DiscoServiceName:            "TestAutoPublish",
+		})
+		So(err, ShouldBeNil)
+		defer d1.Close()
+
+		// Should have published automatically during New()
+		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+
+		// Verify child node (only one node is added to myEphemeralNodes now)
+		childPayload, childExists := d1.myEphemeralNodes["config.mapping/TestAutoPublish"]
+		So(childExists, ShouldBeTrue)
+		So(string(childPayload), ShouldContainSubstring, `"releaseName":"auto-release"`)
+		So(string(childPayload), ShouldContainSubstring, `"namespace":"auto-namespace"`)
+	})
+}
+
+func TestDisco_PublishComponentMappingConcurrent(t *testing.T) {
+	s := zktest.New()
+	z, ch, _ := s.Connect()
+
+	_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+	require.NoError(t, err)
+
+	zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+		zkp, zkErr := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+		return zkp, zkp.EventChan(), zkErr
+	})
+
+	d1, err := New(zkConnFunc, "TestConcurrent", nil)
+	require.NoError(t, err)
+	defer d1.Close()
+
+	t.Setenv(ReleaseNameKey, "concurrent-release")
+	t.Setenv(NamespaceKey, "concurrent-namespace")
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			err := d1.PublishComponentMapping(fmt.Sprintf("service-%d", idx))
+			if err != nil {
+				errs <- err
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestDisco_PublishComponentMappingIdempotent(t *testing.T) {
+	Convey("should handle multiple publishes to same service name", t, func() {
+		s := zktest.New()
+		z, ch, _ := s.Connect()
+
+		_, err := z.Create("/test", []byte(""), 0, zk.WorldACL(zk.PermAll))
+		So(err, ShouldBeNil)
+
+		zkConnFunc := ZkConnCreatorFunc(func() (ZkConn, <-chan zk.Event, error) {
+			zkp, zkErr := zkplus.NewBuilder().PathPrefix("/test").Connector(&zkplus.StaticConnector{C: z, Ch: ch}).Build()
+			return zkp, zkp.EventChan(), zkErr
+		})
+
+		d1, err := New(zkConnFunc, "TestIdempotent", nil)
+		So(err, ShouldBeNil)
+		defer d1.Close()
+
+		t.Setenv(ReleaseNameKey, "my-release")
+		t.Setenv(NamespaceKey, "my-namespace")
+
+		// First publish
+		So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+		So(len(d1.myEphemeralNodes), ShouldEqual, 1)
+
+		// Second publish to same service should succeed (root already exists)
+		So(d1.PublishComponentMapping("service-name"), ShouldBeNil)
+	})
 }
