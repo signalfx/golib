@@ -262,11 +262,17 @@ func TestHTTPDatapointSink(t *testing.T) {
 				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
 				So(len(seenBodyPoints.Datapoints[0].Dimensions), ShouldEqual, 0)
 			})
-			Convey("invalid rune filtering should happen", func() {
+			Convey("dot character should be preserved in dimension keys", func() {
 				dps[0].Dimensions = map[string]string{"hi.bob": "hi"}
 				dps = dps[0:1]
 				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
-				So(seenBodyPoints.Datapoints[0].Dimensions[0].Key, ShouldEqual, "hi_bob")
+				So(seenBodyPoints.Datapoints[0].Dimensions[0].Key, ShouldEqual, "hi.bob")
+			})
+			Convey("invalid rune filtering should still happen for other characters", func() {
+				dps[0].Dimensions = map[string]string{"hi@bob#test": "hi"}
+				dps = dps[0:1]
+				So(s.AddDatapoints(ctx, dps), ShouldBeNil)
+				So(seenBodyPoints.Datapoints[0].Dimensions[0].Key, ShouldEqual, "hi_bob_test")
 			})
 			Convey("Invalid datapoints should panic", func() {
 				dps[0].MetricType = datapoint.MetricType(1001)
@@ -496,11 +502,17 @@ func TestHTTPEventSink(t *testing.T) {
 				So(s.AddEvents(ctx, events), ShouldBeNil)
 				So(len(seenBodyEvents.Events[0].Dimensions), ShouldEqual, 0)
 			})
-			Convey("invalid rune filtering should happen", func() {
+			Convey("dot character should be preserved in dimension keys", func() {
 				events[0].Dimensions = map[string]string{"hi.bob": "hi"}
 				events = events[0:1]
 				So(s.AddEvents(ctx, events), ShouldBeNil)
-				So(seenBodyEvents.Events[0].Dimensions[0].Key, ShouldEqual, "hi_bob")
+				So(seenBodyEvents.Events[0].Dimensions[0].Key, ShouldEqual, "hi.bob")
+			})
+			Convey("invalid rune filtering should still happen for other characters", func() {
+				events[0].Dimensions = map[string]string{"hi@bob#test": "hi"}
+				events = events[0:1]
+				So(s.AddEvents(ctx, events), ShouldBeNil)
+				So(seenBodyEvents.Events[0].Dimensions[0].Key, ShouldEqual, "hi_bob_test")
 			})
 			Convey("Invalid events should panic", func() {
 				events[0].Category = event.Category(999999)

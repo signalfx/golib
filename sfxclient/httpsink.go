@@ -326,7 +326,7 @@ func filterSignalfxKey(str string) string {
 }
 
 func runeFilterMap(r rune) rune {
-	if unicode.IsDigit(r) || unicode.IsLetter(r) || r == '_' || r == '-' {
+	if unicode.IsDigit(r) || unicode.IsLetter(r) || r == '_' || r == '-' || r == '.' {
 		return r
 	}
 	return '_'
