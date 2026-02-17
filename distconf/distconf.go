@@ -339,6 +339,25 @@ func (c *Distconf) GetStringIntMap(key string, defaultVal map[string]int) map[st
 	return result
 }
 
+// GetStringSliceMap retrieves a map[string][]string for the given key.
+// This is useful for org overrides with string array values like blocked span tags:
+// '{"ORG_ID": ["TAG1", "TAG2"]}'
+// The value can be either a YAML map or a JSON object string.
+// Returns the default value if the key is not found or if parsing fails.
+func (c *Distconf) GetStringSliceMap(key string, defaultVal map[string][]string) map[string][]string {
+	bytes, err := c.Get(key)
+	if err != nil || bytes == nil {
+		return defaultVal
+	}
+
+	var result map[string][]string
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		c.Logger.Log(logkey.DistconfKey, key, log.Err, err, "failed to unmarshal string slice map")
+		return defaultVal
+	}
+	return result
+}
+
 // GetNestedStringSliceMap retrieves a map[string]map[string][]string for the given key.
 // This is useful for complex org overrides like blocked process tags:
 // '{"G7qxWWeAAAU": {"sf_environment": ["psr-ai-lab0"]}}'

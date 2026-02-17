@@ -634,6 +634,9 @@ items_json: '["a", "b", "c"]'
 # JSON string for sample rate org overrides (map[string]int)
 sample_rate_overrides_json: '{"BqDQY5OAAAA": 100, "G7qxWWeAAAU": 50, "EauzO4EAIAA": 25}'
 
+# JSON string for blocked span tags (map[string][]string)
+blocked_span_tags_json: '{"ORG_ID1": ["TAG1", "TAG2"], "ORG_ID2": ["TAG3"]}'
+
 # JSON string for blocked process tags (map[string]map[string][]string)
 blocked_process_tags_json: '{"G7qxWWeAAAU": {"sf_environment": ["psr-ai-lab0"]}, "BqDQY5OAAAA": {"sf_service": ["svc1", "svc2"], "sf_environment": ["prod"]}}'
 
@@ -645,6 +648,10 @@ sf:
       ai_spans_sample_rate_org_overrides: '{"BqDQY5OAAAA": 100, "G7qxWWeAAAU": 100, "EauzO4EAIAA": 100, "G_yXEGYAIAI": 100}'
     spanbus:
       blocked_process_tags_org_overrides: '{"G7qxWWeAAAU": {"sf_environment": ["psr-ai-lab0"]}}'
+      blocked_span_tags: '{"ORG_ID": ["TAG1", "TAG2"]}'
+  trace_ingest:
+    spanbus:
+      blocked_process_tags: '{"ORG_ID": {"TAG_KEY": ["TAG_VALUE1", "TAG_VALUE2"]}}'
 
 # For GetJSON with struct
 server_config: '{"host": "localhost", "port": 8080, "enabled": true}'
@@ -712,6 +719,21 @@ server_config: '{"host": "localhost", "port": 8080, "enabled": true}'
 	defaultIntMap := conf.GetStringIntMap("non_existent", map[string]int{"default": 42})
 	assert.Equal(t, 42, defaultIntMap["default"])
 
+	// Test GetStringSliceMap with JSON string (blocked span tags use case!)
+	blockedSpanTags := conf.GetStringSliceMap("blocked_span_tags_json", nil)
+	assert.NotNil(t, blockedSpanTags)
+	assert.Equal(t, []string{"TAG1", "TAG2"}, blockedSpanTags["ORG_ID1"])
+	assert.Equal(t, []string{"TAG3"}, blockedSpanTags["ORG_ID2"])
+
+	// Test GetStringSliceMap with nested key (the exact user use case!)
+	nestedBlockedSpanTags := conf.GetStringSliceMap("sf.trace-ingest.spanbus.blocked_span_tags", nil)
+	assert.NotNil(t, nestedBlockedSpanTags)
+	assert.Equal(t, []string{"TAG1", "TAG2"}, nestedBlockedSpanTags["ORG_ID"])
+
+	// Test GetStringSliceMap with non-existent key (returns default)
+	defaultSliceMap := conf.GetStringSliceMap("non_existent", map[string][]string{"org1": {"tag1"}})
+	assert.Equal(t, []string{"tag1"}, defaultSliceMap["org1"])
+
 	// Test GetNestedStringSliceMap with JSON string (blocked process tags use case!)
 	blockedTags := conf.GetNestedStringSliceMap("blocked_process_tags_json", nil)
 	assert.NotNil(t, blockedTags)
@@ -723,6 +745,11 @@ server_config: '{"host": "localhost", "port": 8080, "enabled": true}'
 	nestedBlockedTags := conf.GetNestedStringSliceMap("sf.trace-ingest.spanbus.blocked_process_tags_org_overrides", nil)
 	assert.NotNil(t, nestedBlockedTags)
 	assert.Equal(t, []string{"psr-ai-lab0"}, nestedBlockedTags["G7qxWWeAAAU"]["sf_environment"])
+
+	// Test GetNestedStringSliceMap with blocked_process_tags format: {"ORG_ID": {"TAG_KEY": ["TAG_VALUE1", "TAG_VALUE2"]}}
+	blockedProcessTags := conf.GetNestedStringSliceMap("sf.trace_ingest.spanbus.blocked_process_tags", nil)
+	assert.NotNil(t, blockedProcessTags)
+	assert.Equal(t, []string{"TAG_VALUE1", "TAG_VALUE2"}, blockedProcessTags["ORG_ID"]["TAG_KEY"])
 
 	// Test GetNestedStringSliceMap with non-existent key (returns default)
 	defaultNestedMap := conf.GetNestedStringSliceMap("non_existent", map[string]map[string][]string{"org1": {"tag1": {"val1"}}})
@@ -997,6 +1024,74 @@ wrong_type: '{"key": "string_not_int"}'
 
 	// Test nil default
 	nilDefault := conf.GetStringIntMap("non_existent", nil)
+	assert.Nil(t, nilDefault)
+}
+
+func TestGetStringSliceMapEdgeCases(t *testing.T) {
+	file, err := ioutil.TempFile("", "TestGetStringSliceMapEdgeCases")
+	assert.NoError(t, err)
+	defer func() {
+		log.IfErr(log.Panic, os.Remove(file.Name()))
+	}()
+
+	log.IfErr(log.Panic, file.Close())
+
+	yamlContent := `
+empty_map: '{}'
+single_org: '{"ORG1": ["tag1"]}'
+multiple_tags: '{"ORG1": ["tag1", "tag2", "tag3"]}'
+multiple_orgs: '{"ORG1": ["tag1"], "ORG2": ["tag2", "tag3"]}'
+empty_tags: '{"ORG1": []}'
+special_chars: '{"ORG-WITH-DASH": ["tag_with_underscore", "tag.with.dot"]}'
+invalid_json: 'not valid json'
+wrong_type: '["array", "not", "map"]'
+wrong_value_type: '{"ORG1": "string_not_array"}'
+`
+	assert.NoError(t, ioutil.WriteFile(file.Name(), []byte(yamlContent), 0))
+
+	backs := []BackingLoader{YamlLoader(file.Name())}
+	conf := FromLoaders(backs)
+	defer conf.Close()
+
+	// Test empty map
+	empty := conf.GetStringSliceMap("empty_map", map[string][]string{"default": {"val"}})
+	assert.Equal(t, map[string][]string{}, empty)
+
+	// Test single org with single tag
+	singleOrg := conf.GetStringSliceMap("single_org", nil)
+	assert.Equal(t, []string{"tag1"}, singleOrg["ORG1"])
+
+	// Test single org with multiple tags
+	multipleTags := conf.GetStringSliceMap("multiple_tags", nil)
+	assert.Equal(t, []string{"tag1", "tag2", "tag3"}, multipleTags["ORG1"])
+
+	// Test multiple orgs
+	multipleOrgs := conf.GetStringSliceMap("multiple_orgs", nil)
+	assert.Equal(t, []string{"tag1"}, multipleOrgs["ORG1"])
+	assert.Equal(t, []string{"tag2", "tag3"}, multipleOrgs["ORG2"])
+
+	// Test empty tags array
+	emptyTags := conf.GetStringSliceMap("empty_tags", nil)
+	assert.Equal(t, []string{}, emptyTags["ORG1"])
+
+	// Test special characters in keys and values
+	special := conf.GetStringSliceMap("special_chars", nil)
+	assert.Equal(t, []string{"tag_with_underscore", "tag.with.dot"}, special["ORG-WITH-DASH"])
+
+	// Test invalid JSON returns default
+	invalid := conf.GetStringSliceMap("invalid_json", map[string][]string{"fallback": {"val"}})
+	assert.Equal(t, []string{"val"}, invalid["fallback"])
+
+	// Test wrong type returns default
+	wrongType := conf.GetStringSliceMap("wrong_type", map[string][]string{"fallback": {"val"}})
+	assert.Equal(t, []string{"val"}, wrongType["fallback"])
+
+	// Test wrong value type returns default
+	wrongValueType := conf.GetStringSliceMap("wrong_value_type", map[string][]string{"fallback": {"val"}})
+	assert.Equal(t, []string{"val"}, wrongValueType["fallback"])
+
+	// Test nil default
+	nilDefault := conf.GetStringSliceMap("non_existent", nil)
 	assert.Nil(t, nilDefault)
 }
 
