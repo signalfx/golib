@@ -163,3 +163,65 @@ non_empty: "hello"
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hello"), v)
 }
+
+func TestDistconfGetArraysAndObjects(t *testing.T) {
+	// Create a temporary YAML file with arrays and objects
+	file, err := ioutil.TempFile("", "TestDistconfGetArraysAndObjects")
+	assert.NoError(t, err)
+	defer func() {
+		log.IfErr(log.Panic, os.Remove(file.Name()))
+	}()
+
+	log.IfErr(log.Panic, file.Close())
+	yamlContent := `
+string_val: hello
+items:
+  - item1
+  - item2
+  - item3
+database:
+  host: localhost
+  port: 5432
+`
+	assert.NoError(t, ioutil.WriteFile(file.Name(), []byte(yamlContent), 0))
+
+	// Use FromLoaders to create Distconf (the typical usage pattern)
+	backs := []BackingLoader{YamlLoader(file.Name())}
+	conf := FromLoaders(backs)
+	defer conf.Close()
+
+	// Test that typed methods still work
+	strVal := conf.Str("string_val", "default")
+	assert.Equal(t, "hello", strVal.Get())
+
+	// Test Get() for string value
+	v, err := conf.Get("string_val")
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hello"), v)
+
+	// Test Get() for array
+	v, err = conf.Get("items")
+	assert.NoError(t, err)
+	assert.NotNil(t, v)
+
+	var items []string
+	err = json.Unmarshal(v, &items)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"item1", "item2", "item3"}, items)
+
+	// Test Get() for object
+	v, err = conf.Get("database")
+	assert.NoError(t, err)
+	assert.NotNil(t, v)
+
+	var db map[string]interface{}
+	err = json.Unmarshal(v, &db)
+	assert.NoError(t, err)
+	assert.Equal(t, "localhost", db["host"])
+	assert.Equal(t, float64(5432), db["port"])
+
+	// Test Get() for non-existent key
+	v, err = conf.Get("non_existent_key")
+	assert.NoError(t, err)
+	assert.Nil(t, v)
+}

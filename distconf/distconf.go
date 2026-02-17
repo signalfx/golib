@@ -232,6 +232,23 @@ func (c *Distconf) Duration(key string, defaultVal time.Duration) *Duration {
 	return &ret.Duration
 }
 
+// Get retrieves the raw bytes for a given key from the first backing reader that has it.
+// This is useful for accessing complex types like arrays and objects that cannot be
+// represented by the typed methods (Int, Str, Bool, etc.).
+// For YAML arrays/objects, the returned bytes will be JSON-encoded.
+func (c *Distconf) Get(key string) ([]byte, error) {
+	for _, reader := range c.readers {
+		val, err := reader.Get(key)
+		if err != nil {
+			return nil, err
+		}
+		if val != nil {
+			return val, nil
+		}
+	}
+	return nil, nil
+}
+
 // Close this config framework's readers.  Config variable results are undefined after this call.
 func (c *Distconf) Close() {
 	c.varsMutex.Lock()
