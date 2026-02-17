@@ -1,6 +1,7 @@
 package distconf
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"sync"
