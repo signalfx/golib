@@ -1,7 +1,9 @@
 package distconf
 
 import (
+	"encoding/json"
 	"expvar"
+	"fmt"
 	"math"
 	"runtime"
 	"sync"
@@ -247,6 +249,131 @@ func (c *Distconf) Get(key string) ([]byte, error) {
 		}
 	}
 	return nil, nil
+}
+
+// GetStringSlice retrieves a string slice for the given key.
+// The value can be either a YAML array or a JSON array string.
+// Returns the default value if the key is not found or if parsing fails.
+func (c *Distconf) GetStringSlice(key string, defaultVal []string) []string {
+	bytes, err := c.Get(key)
+	if err != nil || bytes == nil {
+		return defaultVal
+	}
+
+	var result []string
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		c.Logger.Log(logkey.DistconfKey, key, log.Err, err, "failed to unmarshal string slice")
+		return defaultVal
+	}
+	return result
+}
+
+// GetIntSlice retrieves an int slice for the given key.
+// The value can be either a YAML array or a JSON array string.
+// Returns the default value if the key is not found or if parsing fails.
+func (c *Distconf) GetIntSlice(key string, defaultVal []int) []int {
+	bytes, err := c.Get(key)
+	if err != nil || bytes == nil {
+		return defaultVal
+	}
+
+	var result []int
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		c.Logger.Log(logkey.DistconfKey, key, log.Err, err, "failed to unmarshal int slice")
+		return defaultVal
+	}
+	return result
+}
+
+// GetStringMap retrieves a map[string]string for the given key.
+// The value can be either a YAML map or a JSON object string.
+// Returns the default value if the key is not found or if parsing fails.
+func (c *Distconf) GetStringMap(key string, defaultVal map[string]string) map[string]string {
+	bytes, err := c.Get(key)
+	if err != nil || bytes == nil {
+		return defaultVal
+	}
+
+	var result map[string]string
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		c.Logger.Log(logkey.DistconfKey, key, log.Err, err, "failed to unmarshal string map")
+		return defaultVal
+	}
+	return result
+}
+
+// GetStringBoolMap retrieves a map[string]bool for the given key.
+// This is useful for org overrides like: '{"org1": true, "org2": false}'
+// The value can be either a YAML map or a JSON object string.
+// Returns the default value if the key is not found or if parsing fails.
+func (c *Distconf) GetStringBoolMap(key string, defaultVal map[string]bool) map[string]bool {
+	bytes, err := c.Get(key)
+	if err != nil || bytes == nil {
+		return defaultVal
+	}
+
+	var result map[string]bool
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		c.Logger.Log(logkey.DistconfKey, key, log.Err, err, "failed to unmarshal string bool map")
+		return defaultVal
+	}
+	return result
+}
+
+// GetStringIntMap retrieves a map[string]int for the given key.
+// This is useful for org overrides with integer values like sample rates:
+// '{"org1": 100, "org2": 50}'
+// The value can be either a YAML map or a JSON object string.
+// Returns the default value if the key is not found or if parsing fails.
+func (c *Distconf) GetStringIntMap(key string, defaultVal map[string]int) map[string]int {
+	bytes, err := c.Get(key)
+	if err != nil || bytes == nil {
+		return defaultVal
+	}
+
+	var result map[string]int
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		c.Logger.Log(logkey.DistconfKey, key, log.Err, err, "failed to unmarshal string int map")
+		return defaultVal
+	}
+	return result
+}
+
+// GetNestedStringSliceMap retrieves a map[string]map[string][]string for the given key.
+// This is useful for complex org overrides like blocked process tags:
+// '{"G7qxWWeAAAU": {"sf_environment": ["psr-ai-lab0"]}}'
+// The value can be either a YAML map or a JSON object string.
+// Returns the default value if the key is not found or if parsing fails.
+func (c *Distconf) GetNestedStringSliceMap(key string, defaultVal map[string]map[string][]string) map[string]map[string][]string {
+	bytes, err := c.Get(key)
+	if err != nil || bytes == nil {
+		return defaultVal
+	}
+
+	var result map[string]map[string][]string
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		c.Logger.Log(logkey.DistconfKey, key, log.Err, err, "failed to unmarshal nested string slice map")
+		return defaultVal
+	}
+	return result
+}
+
+// GetJSON unmarshals the config value into the provided target interface.
+// The value can be either a YAML object/array or a JSON string.
+// Returns an error if the key is not found or if unmarshalling fails.
+// Example usage:
+//
+//	var config MyConfigStruct
+//	err := conf.GetJSON("my.config.key", &config)
+func (c *Distconf) GetJSON(key string, target interface{}) error {
+	bytes, err := c.Get(key)
+	if err != nil {
+		return err
+	}
+	if bytes == nil {
+		return fmt.Errorf("key %s not found", key)
+	}
+	return json.Unmarshal(bytes, target)
 }
 
 // Close this config framework's readers.  Config variable results are undefined after this call.
