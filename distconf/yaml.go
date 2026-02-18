@@ -1,6 +1,7 @@
 package distconf
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -41,16 +42,32 @@ type yamlFileDisco struct {
 }
 
 // Get retrieves the value for a given key from the YAML file.
+// For string values, it returns the raw bytes.
+// For arrays and objects, it returns JSON-encoded bytes.
 func (y *yamlFileDisco) Get(key string) ([]byte, error) {
 	y.mu.RLock()
 	defer y.mu.RUnlock()
 
-	// Fetch the value from Viper
-	value := y.v.GetString(key)
-	if value == "" {
+	// Fetch the value from Viper using Get() to support all types
+	value := y.v.Get(key)
+	if value == nil {
 		return nil, nil // Return nil if the key is not found
 	}
-	return []byte(value), nil
+
+	// If it's a string, return it directly as bytes
+	if str, ok := value.(string); ok {
+		if str == "" {
+			return nil, nil
+		}
+		return []byte(str), nil
+	}
+
+	// For arrays, objects, and other complex types, serialize to JSON bytes
+	jsonBytes, err := json.Marshal(value)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to marshal value for key %s", key)
+	}
+	return jsonBytes, nil
 }
 
 // Watch registers a callback function for a given key.
