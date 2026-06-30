@@ -19,7 +19,6 @@ require (
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083
 	github.com/signalfx/gomemcache v0.0.0-20180823214636-4f7ef64c72a9
-	github.com/signalfx/sapm-proto v0.18.0
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.10.0

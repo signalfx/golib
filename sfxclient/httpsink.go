@@ -29,7 +29,6 @@ import (
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
 	traceformat "github.com/signalfx/golib/v3/trace/format"
-	"github.com/signalfx/golib/v3/trace/translator"
 )
 
 const (
@@ -46,14 +45,10 @@ const (
 	// @Deprecated
 	TraceIngestEndpointV1 = "https://ingest.us0.signalfx.com/v2/trace"
 
-	// TraceIngestSAPMEndpointV2 is the of the sapm trace endpoint
-	TraceIngestSAPMEndpointV2 = "https://ingest.us0.signalfx.com/v2/trace"
-
 	// DefaultTimeout is the default time to fail signalfx datapoint requests if they don't succeed
 	DefaultTimeout = time.Second * 5
 
 	contentTypeHeaderJSON = "application/json"
-	contentTypeHeaderSAPM = "application/x-protobuf"
 )
 
 // DefaultUserAgent is the UserAgent string sent to signalfx
@@ -505,15 +500,6 @@ func jsonMarshal(v []*trace.Span) ([]byte, error) {
 	// Yeah, i did that.
 	y := (*traceformat.Trace)(unsafe.Pointer(&v))
 	return easyjson.Marshal(y)
-}
-
-func sapmMarshal(v []*trace.Span) ([]byte, error) {
-	msg, sm := translator.SFXToSAPMPostRequest(v)
-	bb, err := proto.Marshal(msg)
-	if err == nil {
-		err = sm
-	}
-	return bb, err
 }
 
 func parseRetryAfterHeader(v string) (time.Duration, error) {

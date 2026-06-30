@@ -25,7 +25,6 @@ import (
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
-	sapmpb "github.com/signalfx/sapm-proto/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,13 +60,20 @@ func TestDurationTranslator(t *testing.T) {
 }
 
 func TestTranslator(t *testing.T) {
-	got, sm := SFXToSAPMPostRequest(sourceSpans)
-	require.Equal(t, len(wantPostRequest.Batches), len(got.Batches))
-	sortBatches(wantPostRequest.Batches)
-	sortBatches(got.Batches)
-
-	for i := 0; i < len(got.Batches); i++ {
-		assertBatchesAreEqual(t, got.Batches[i], wantPostRequest.Batches[i])
+	batcher := SpanBatcher{}
+	sm := &spanfilter.Map{}
+	for _, sfxSpan := range sourceSpans {
+		span := SAPMSpanFromSFXSpan(sfxSpan, sm)
+		if span != nil {
+			batcher.Add(span)
+		}
+	}
+	got := batcher.Batches()
+	require.Equal(t, len(wantBatches), len(got))
+	sortBatches(wantBatches)
+	sortBatches(got)
+	for i := 0; i < len(got); i++ {
+		assertBatchesAreEqual(t, got[i], wantBatches[i])
 	}
 	require.Equal(t, len(sm.Invalid), 0)
 }
@@ -206,355 +212,353 @@ func sortLogs(t []jaegerpb.Log) {
 	}
 }
 
-var wantPostRequest = sapmpb.PostSpansRequest{
-	Batches: []*jaegerpb.Batch{
-		{
-			Process: &jaegerpb.Process{
-				ServiceName: "api1",
-				Tags: []jaegerpb.KeyValue{
-					{
-						Key:   "ip",
-						VType: jaegerpb.ValueType_STRING,
-						VStr:  "10.53.69.61",
-					},
-					{
-						Key:   "hostname",
-						VType: jaegerpb.ValueType_STRING,
-						VStr:  "api246-sjc1",
-					},
-					{
-						Key:   "jaeger.version",
-						VType: jaegerpb.ValueType_STRING,
-						VStr:  "Python-3.1.0",
-					},
+var wantBatches = []*jaegerpb.Batch{
+	{
+		Process: &jaegerpb.Process{
+			ServiceName: "api1",
+			Tags: []jaegerpb.KeyValue{
+				{
+					Key:   "ip",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "10.53.69.61",
+				},
+				{
+					Key:   "hostname",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "api246-sjc1",
+				},
+				{
+					Key:   "jaeger.version",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "Python-3.1.0",
 				},
 			},
-			Spans: []*jaegerpb.Span{
-				{
-					SpanID:        jaegerpb.SpanID(0x147d98),
-					TraceID:       jaegerpb.TraceID{Low: 11715721395283892799},
-					OperationName: "get",
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Duration(22938000),
-					Flags:         0,
-					Process:       nil,
-					ProcessID:     "",
-					References: []jaegerpb.SpanRef{
-						{
-							TraceID: jaegerpb.TraceID{Low: 11715721395283892799},
-							SpanID:  jaegerpb.SpanID(0x68c4e3),
-							RefType: jaegerpb.SpanRefType_CHILD_OF,
-						},
+		},
+		Spans: []*jaegerpb.Span{
+			{
+				SpanID:        jaegerpb.SpanID(0x147d98),
+				TraceID:       jaegerpb.TraceID{Low: 11715721395283892799},
+				OperationName: "get",
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Duration(22938000),
+				Flags:         0,
+				Process:       nil,
+				ProcessID:     "",
+				References: []jaegerpb.SpanRef{
+					{
+						TraceID: jaegerpb.TraceID{Low: 11715721395283892799},
+						SpanID:  jaegerpb.SpanID(0x68c4e3),
+						RefType: jaegerpb.SpanRefType_CHILD_OF,
 					},
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "peer.ipv4",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "192.53.69.61",
-						},
-						{
-							Key:    "peer.port",
-							VType:  jaegerpb.ValueType_INT64,
-							VInt64: 53931,
-						},
-						{
-							Key:   "span.kind",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "server",
-						},
-						{
-							Key:   "someFalseBool",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "false",
-						},
-						{
-							Key:   "someDouble",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "129.8",
-						},
-						{
-							Key:   "http.url",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "http://127.0.0.1:15598/client_transactions",
-						},
-						{
-							Key:   "someBool",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "true",
-						},
+				},
+				Tags: []jaegerpb.KeyValue{
+					{
+						Key:   "peer.ipv4",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "192.53.69.61",
 					},
-					Logs: []jaegerpb.Log{
-						{
-							Timestamp: time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-							Fields: []jaegerpb.KeyValue{
-								{
-									Key:   "key1",
-									VType: jaegerpb.ValueType_STRING,
-									VStr:  "value1",
-								},
-								{
-									Key:   "key2",
-									VType: jaegerpb.ValueType_STRING,
-									VStr:  "value2",
-								},
+					{
+						Key:    "peer.port",
+						VType:  jaegerpb.ValueType_INT64,
+						VInt64: 53931,
+					},
+					{
+						Key:   "span.kind",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "server",
+					},
+					{
+						Key:   "someFalseBool",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "false",
+					},
+					{
+						Key:   "someDouble",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "129.8",
+					},
+					{
+						Key:   "http.url",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "http://127.0.0.1:15598/client_transactions",
+					},
+					{
+						Key:   "someBool",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "true",
+					},
+				},
+				Logs: []jaegerpb.Log{
+					{
+						Timestamp: time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+						Fields: []jaegerpb.KeyValue{
+							{
+								Key:   "key1",
+								VType: jaegerpb.ValueType_STRING,
+								VStr:  "value1",
 							},
-						},
-						{
-							Timestamp: time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-							Fields: []jaegerpb.KeyValue{
-								{
-									Key:   "annotation",
-									VType: jaegerpb.ValueType_STRING,
-									VStr:  "nothing",
-								},
+							{
+								Key:   "key2",
+								VType: jaegerpb.ValueType_STRING,
+								VStr:  "value2",
 							},
 						},
 					},
-					Warnings: nil,
+					{
+						Timestamp: time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+						Fields: []jaegerpb.KeyValue{
+							{
+								Key:   "annotation",
+								VType: jaegerpb.ValueType_STRING,
+								VStr:  "nothing",
+							},
+						},
+					},
 				},
-				{
-					TraceID:       jaegerpb.TraceID{Low: 12868642899890739775, High: 1},
-					SpanID:        jaegerpb.SpanID(0x21d092272e),
-					OperationName: "post",
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Microsecond * 22938,
-					References: []jaegerpb.SpanRef{{
-						TraceID: jaegerpb.TraceID{Low: 12868642899890739775, High: 1},
-						SpanID:  jaegerpb.SpanID(6866147),
+				Warnings: nil,
+			},
+			{
+				TraceID:       jaegerpb.TraceID{Low: 12868642899890739775, High: 1},
+				SpanID:        jaegerpb.SpanID(0x21d092272e),
+				OperationName: "post",
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Microsecond * 22938,
+				References: []jaegerpb.SpanRef{{
+					TraceID: jaegerpb.TraceID{Low: 12868642899890739775, High: 1},
+					SpanID:  jaegerpb.SpanID(6866147),
+					RefType: jaegerpb.SpanRefType_CHILD_OF,
+				}},
+				Tags: []jaegerpb.KeyValue{
+					{
+						Key:   "span.kind",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "client",
+					},
+					{
+						Key:    "peer.port",
+						VType:  jaegerpb.ValueType_INT64,
+						VInt64: 53931,
+					},
+					{
+						Key:   "peer.ipv4",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "10.0.0.1",
+					},
+				},
+				Logs: []jaegerpb.Log{},
+			},
+			{
+				TraceID:       jaegerpb.TraceID{Low: 14021564404497586751},
+				SpanID:        jaegerpb.SpanID(213952636718),
+				OperationName: "post",
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Microsecond * 22938,
+				References: []jaegerpb.SpanRef{{
+					TraceID: jaegerpb.TraceID{Low: 14021564404497586751},
+					SpanID:  jaegerpb.SpanID(6866147),
+					RefType: jaegerpb.SpanRefType_CHILD_OF,
+				}},
+				Tags: []jaegerpb.KeyValue{
+					{
+						Key:   "span.kind",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "consumer",
+					},
+				},
+				Logs: []jaegerpb.Log{},
+			},
+			{
+				TraceID:       jaegerpb.TraceID{Low: 15174485909104433727},
+				SpanID:        jaegerpb.SpanID(47532398882098234),
+				OperationName: strings.ToLower(http.MethodPost),
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Microsecond * 22938,
+				Flags:         2,
+				References: []jaegerpb.SpanRef{
+					{
 						RefType: jaegerpb.SpanRefType_CHILD_OF,
-					}},
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "span.kind",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "client",
-						},
-						{
-							Key:    "peer.port",
-							VType:  jaegerpb.ValueType_INT64,
-							VInt64: 53931,
-						},
-						{
-							Key:   "peer.ipv4",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "10.0.0.1",
-						},
-					},
-					Logs: []jaegerpb.Log{},
-				},
-				{
-					TraceID:       jaegerpb.TraceID{Low: 14021564404497586751},
-					SpanID:        jaegerpb.SpanID(213952636718),
-					OperationName: "post",
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Microsecond * 22938,
-					References: []jaegerpb.SpanRef{{
-						TraceID: jaegerpb.TraceID{Low: 14021564404497586751},
+						TraceID: jaegerpb.TraceID{Low: 15174485909104433727},
 						SpanID:  jaegerpb.SpanID(6866147),
+					},
+				},
+				Tags: []jaegerpb.KeyValue{
+					{
+						Key:   "span.kind",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "producer",
+					},
+					{
+						Key:   "peer.ipv6",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "::1",
+					},
+				},
+				Logs: []jaegerpb.Log{},
+			},
+			{
+				TraceID:       jaegerpb.TraceID{Low: 16327407413711280703},
+				SpanID:        jaegerpb.SpanID(52035998509468730),
+				OperationName: "post",
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Microsecond * 22938,
+				Flags:         2,
+				References: []jaegerpb.SpanRef{
+					{
 						RefType: jaegerpb.SpanRefType_CHILD_OF,
-					}},
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "span.kind",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "consumer",
-						},
+						TraceID: jaegerpb.TraceID{Low: 16327407413711280703},
+						SpanID:  jaegerpb.SpanID(7914723),
 					},
-					Logs: []jaegerpb.Log{},
 				},
-				{
-					TraceID:       jaegerpb.TraceID{Low: 15174485909104433727},
-					SpanID:        jaegerpb.SpanID(47532398882098234),
-					OperationName: strings.ToLower(http.MethodPost),
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Microsecond * 22938,
-					Flags:         2,
-					References: []jaegerpb.SpanRef{
-						{
-							RefType: jaegerpb.SpanRefType_CHILD_OF,
-							TraceID: jaegerpb.TraceID{Low: 15174485909104433727},
-							SpanID:  jaegerpb.SpanID(6866147),
-						},
-					},
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "span.kind",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "producer",
-						},
-						{
-							Key:   "peer.ipv6",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "::1",
-						},
-					},
-					Logs: []jaegerpb.Log{},
-				},
-				{
-					TraceID:       jaegerpb.TraceID{Low: 16327407413711280703},
-					SpanID:        jaegerpb.SpanID(52035998509468730),
-					OperationName: "post",
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Microsecond * 22938,
-					Flags:         2,
-					References: []jaegerpb.SpanRef{
-						{
-							RefType: jaegerpb.SpanRefType_CHILD_OF,
-							TraceID: jaegerpb.TraceID{Low: 16327407413711280703},
-							SpanID:  jaegerpb.SpanID(7914723),
-						},
-					},
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "span.kind",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "producer",
-						},
-						{
-							Key:   "peer.ipv6",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "::1",
-						},
-						{
-							Key:   "elements",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "100",
-						},
-					},
-					Logs: []jaegerpb.Log{},
-				},
-			},
-		}, {
-			Process: &jaegerpb.Process{
-				ServiceName: "api2",
 				Tags: []jaegerpb.KeyValue{
 					{
-						Key:   "ip",
+						Key:   "span.kind",
 						VType: jaegerpb.ValueType_STRING,
-						VStr:  "10.53.69.70",
+						VStr:  "producer",
 					},
 					{
-						Key:   "jaeger.version",
+						Key:   "peer.ipv6",
 						VType: jaegerpb.ValueType_STRING,
-						VStr:  "Python-3.6.0",
+						VStr:  "::1",
 					},
 					{
-						Key:   "hostname",
+						Key:   "elements",
 						VType: jaegerpb.ValueType_STRING,
-						VStr:  "api2-233",
+						VStr:  "100",
 					},
 				},
+				Logs: []jaegerpb.Log{},
 			},
-			Spans: []*jaegerpb.Span{
+		},
+	}, {
+		Process: &jaegerpb.Process{
+			ServiceName: "api2",
+			Tags: []jaegerpb.KeyValue{
 				{
-					TraceID:       jaegerpb.TraceID{Low: 17480328918319176255},
-					SpanID:        jaegerpb.SpanID(58525199627357242),
-					OperationName: "post",
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Microsecond * 22938,
-					Flags:         2,
-					References: []jaegerpb.SpanRef{
-						{
-							RefType: jaegerpb.SpanRefType_CHILD_OF,
-							TraceID: jaegerpb.TraceID{Low: 17480328918319176255},
-							SpanID:  jaegerpb.SpanID(0x35c4e2),
-						},
-					},
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "span.kind",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "producer",
-						},
-						{
-							Key:   "peer.ipv6",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "::1",
-						},
-					},
-					Logs: []jaegerpb.Log{},
+					Key:   "ip",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "10.53.69.70",
+				},
+				{
+					Key:   "jaeger.version",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "Python-3.6.0",
+				},
+				{
+					Key:   "hostname",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "api2-233",
 				},
 			},
-		}, {
-			Process: &jaegerpb.Process{
-				ServiceName: "api3",
+		},
+		Spans: []*jaegerpb.Span{
+			{
+				TraceID:       jaegerpb.TraceID{Low: 17480328918319176255},
+				SpanID:        jaegerpb.SpanID(58525199627357242),
+				OperationName: "post",
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Microsecond * 22938,
+				Flags:         2,
+				References: []jaegerpb.SpanRef{
+					{
+						RefType: jaegerpb.SpanRefType_CHILD_OF,
+						TraceID: jaegerpb.TraceID{Low: 17480328918319176255},
+						SpanID:  jaegerpb.SpanID(0x35c4e2),
+					},
+				},
 				Tags: []jaegerpb.KeyValue{
 					{
-						Key:   "ip",
+						Key:   "span.kind",
 						VType: jaegerpb.ValueType_STRING,
-						VStr:  "10.53.67.53",
+						VStr:  "producer",
 					},
 					{
-						Key:   "jaeger.version",
+						Key:   "peer.ipv6",
 						VType: jaegerpb.ValueType_STRING,
-						VStr:  "Python-3.6.0",
-					},
-					{
-						Key:   "hostname",
-						VType: jaegerpb.ValueType_STRING,
-						VStr:  "api3-sjc1",
+						VStr:  "::1",
 					},
 				},
+				Logs: []jaegerpb.Log{},
 			},
-			Spans: []*jaegerpb.Span{
+		},
+	}, {
+		Process: &jaegerpb.Process{
+			ServiceName: "api3",
+			Tags: []jaegerpb.KeyValue{
 				{
-					TraceID:       jaegerpb.TraceID{Low: 18025686685695023674},
-					SpanID:        jaegerpb.SpanID(63028799254727738),
-					OperationName: "get",
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Microsecond * 22938,
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "span.kind",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "client",
-						},
-						{
-							Key:   "peer.ipv6",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "::1",
-						},
-					},
-					Logs: []jaegerpb.Log{},
+					Key:   "ip",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "10.53.67.53",
+				},
+				{
+					Key:   "jaeger.version",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "Python-3.6.0",
+				},
+				{
+					Key:   "hostname",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "api3-sjc1",
 				},
 			},
-		}, {
-			Process: &jaegerpb.Process{
-				ServiceName: "api4",
+		},
+		Spans: []*jaegerpb.Span{
+			{
+				TraceID:       jaegerpb.TraceID{Low: 18025686685695023674},
+				SpanID:        jaegerpb.SpanID(63028799254727738),
+				OperationName: "get",
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Microsecond * 22938,
 				Tags: []jaegerpb.KeyValue{
 					{
-						Key:   "ip",
+						Key:   "span.kind",
 						VType: jaegerpb.ValueType_STRING,
-						VStr:  "10.53.67.54",
+						VStr:  "client",
 					},
 					{
-						Key:   "jaeger.version",
+						Key:   "peer.ipv6",
 						VType: jaegerpb.ValueType_STRING,
-						VStr:  "Python-3.6.0",
+						VStr:  "::1",
 					},
-					{
-						Key:   "hostname",
-						VType: jaegerpb.ValueType_STRING,
-						VStr:  "api4-sjc1",
-					},
+				},
+				Logs: []jaegerpb.Log{},
+			},
+		},
+	}, {
+		Process: &jaegerpb.Process{
+			ServiceName: "api4",
+			Tags: []jaegerpb.KeyValue{
+				{
+					Key:   "ip",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "10.53.67.54",
+				},
+				{
+					Key:   "jaeger.version",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "Python-3.6.0",
+				},
+				{
+					Key:   "hostname",
+					VType: jaegerpb.ValueType_STRING,
+					VStr:  "api4-sjc1",
 				},
 			},
-			Spans: []*jaegerpb.Span{
-				{
-					TraceID:       jaegerpb.TraceID{Low: 18025686685695023675},
-					SpanID:        jaegerpb.SpanID(63028799254727739),
-					OperationName: "get",
-					StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
-					Duration:      time.Microsecond * 22938,
-					Tags: []jaegerpb.KeyValue{
-						{
-							Key:   "peer.ipv6",
-							VType: jaegerpb.ValueType_STRING,
-							VStr:  "::1",
-						},
+		},
+		Spans: []*jaegerpb.Span{
+			{
+				TraceID:       jaegerpb.TraceID{Low: 18025686685695023675},
+				SpanID:        jaegerpb.SpanID(63028799254727739),
+				OperationName: "get",
+				StartTime:     time.Date(2017, 1, 26, 21, 46, 31, 639875000, time.UTC),
+				Duration:      time.Microsecond * 22938,
+				Tags: []jaegerpb.KeyValue{
+					{
+						Key:   "peer.ipv6",
+						VType: jaegerpb.ValueType_STRING,
+						VStr:  "::1",
 					},
-					Logs: []jaegerpb.Log{},
 				},
+				Logs: []jaegerpb.Log{},
 			},
 		},
 	},

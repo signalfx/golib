@@ -21,10 +21,7 @@ import (
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/log"
-	"github.com/signalfx/golib/v3/pointer"
-	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
-	sapmpb "github.com/signalfx/sapm-proto/gen"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -663,46 +660,6 @@ func TestHTTPTraceZipkinSink(t *testing.T) {
 		Convey("should export to SAPM endpoint and use SAPM marshaller", func() {
 			So(s.contentTypeHeader, ShouldEqual, contentTypeHeaderJSON)
 			So(s.traceMarshal, ShouldEqual, jsonMarshal)
-		})
-	})
-}
-
-func TestHTTPTraceSAPMSink(t *testing.T) {
-	Convey("A trace sink with SAPM option", t, func() {
-		s := NewHTTPSink(WithSAPMTraceExporter())
-		Convey("should export to SAPM endpoint and use SAPM marshaller", func() {
-			So(s.contentTypeHeader, ShouldEqual, contentTypeHeaderSAPM)
-			So(s.traceMarshal, ShouldEqual, sapmMarshal)
-		})
-	})
-}
-
-func TestSAPMMarshal(t *testing.T) {
-	Convey("A SAPM marshaller", t, func() {
-		traces := []*trace.Span{
-			{
-				TraceID: "fa281a8955571a3a",
-				ID:      "acdfec5be6328c3a",
-				Name:    pointer.String("get"),
-			},
-		}
-		marshalled, err := sapmMarshal(traces)
-		Convey("should marshal traces", func() {
-			So(spanfilter.IsInvalid(err), ShouldBeFalse)
-			psr := sapmpb.PostSpansRequest{}
-			err = proto.Unmarshal(marshalled, &psr)
-			Convey("which should unmarshal to SAPM PostSpansRequest", func() {
-				So(err, ShouldBeNil)
-				So(psr, ShouldNotBeNil)
-				Convey("and the request should have expected data", func() {
-					So(len(psr.Batches), ShouldEqual, 1)
-					So(len(psr.Batches[0].Spans), ShouldEqual, 1)
-					span := psr.Batches[0].Spans[0]
-					So(span.SpanID.String(), ShouldEqual, traces[0].ID)
-					So(span.TraceID.String(), ShouldEqual, traces[0].TraceID)
-					So(span.OperationName, ShouldEqual, *traces[0].Name)
-				})
-			})
 		})
 	})
 }
