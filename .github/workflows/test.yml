@@ -13,7 +13,7 @@ jobs:
       REQUIRED_COVERAGE: 80
     strategy:
       matrix:
-        GO_VERSION: [ "1.23", "1.24", "1.25" ]
+        GO_VERSION: [ "1.24", "1.25" ]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v3
