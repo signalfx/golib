@@ -25,7 +25,6 @@ import (
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
-	sapmpb "github.com/signalfx/sapm-proto/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,13 +60,20 @@ func TestDurationTranslator(t *testing.T) {
 }
 
 func TestTranslator(t *testing.T) {
-	got, sm := SFXToSAPMPostRequest(sourceSpans)
-	require.Equal(t, len(wantPostRequest.Batches), len(got.Batches))
-	sortBatches(wantPostRequest.Batches)
-	sortBatches(got.Batches)
-
-	for i := 0; i < len(got.Batches); i++ {
-		assertBatchesAreEqual(t, got.Batches[i], wantPostRequest.Batches[i])
+	batcher := SpanBatcher{}
+	sm := &spanfilter.Map{}
+	for _, sfxSpan := range sourceSpans {
+		span := SAPMSpanFromSFXSpan(sfxSpan, sm)
+		if span != nil {
+			batcher.Add(span)
+		}
+	}
+	got := batcher.Batches()
+	require.Equal(t, len(wantBatches), len(got))
+	sortBatches(wantBatches)
+	sortBatches(got)
+	for i := 0; i < len(got); i++ {
+		assertBatchesAreEqual(t, got[i], wantBatches[i])
 	}
 	require.Equal(t, len(sm.Invalid), 0)
 }
@@ -206,8 +212,7 @@ func sortLogs(t []jaegerpb.Log) {
 	}
 }
 
-var wantPostRequest = sapmpb.PostSpansRequest{
-	Batches: []*jaegerpb.Batch{
+var wantBatches = []*jaegerpb.Batch{
 		{
 			Process: &jaegerpb.Process{
 				ServiceName: "api1",
@@ -557,7 +562,6 @@ var wantPostRequest = sapmpb.PostSpansRequest{
 				},
 			},
 		},
-	},
 }
 
 var sourceSpans = []*trace.Span{

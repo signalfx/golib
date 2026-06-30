@@ -24,7 +24,6 @@ import (
 	jaegerpb "github.com/jaegertracing/jaeger-idl/model/v1"
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
-	gen "github.com/signalfx/sapm-proto/gen"
 )
 
 const (
@@ -39,25 +38,6 @@ const (
 
 	nanosInOneMicro = time.Microsecond
 )
-
-// SFXToSAPMPostRequest takes a slice spans in the SignalFx format and converts it to a SAPM PostSpansRequest
-func SFXToSAPMPostRequest(spans []*trace.Span) (*gen.PostSpansRequest, *spanfilter.Map) {
-	sr := &gen.PostSpansRequest{}
-
-	batcher := SpanBatcher{}
-
-	sm := &spanfilter.Map{}
-
-	for _, sfxSpan := range spans {
-		span := SAPMSpanFromSFXSpan(sfxSpan, sm)
-		if span != nil {
-			batcher.Add(span)
-		}
-	}
-
-	sr.Batches = batcher.Batches()
-	return sr, sm
-}
 
 // GetLocalEndpointInfo sets the jaeger span's local endpoint extracted from the SignalFx span
 func GetLocalEndpointInfo(sfxSpan *trace.Span, span *jaegerpb.Span) {
