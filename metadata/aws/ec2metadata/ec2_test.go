@@ -15,7 +15,7 @@ type requestHandler struct {
 }
 
 func (rh *requestHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	fmt.Fprintf(w, rh.response)
+	fmt.Fprint(w, rh.response)
 }
 
 func TestAWSMetadata_Get(t *testing.T) {
